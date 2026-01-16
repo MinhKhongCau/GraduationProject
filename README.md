@@ -51,7 +51,7 @@ Hệ thống sử dụng mô hình **Client-Server** dựa trên các Microservi
 ---
 
 ## 5. Quản lý dữ liệu (Database & Storage)
-* **SQL Server:** Cơ sở dữ liệu quan hệ chính đảm bảo tính nhất quán (ACID) cho giao dịch và booking.
+* **PostgreSQL:** Cơ sở dữ liệu quan hệ chính đảm bảo tính nhất quán (ACID) cho giao dịch và booking.
 * **Data Integrity:** Thiết kế chuẩn hóa dữ liệu, hỗ trợ mở rộng sang Redis (Cache) để tăng tốc độ truy vấn.
 
 ---
