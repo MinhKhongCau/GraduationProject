@@ -1,5 +1,5 @@
 # API Contract: Psychological Counseling System
-General Information
+***General Information***
 
 - Base URL: http://localhost:8080/api/v1
 - Date: Wednesday, March 4, 2026
@@ -43,8 +43,8 @@ export enum AssessmentType {
 - Endpoint: POST /auth/register
 - Description: Create a new Client or Expert account.
 - Authentication: None
-- Request Body:
 ```
+Request Body:
 {
     "email": "user@example.com",
     "password": "SecurePassword123!",
@@ -72,8 +72,9 @@ Response:
 - Query Params: specialization, rating, availabilityDate
 
 Response: 200 OK:
-```    {
-        "data": [
+```    
+{
+    "data": [
         {
             "expertId": 501,
             "fullName": "Dr. Smith",
@@ -81,43 +82,44 @@ Response: 200 OK:
             "hourlyRate": 500000,
             "rating": 4.9
         }
-        ]
-    }
+    ]
+}
 ```
-### 2.2 View Expert Schedule
+### 2.2 Seek Expert Schedule
 
 - Endpoint: GET /experts/:id/slots
 - Description: Get available time slots for a specific expert.
 Response: 200 OK:
 ```
-    {
-        "expertId": 501,
-        "availableSlots": [
-        { "slotId": 1001, "startTime": "2026-03-05T09:00:00Z", "status": "AVAILABLE" }
-        ]
-    }
+{
+    "expertId": 501,
+    "availableSlots": [
+    { "slotId": 1001, "startTime": "2026-03-05T09:00:00Z", "status": "AVAILABLE" }
+    ]
+}
 ```
 ### 2.3 Book Appointment (Locking Slot)
 
 - Endpoint: POST /bookings/lock
 - Description: Temporarily lock a slot for 15 minutes to proceed with payment.
 - Permissions: CLIENT
-- Request Body: { "slotId": 1001, "expertId": 501 }
-- Response:
-- 201 Created: { "bookingId": 999, "lockExpiresAt": "2026-03-04T19:15:00Z" }
+```
+Request Body: { "slotId": 1001, "expertId": 501 }
+Response:
+201 Created: { "bookingId": 999, "lockExpiresAt": "2026-03-04T19:15:00Z" }
+```
 ## 3. Assessment & AI Service
 ### 3.1 Submit Test Results
 
 - Endpoint: POST /assessments/submit
 - Description: Client submits answers; Assessment Service calls AI Service for analysis.
 - Permissions: CLIENT
-- Request Body:
 ```
+Request Body:
 {
   "testType": "DEPRESSION",
   "answers": [ { "questionId": 1, "score": 3 }, { "questionId": 2, "score": 4 } ]
 }
-```
 Response:
 
     200 OK:
@@ -129,6 +131,7 @@ Response:
           "ai_recommendation": "It is recommended to speak with an expert specializing in CBT.",
           "suggestedExperts": [501, 505]
         }
+```
 
 ## 4. Payment Service
 ### 4.1 Create Payment Intent
@@ -137,17 +140,30 @@ Response:
 - Description: Integrate with VNPay/MoMo to pay for a locked booking.
 - Request Body: { "bookingId": 999, "paymentGateway": "VNPAY" }
 - Response:
-- 200 OK: { "paymentUrl": "https://vnpay.vn/pay?..." }
+- 200 OK: 
+```
+{ "paymentUrl": "https://vnpay.vn/pay?..." }
+```
 ## 5. Chat & Notification Service
 ### 5.1 Send Message (REST Fallback)
 
 - Endpoint: POST /chat/messages
 - Description: Send a message in a 1-1 session (Primary communication is via Socket.io).
-- Request Body: { "receiverId": 501, "content": "Hello Doctor" }
+```
+Request Body: 
+
+{ "receiverId": 501, "content": "Hello Doctor" }
+Response:
+    200 OK:
+    JSON
+    { "message": "Message sent successfully" }
+```
 ### 5.2 Get Notifications
 
 - Endpoint: GET /notifications
 - Description: Fetch unread notifications for the user.
+- Response: 200 OK
+
 ## 📋 API Summary
 
 | Service     | Endpoint              | Method | Permission | Description              |
