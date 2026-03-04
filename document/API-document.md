@@ -6,7 +6,7 @@
 - Authentication: JWT token required for protected endpoints, passed in the Authorization header as Bearer <token>.
 - Roles: CLIENT, EXPERT, ADMIN
 - Content-Type: application/json
-- Version: v1.0
+- Version: v1.3
 ```
 Enums
 
