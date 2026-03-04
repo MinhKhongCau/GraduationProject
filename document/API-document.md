@@ -60,9 +60,53 @@ Response:
 ### 1.2 Login
 
 Endpoint: POST /auth/login
+```
 Request Body: { "email": "user@example.com", "password": "password" }
 Response:
     200 OK: { "token": "eyJhbGci...", "role": "CLIENT", "userId": 101 }
+```
+### 1.3 Refresh Token
+
+Endpoint: POST /auth/refresh
+Request Body: { "refreshToken": "eyJhbGci..." }
+Response:
+  - 200 OK: { "token": "eyJhbGci..." }
+  - 401 Unauthorized: { "message": "Invalid refresh token" }
+
+### 1.4 Forgot Password
+
+Endpoint: POST /auth/forgot-password
+Request Body: { "email": "user@example.com" }
+Response:
+  - 200 OK: { "message": "Password reset link sent" }
+### 1.5 Reset Password
+
+Endpoint: POST /auth/reset-password
+```
+Request Body: 
+{ 
+  "token": "reset_token_from_email",
+  "newPassword": "NewSecurePassword123!" 
+}
+Response:
+    200 OK: { "message": "Password reset successfully" }
+```
+
+### 1.6 Login with Google (OAuth2)
+
+Endpoint: POST /auth/google
+```
+Request Body: { "idToken": "google_credential_string" }
+Response:
+  - 200 OK: { "token": "eyJhbGci..." }
+```
+
+### ***Security Notes***
+
+  - JWT Algorithm: HS256 or RS256.
+  - Token Expiry: Access Token (15 - 60 minutes), Refresh Token (7 - 30 day).
+  - CORS: Requires configuration to allow Frontend (React) access to API.
+  - Rate Limiting: Limit the number of consecutive fail Login/Forgot Password attepmt to prevent Brute Force.
 
 ## 2. Booking & Expert Service
 ### 2.1 Search Experts
@@ -71,8 +115,9 @@ Response:
 - Description: List experts with filters.
 - Query Params: specialization, rating, availabilityDate
 
+```
+Request Body: { "specialization": "Clinical Psychology", "rating": 4.5, "availabilityDate": "2026-03-05" }   
 Response: 200 OK:
-```    
 {
     "data": [
         {
@@ -89,8 +134,11 @@ Response: 200 OK:
 
 - Endpoint: GET /experts/:id/slots
 - Description: Get available time slots for a specific expert.
-Response: 200 OK:
 ```
+Request Body: 
+{ "expertId": 501 }
+
+Response: 200 OK`:
 {
     "expertId": 501,
     "availableSlots": [
@@ -138,10 +186,9 @@ Response:
 
 - Endpoint: POST /payments/create
 - Description: Integrate with VNPay/MoMo to pay for a locked booking.
-- Request Body: { "bookingId": 999, "paymentGateway": "VNPAY" }
-- Response:
-- 200 OK: 
 ```
+Request Body: { "bookingId": 999, "paymentGateway": "VNPAY" }
+Response: 200 OK: 
 { "paymentUrl": "https://vnpay.vn/pay?..." }
 ```
 ## 5. Chat & Notification Service
