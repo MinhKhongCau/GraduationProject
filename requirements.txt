@@ -1,0 +1,5 @@
+pymupdf 
+beautifulsoup4 
+pandas
+requests
+PyMuPDF
