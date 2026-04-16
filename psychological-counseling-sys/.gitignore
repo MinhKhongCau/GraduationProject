@@ -1,0 +1,35 @@
+# ========================
+# Node & Frontend (Next.js/React)
+# ========================
+node_modules/
+.next/
+out/
+npm-debug.log
+yarn-error.log
+.env.local
+
+# ========================
+# Java & Spring Boot
+# ========================
+target/
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+
+# ========================
+# Python (AI Service)
+# ========================
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env
+
+# ========================
+# OS & IDE (VS Code, IntelliJ, etc.)
+# ========================
+.DS_Store
+.idea/
+.vscode/
+*.log
