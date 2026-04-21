@@ -30,6 +30,19 @@ services:
       - auth_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  assessment-db:
+    image: postgres:15-alpine
+    container_name: assessment-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: assessment_db
+    ports:
+      - "5435:5432" # Máy thật gọi 5435 sẽ vào 5432 của container
+    volumes:
+      - assessment_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   # ================== REDIS ==================
   redis:
     image: redis:7-alpine
@@ -55,5 +68,6 @@ services:
 volumes:
   booking_data:
   auth_data:
+  assessment_data:
   redis_data:
   rabbitmq_data:
