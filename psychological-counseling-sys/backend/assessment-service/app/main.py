@@ -1,12 +1,22 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from .database import engine, get_db
 from . import models, schemas
+from .services.ai_service import generate_psychological_advice
 
 app = FastAPI(title="MindCare Assessment Service")
 
 # Lệnh này tương tự như ddl-auto: update bên Spring Boot
 models.Base.metadata.create_all(bind=engine)
+
+
+def get_current_user_id(authorization: str = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Bạn chưa đăng nhập (Thiếu Token)!")
+    # 1. Lấy token cắt bỏ chữ Bearer
+    token = authorization.split(" ")[1]
+    extracted_user_id = token 
+    return extracted_user_id
 
 
 @app.get("/")
@@ -130,7 +140,8 @@ def create_bulk_questions(
 @app.post("/api/v1/assessments/submit")
 def submit_assessment(
     payload: schemas.AssessmentSubmit,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user_id: str = Depends(get_current_user_id)
 ):
     dimension_scores = {}
     total_score = 0
@@ -165,10 +176,8 @@ def submit_assessment(
         # Lưu trữ lại để tí nữa insert db
         valid_answers.append({"question": question, "option": option})
 
-    # 3. (Tạm thời) Tạo một câu đánh giá sơ bộ.
-    # Về sau, chúng ta sẽ nhét "dimension_scores" này cho AI
-    # (Gemini/ChatGPT) để nó viết lời khuyên!
-    ai_eval = f"Hoàn thành bài test. Chi tiết điểm phân bổ: {dimension_scores}"
+    # Tạo nhận xét AI dựa trên điểm số đã chấm.
+    ai_eval = generate_psychological_advice(dimension_scores)
 
     # 4. Lưu Bản ghi Kết quả (AssessResult)
     new_result = models.AssessResult(
@@ -196,7 +205,8 @@ def submit_assessment(
         "message": "Nộp bài và chấm điểm thành công!",
         "result_id": new_result.result_id,
         "total_score": total_score,
-        "dimension_scores": dimension_scores
+        "dimension_scores": dimension_scores,
+        "ai_evaluation": ai_eval
     }
 
 
