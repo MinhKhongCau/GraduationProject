@@ -56,6 +56,19 @@ services:
       - profile_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  payment-db:
+    image: postgres:15-alpine
+    container_name: payment-db
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: payment_db
+    ports:
+      - "5437:5432" # Máy thật gọi 5437 sẽ vào 5432 của container
+    volumes:
+      - payment_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   # ================== REDIS ==================
   redis:
     image: redis:7-alpine
@@ -83,5 +96,6 @@ volumes:
   auth_data:
   assessment_data:
   profile_data:
+  payment_data:
   redis_data:
   rabbitmq_data:
