@@ -40,12 +40,12 @@ Hệ thống sử dụng mô hình **Client-Server** dựa trên các Microservi
 | Service | Công nghệ | Trách nhiệm chính |
 | :--- | :--- | :--- |
 | **Auth Service** | Spring Boot | Quản lý User, Expert, JWT và phân quyền. |
-| **Booking Service** | Spring Boot | Quản lý lịch trình, khóa Slot (15p), trạng thái cuộc hẹn. |
+| **Booking Service** | Go | Quản lý lịch trình, khóa Slot (15p), trạng thái cuộc hẹn. |
 | **Community Service** | Spring Boot | Quản lý Forum, Blog và hệ thống Comment Tree. |
-| **Assessment Service** | Spring Boot | Quản lý bộ câu hỏi trắc nghiệm và lưu trữ kết quả. |
+| **Assessment Service** | Python (FastAPI) | Quản lý bộ câu hỏi trắc nghiệm và lưu trữ kết quả. |
 | **Chat Service** | Node.js / Socket.io | Xử lý tin nhắn Real-time 1-1 và Group. |
 | **Notification Service** | WebSocket | Đẩy thông báo tức thời (Push notifications). |
-| **Payment Service** | Spring Boot | Xử lý nạp/rút tiền, tích hợp cổng VNPay/MoMo. |
+| **Payment Service** | Go | Xử lý nạp/rút tiền, tích hợp cổng VNPay/MoMo. |
 | **AI Service** | Python (FastAPI) | Phân tích kết quả trắc nghiệm bằng mô hình AI. |
 
 ---
