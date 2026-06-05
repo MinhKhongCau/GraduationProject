@@ -5,11 +5,10 @@ name: Build and Test
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-frontend:
-
     runs-on: ubuntu-latest
 
     strategy:
@@ -18,21 +17,20 @@ jobs:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        
-    - name: Install dependencies
-      working-directory: ./psychological-counseling-sys/frontend
-      run: npm install
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - name: Build FE
-      working-directory: ./psychological-counseling-sys/frontend
-      run: npm run build
+      - name: Install dependencies
+        working-directory: ./psychological-counseling-sys/frontend
+        run: npm ci
 
-    - name: Run test
-      working-directory: ./psychological-counseling-sys/frontend
-      run: npm run test
-    
+      - name: Build FE
+        working-directory: ./psychological-counseling-sys/frontend
+        run: npm run build
+
+      - name: Run test
+        working-directory: ./psychological-counseling-sys/frontend
+        run: npm run test:run
