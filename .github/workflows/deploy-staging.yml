@@ -5,11 +5,11 @@ name: Deploy to Staging
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["staging"]
 
 jobs:
   build-frontend:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     strategy:
       matrix:
@@ -24,4 +24,6 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Setup docker
-        run: docker compose -f docker-compose.dev.yml up --build -d
+        run: |
+          docker compose -f docker-compose.dev.yml down -d 
+          docker compose -f docker-compose.dev.yml up --build -d
