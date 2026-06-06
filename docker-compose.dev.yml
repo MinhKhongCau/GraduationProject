@@ -1,0 +1,83 @@
+version: "3.9"
+
+services:
+
+  # ================== POSTGRES ==================
+  postgres:
+    image: postgres:16
+    container_name: postgres-db
+    restart: always
+
+    environment:
+      # format: psychology_<service name>_db
+      POSTGRES_DB: psychology_assessment_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    networks:
+      - app-network
+
+  # ================== REDIS ==================
+  redis:
+    image: redis:7-alpine
+    container_name: mindcare_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # ================== RABBITMQ ==================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: mindcare_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # ================== PROFILE SERVICE ==================
+  profile-service:
+    build:
+      context: ./app/backend/profile-service
+      dockerfile: Dockerfile
+    container_name: profile-service
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=psychology_assessment_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=admin
+      - RABBITMQ_PASSWORD=admin123
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  app-network:
+    driver: bridge
