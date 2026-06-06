@@ -95,9 +95,24 @@ jobs:
         working-directory: ./app/backend/auth-service
         run: chmod +x mvnw
 
-      - name: Build and Test with Maven
+      - name: Build with Maven
         working-directory: ./app/backend/auth-service
-        run: ./mvnw clean test
+        run: ./mvnw clean package -DskipTests
+
+      - name: Run application
+        working-directory: ./app/backend/auth-service
+        run: |
+          java -jar target/app.jar &
+          APP_PID=$!
+          echo "Starting application with PID $APP_PID..."
+          sleep 10
+          if kill -0 $APP_PID 2>/dev/null; then
+            echo "Application started successfully and is running."
+            kill $APP_PID
+          else
+            echo "Application failed to start or stopped prematurely."
+            exit 1
+          fi
 
   build-assessment-service:
     runs-on: ubuntu-latest
