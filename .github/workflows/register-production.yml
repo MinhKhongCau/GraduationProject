@@ -1,9 +1,9 @@
-name: Register Dev
+name: register-production
 
 on:
   push:
     branches:
-      - main
+      - product
 
 jobs:
   # Định nghĩa ma trận để build và push tất cả các service song song
