@@ -26,7 +26,7 @@ services:
       BOOKING_DB_NAME: ${BOOKING_DB_NAME}
       ASSESSMENT_DB_NAME: ${ASSESSMENT_DB_NAME}
     ports:
-      - "${PORT_POSTGRES}:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
@@ -51,7 +51,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${AUTH_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - PORT=${DB_PORT}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_AUTH_SERVICE}
 
   # 3. GO SERVICES (Profile, Payment, Booking)
   profile-service:
@@ -70,7 +71,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${PROFILE_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - PORT=${DB_PORT}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_PROFILE_SERVICE}
 
   payment-service:
     image: ${DOCKERHUB_USERNAME}/payment-service-dev:latest
@@ -88,7 +90,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${PAYMENT_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - PORT=${DB_PORT}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_PAYMENT_SERVICE}
 
   booking-service:
     image: ${DOCKERHUB_USERNAME}/booking-service-dev:latest
@@ -106,7 +109,8 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${BOOKING_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - PORT=${DB_PORT}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_BOOKING_SERVICE}
 
   # 4. ASSESSMENT SERVICE (Python)
   assessment-service:
@@ -125,7 +129,9 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${ASSESSMENT_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - PORT=${DB_PORT}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_ASSESSMENT_SERVICE}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
 
 # Volume cache for database
 volumes:

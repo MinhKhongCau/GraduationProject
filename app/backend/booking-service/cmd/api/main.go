@@ -4,6 +4,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -49,8 +50,13 @@ func main() {
 	})
 
 	// 5. Khởi chạy Server
-	log.Println("Starting Booking Service on port 8080...")
-	if err := router.Run(":8080"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Mặc định nếu quên setup
+	}
+
+	log.Printf("Starting Booking Service on port %s...", port)
+	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
