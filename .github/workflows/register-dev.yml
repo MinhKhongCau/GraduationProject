@@ -1,4 +1,4 @@
-name: Register Dev
+name: register-dev
 
 on:
   push:
