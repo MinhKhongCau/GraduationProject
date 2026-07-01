@@ -1,0 +1,36 @@
+name: Deploy Dev 
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy-to-runner:
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Bước 1: Login to Docker Hub
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Bước 2: Pull Image lasted from Docker Hub before deploy.
+      - name: Pull Latest Docker Images
+        run: |
+          docker compose -f .deploy/dev/docker.yml pull
+
+      # Bước 3: Deploy/update container with Zero-downtime
+      - name: Deploy and Update Containers
+        run: |
+          docker compose -f .deploy/dev/docker.yml up -d --no-deps
+
+      # Bước 4: Clear old image.
+      - name: Clean up Old Docker Images
+        run: |
+          docker image prune -f
