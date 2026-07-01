@@ -1,9 +1,10 @@
-name: Deploy Dev 
+name: deploy-production
 
 on:
-  push:
-    branches:
-      - dev
+  workflow_run:
+    workflows: ["register-production"]
+    types:
+      - completed
 
 jobs:
   deploy-to-runner:
