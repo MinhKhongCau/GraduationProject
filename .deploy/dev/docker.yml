@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  # 1. FRONTEND SERVICE (Node.js)
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/frontend-dev:latest
+    container_name: frontend-app
+    ports:
+      - "${PORT_FRONTEND}:3000"
+    restart: always
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
+
+  # 2. AUTH SERVICE (Java / Spring Boot) + DATABASE
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: auth-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PROFILE_DB_NAME: ${PROFILE_DB_NAME}
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME}
+      BOOKING_DB_NAME: ${BOOKING_DB_NAME}
+      ASSESSMENT_DB_NAME: ${ASSESSMENT_DB_NAME}
+    ports:
+      - "${PORT_POSTGRES}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    image: ${DOCKERHUB_USERNAME}/auth-service-dev:latest
+    container_name: auth-service
+    restart: always
+    ports:
+      - "${PORT_AUTH_SERVICE}:8080"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${AUTH_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - PORT=${DB_PORT}
+
+  # 3. GO SERVICES (Profile, Payment, Booking)
+  profile-service:
+    image: ${DOCKERHUB_USERNAME}/profile-service-dev:latest
+    container_name: profile-service
+    restart: always
+    ports:
+      - "${PORT_PROFILE_SERVICE}:8081"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${PROFILE_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - PORT=${DB_PORT}
+
+  payment-service:
+    image: ${DOCKERHUB_USERNAME}/payment-service-dev:latest
+    container_name: payment-service
+    restart: always
+    ports:
+      - "${PORT_PAYMENT_SERVICE}:8082"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${PAYMENT_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - PORT=${DB_PORT}
+
+  booking-service:
+    image: ${DOCKERHUB_USERNAME}/booking-service-dev:latest
+    container_name: booking-service
+    restart: always
+    ports:
+      - "${PORT_BOOKING_SERVICE}:8083"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${BOOKING_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - PORT=${DB_PORT}
+
+  # 4. ASSESSMENT SERVICE (Python)
+  assessment-service:
+    image: ${DOCKERHUB_USERNAME}/assessment-service-dev:latest
+    container_name: assessment-service
+    restart: always
+    ports:
+      - "${PORT_ASSESSMENT_SERVICE}:5000"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    environment:
+      - ENV=${APP_ENV}
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${ASSESSMENT_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - PORT=${DB_PORT}
+
+# Volume cache for database
+volumes:
+  postgres_data:
+    driver: local
