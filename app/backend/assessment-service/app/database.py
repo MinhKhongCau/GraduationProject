@@ -5,7 +5,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DB_URL = os.getenv("DB_URL")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_SSLMODE = os.getenv("DB_SSLMODE")
+PORT = os.getenv("PORT")
+
+DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_URL}:{PORT}/{DB_NAME}?sslmode={DB_SSLMODE}"
 
 # 1. Tạo engine kết nối
 engine = create_engine(DATABASE_URL)
