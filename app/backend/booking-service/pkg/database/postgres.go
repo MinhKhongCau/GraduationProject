@@ -5,6 +5,7 @@ import (
 	"booking-service/internal/domain"
 	"fmt"
 	"log"
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -15,9 +16,17 @@ var DB *gorm.DB
 
 // ConnectDB khởi tạo kết nối đến PostgreSQL
 func ConnectDB() {
-	// Chuỗi kết nối dựa trên cấu hình docker-compose.yml của bạn
-	// User: root, Pass: rootpassword, DB: booking_db, Port: 5432
-	dsn := "host=localhost user=root password=rootpassword dbname=booking_db port=5432 sslmode=disable TimeZone=Asia/Ho_Chi_Minh"
+	// Chuỗi kết nối được xây dựng từ các biến môi trường DB_URL, DB_USER,
+	// DB_PASSWORD, DB_NAME, DB_SSLMODE, PORT
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Ho_Chi_Minh",
+		os.Getenv("DB_URL"),
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("PORT"),
+		os.Getenv("DB_SSLMODE"),
+	)
 
 	database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
