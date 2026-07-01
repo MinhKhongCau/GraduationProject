@@ -23,17 +23,59 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Bước 2: Pull Image lasted from Docker Hub before deploy.
+      # Bước 2: Setup file .env cho docker compose
+      - name: Setup Environment Variables
+        run: |
+          cat <<EOF > .deploy/product/.env
+          DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+
+          APP_ENV=${{ vars.APP_ENV }}
+          NODE_ENV=${{ vars.NODE_ENV }}
+
+          DB_HOST=${{ vars.DB_HOST }}
+          DB_PORT=${{ vars.DB_PORT }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_SSLMODE=${{ vars.DB_SSLMODE }}
+
+          POSTGRES_DB=${{ vars.POSTGRES_DB }}
+
+          AUTH_DB_NAME=${{ vars.AUTH_DB_NAME }}
+          PROFILE_DB_NAME=${{ vars.PROFILE_DB_NAME }}
+          PAYMENT_DB_NAME=${{ vars.PAYMENT_DB_NAME }}
+          BOOKING_DB_NAME=${{ vars.BOOKING_DB_NAME }}
+          ASSESSMENT_DB_NAME=${{ vars.ASSESSMENT_DB_NAME }}
+
+          PORT_FRONTEND=${{ vars.PORT_FRONTEND }}
+          PORT_AUTH_SERVICE=${{ vars.PORT_AUTH_SERVICE }}
+          PORT_PROFILE_SERVICE=${{ vars.PORT_PROFILE_SERVICE }}
+          PORT_PAYMENT_SERVICE=${{ vars.PORT_PAYMENT_SERVICE }}
+          PORT_BOOKING_SERVICE=${{ vars.PORT_BOOKING_SERVICE }}
+          PORT_ASSESSMENT_SERVICE=${{ vars.PORT_ASSESSMENT_SERVICE }}
+
+          REACT_APP_API_URL=${{ vars.REACT_APP_API_URL }}
+
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+
+          REDIS_PORT=${{ vars.REDIS_PORT }}
+
+          RABBITMQ_DEFAULT_USER=${{ secrets.RABBITMQ_DEFAULT_USER }}
+          RABBITMQ_DEFAULT_PASS=${{ secrets.RABBITMQ_DEFAULT_PASS }}
+          RABBITMQ_PORT=${{ vars.RABBITMQ_PORT }}
+          RABBITMQ_MANAGEMENT_PORT=${{ vars.RABBITMQ_MANAGEMENT_PORT }}
+          EOF
+
+      # Bước 3: Pull Image lasted from Docker Hub before deploy.
       - name: Pull Latest Docker Images
         run: |
-          docker compose -f .deploy/product/docker.yml pull
+          docker compose -f .deploy/dev/docker.yml pull
 
-      # Bước 3: Deploy/update container with Zero-downtime
+      # Bước 4: Deploy/update container with Zero-downtime
       - name: Deploy and Update Containers
         run: |
-          docker compose -f .deploy/product/docker.yml up -d --no-deps
+          docker compose -f .deploy/dev/docker.yml up -d --no-deps
 
-      # Bước 4: Clear old image.
+      # Bước 5: Clear old image.
       - name: Clean up Old Docker Images
         run: |
           docker image prune -f
