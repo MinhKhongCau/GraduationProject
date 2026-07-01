@@ -21,7 +21,7 @@ func ConnectDB() {
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
 		os.Getenv("DB_NAME"),
-		os.Getenv("PORT"),
+		os.Getenv("DB_PORT"),
 		os.Getenv("DB_SSLMODE"),
 	)
 
