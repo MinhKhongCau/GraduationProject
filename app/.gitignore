@@ -33,4 +33,3 @@ env/
 .idea/
 .vscode/
 *.log
-*.exe

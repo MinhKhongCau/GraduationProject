@@ -7,7 +7,6 @@ import (
 	"payment-service/config"
 	"payment-service/internal/models"
 	"payment-service/internal/schemas"
-	"payment-service/pkg/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -20,7 +19,7 @@ import (
 func InitWallet(c *gin.Context) {
 	var req schemas.InitWalletRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ: " + err.Error()})
 		return
 	}
 
@@ -32,11 +31,11 @@ func InitWallet(c *gin.Context) {
 	}
 
 	if err := config.DB.Create(&wallet).Error; err != nil {
-		response.Error(c, http.StatusConflict, "Ví của người dùng này đã tồn tại!", err.Error())
+		c.JSON(http.StatusConflict, gin.H{"error": "Ví của người dùng này đã tồn tại!"})
 		return
 	}
 
-	response.JSON(c, http.StatusCreated, true, "Khởi tạo ví thành công", wallet, "")
+	c.JSON(http.StatusCreated, gin.H{"message": "Khởi tạo ví thành công", "data": wallet})
 }
 
 // 2. XEM SỐ DƯ VÍ
@@ -45,11 +44,11 @@ func GetWallet(c *gin.Context) {
 	var wallet models.Wallet
 
 	if err := config.DB.Where("owner_id = ?", ownerID).First(&wallet).Error; err != nil {
-		response.Error(c, http.StatusNotFound, "Không tìm thấy ví!", err.Error())
+		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy ví!"})
 		return
 	}
 
-	response.Success(c, "Thành công", wallet)
+	c.JSON(http.StatusOK, gin.H{"message": "Thành công", "data": wallet})
 }
 
 // 3. NẠP TIỀN (TOP-UP) VỚI GORM TRANSACTION & ROW LOCKING
@@ -57,12 +56,12 @@ func TopUpWallet(c *gin.Context) {
 	ownerID := c.Param("owner_id")
 	var req schemas.TopUpRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ"})
 		return
 	}
 
 	if req.Amount.LessThanOrEqual(decimal.NewFromInt(0)) {
-		response.Error(c, http.StatusBadRequest, "Số tiền nạp phải lớn hơn 0", "Invalid amount")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Số tiền nạp phải lớn hơn 0"})
 		return
 	}
 
@@ -107,18 +106,18 @@ func TopUpWallet(c *gin.Context) {
 
 	// Kiểm tra kết quả của Transaction
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Giao dịch thất bại", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Giao dịch thất bại: " + err.Error()})
 		return
 	}
 
-	response.Success(c, "Nạp tiền thành công!", nil)
+	c.JSON(http.StatusOK, gin.H{"message": "Nạp tiền thành công!"})
 }
 
 // 4. THANH TOÁN DỊCH VỤ (Trừ tiền Patient, Cộng tiền Expert)
 func ProcessPayment(c *gin.Context) {
 	var req schemas.PaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ"})
 		return
 	}
 
@@ -180,21 +179,21 @@ func ProcessPayment(c *gin.Context) {
 	// Xử lý kết quả Transaction
 	if err != nil {
 		if err.Error() == "INSUFFICIENT_FUNDS" {
-			response.Error(c, http.StatusBadRequest, "Số dư trong ví không đủ để thanh toán!", "INSUFFICIENT_FUNDS")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Số dư trong ví không đủ để thanh toán!"})
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, "Giao dịch thất bại", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Giao dịch thất bại: " + err.Error()})
 		return
 	}
 
-	response.Success(c, "Thanh toán thành công!", nil)
+	c.JSON(http.StatusOK, gin.H{"message": "Thanh toán thành công!"})
 }
 
 func RequestWithdrawal(c *gin.Context) {
 	ownerID := c.Param("owner_id")
 	var req schemas.CreateWithdrawalRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ"})
 		return
 	}
 
@@ -241,14 +240,14 @@ func RequestWithdrawal(c *gin.Context) {
 
 	if err != nil {
 		if err.Error() == "INSUFFICIENT_FUNDS" {
-			response.Error(c, http.StatusBadRequest, "Số dư không đủ để rút!", "INSUFFICIENT_FUNDS")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Số dư không đủ để rút!"})
 			return
 		}
-		response.Error(c, http.StatusInternalServerError, "Lỗi hệ thống", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi hệ thống: " + err.Error()})
 		return
 	}
 
-	response.Success(c, "Đã gửi yêu cầu rút tiền thành công. Vui lòng chờ Admin xử lý!", nil)
+	c.JSON(http.StatusOK, gin.H{"message": "Đã gửi yêu cầu rút tiền thành công. Vui lòng chờ Admin xử lý!"})
 }
 
 // 6. ADMIN DUYỆT/TỪ CHỐI RÚT TIỀN
@@ -256,7 +255,7 @@ func ProcessWithdrawal(c *gin.Context) {
 	requestID := c.Param("request_id")
 	var req schemas.ProcessWithdrawalRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ"})
 		return
 	}
 
@@ -313,9 +312,9 @@ func ProcessWithdrawal(c *gin.Context) {
 	})
 
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Xử lý yêu cầu rút tiền thất bại", err.Error())
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	response.Success(c, "Đã xử lý yêu cầu rút tiền thành công!", nil)
+	c.JSON(http.StatusOK, gin.H{"message": "Đã xử lý yêu cầu rút tiền thành công!"})
 }
