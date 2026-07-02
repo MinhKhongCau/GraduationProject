@@ -1,0 +1,38 @@
+{
+  "landing": {
+    "header": {
+      "login": "Log in",
+      "register": "Sign up"
+    },
+    "hero": {
+      "eyebrow": "Online psychological counseling",
+      "title": "Take care of your mind, with people who understand you",
+      "subtitle": "MindCare connects you with licensed psychological experts for safe, convenient, and effective online counseling.",
+      "primaryCta": "Book an appointment",
+      "secondaryCta": "Find an expert"
+    },
+    "howItWorks": {
+      "chooseTopic": {
+        "title": "Tell us what's on your mind",
+        "description": "Pick the topics you'd like to talk about so we can match you with the right expert."
+      },
+      "pickExpert": {
+        "title": "Choose your expert",
+        "description": "Browse experts by specialization, experience, and availability."
+      },
+      "bookSlot": {
+        "title": "Book a time that works for you",
+        "description": "Select an open slot on your expert's calendar and confirm your session."
+      },
+      "getSupport": {
+        "title": "Get ongoing support",
+        "description": "Track your appointments, assessments, and progress all in one place."
+      }
+    },
+    "testimonials": {
+      "t1": { "name": "Minh Anh", "quote": "MindCare helped me find the right expert within a day. Booking was effortless." },
+      "t2": { "name": "David Tran", "quote": "The assessment tools gave me real insight before my first session." },
+      "t3": { "name": "Lan Pham", "quote": "Managing my bookings and wallet in one dashboard is a huge time saver." }
+    }
+  }
+}
