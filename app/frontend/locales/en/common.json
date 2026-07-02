@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "findExperts": "Find Experts",
+    "bookAppointment": "Book Appointment",
+    "myBookings": "My Bookings",
+    "wallet": "Wallet",
+    "assessment": "Assessment",
+    "medicalHistory": "Medical History",
+    "messages": "Messages",
+    "settings": "Settings",
+    "schedule": "Schedule",
+    "appointments": "Appointments",
+    "patients": "My Patients",
+    "clinicalRecords": "Clinical Records",
+    "experts": "Experts",
+    "specializations": "Specializations",
+    "schedules": "Schedules",
+    "withdrawals": "Withdrawals",
+    "logout": "Log out"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "comingSoon": "Coming soon",
+    "comingSoonDescription": "This page is planned but not built in this pass. See README for the full roadmap.",
+    "viewAll": "View all",
+    "search": "Search",
+    "language": "Language"
+  }
+}
