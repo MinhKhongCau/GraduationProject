@@ -1,0 +1,16 @@
+{
+  "patient": {
+    "topics": {
+      "stress": "Quản lý căng thẳng",
+      "anxiety": "Lo âu & Hoảng loạn",
+      "depression": "Trầm cảm",
+      "relationships": "Vấn đề trong mối quan hệ",
+      "grief": "Đau buồn & Mất mát",
+      "sleep": "Rối loạn giấc ngủ",
+      "selfEsteem": "Lòng tự trọng",
+      "trauma": "Sang chấn tâm lý",
+      "workLife": "Cân bằng công việc - cuộc sống",
+      "communication": "Kỹ năng giao tiếp"
+    }
+  }
+}
