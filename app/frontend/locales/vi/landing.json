@@ -1,0 +1,38 @@
+{
+  "landing": {
+    "header": {
+      "login": "Đăng nhập",
+      "register": "Đăng ký"
+    },
+    "hero": {
+      "eyebrow": "Tư vấn tâm lý trực tuyến",
+      "title": "Chăm sóc tâm trí của bạn, cùng những người thấu hiểu bạn",
+      "subtitle": "MindCare kết nối bạn với các chuyên gia tâm lý được cấp phép để tư vấn trực tuyến an toàn, tiện lợi và hiệu quả.",
+      "primaryCta": "Đặt lịch hẹn",
+      "secondaryCta": "Tìm chuyên gia"
+    },
+    "howItWorks": {
+      "chooseTopic": {
+        "title": "Chia sẻ điều bạn đang trăn trở",
+        "description": "Chọn các chủ đề bạn muốn trao đổi để chúng tôi kết nối bạn với chuyên gia phù hợp."
+      },
+      "pickExpert": {
+        "title": "Chọn chuyên gia của bạn",
+        "description": "Duyệt danh sách chuyên gia theo chuyên khoa, kinh nghiệm và lịch trống."
+      },
+      "bookSlot": {
+        "title": "Đặt lịch phù hợp với bạn",
+        "description": "Chọn một khung giờ trống trong lịch của chuyên gia và xác nhận buổi hẹn."
+      },
+      "getSupport": {
+        "title": "Nhận hỗ trợ liên tục",
+        "description": "Theo dõi lịch hẹn, bài đánh giá và tiến trình của bạn tại một nơi duy nhất."
+      }
+    },
+    "testimonials": {
+      "t1": { "name": "Minh Anh", "quote": "MindCare giúp tôi tìm được chuyên gia phù hợp chỉ trong một ngày. Việc đặt lịch rất dễ dàng." },
+      "t2": { "name": "David Trần", "quote": "Công cụ đánh giá tâm lý giúp tôi hiểu rõ bản thân trước buổi tư vấn đầu tiên." },
+      "t3": { "name": "Lan Phạm", "quote": "Quản lý lịch hẹn và ví điện tử trên cùng một bảng điều khiển tiết kiệm rất nhiều thời gian." }
+    }
+  }
+}

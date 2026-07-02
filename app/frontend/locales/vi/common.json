@@ -1,0 +1,33 @@
+{
+  "nav": {
+    "dashboard": "Tổng quan",
+    "findExperts": "Tìm chuyên gia",
+    "bookAppointment": "Đặt lịch hẹn",
+    "myBookings": "Lịch hẹn của tôi",
+    "wallet": "Ví",
+    "assessment": "Đánh giá tâm lý",
+    "medicalHistory": "Hồ sơ sức khỏe",
+    "messages": "Tin nhắn",
+    "settings": "Cài đặt",
+    "schedule": "Lịch làm việc",
+    "appointments": "Lịch hẹn",
+    "patients": "Bệnh nhân của tôi",
+    "clinicalRecords": "Hồ sơ tư vấn",
+    "experts": "Chuyên gia",
+    "specializations": "Chuyên khoa",
+    "schedules": "Lịch trình",
+    "withdrawals": "Yêu cầu rút tiền",
+    "logout": "Đăng xuất"
+  },
+  "common": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "confirm": "Xác nhận",
+    "loading": "Đang tải...",
+    "comingSoon": "Sắp ra mắt",
+    "comingSoonDescription": "Trang này đã được lên kế hoạch nhưng chưa hoàn thiện trong đợt này. Xem README để biết lộ trình đầy đủ.",
+    "viewAll": "Xem tất cả",
+    "search": "Tìm kiếm",
+    "language": "Ngôn ngữ"
+  }
+}
