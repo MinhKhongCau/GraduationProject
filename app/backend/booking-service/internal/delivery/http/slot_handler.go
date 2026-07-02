@@ -2,7 +2,6 @@ package http
 
 import (
 	"booking-service/internal/repository/postgres"
-	"booking-service/pkg/response"
 	"net/http"
 	"time"
 
@@ -27,11 +26,14 @@ func (h *SlotHandler) HandleGetAvailableDates(c *gin.Context) {
 
 	dates, err := h.repo.GetAvailableDates(startDate, endDate)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Lỗi khi truy vấn ngày", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi khi truy vấn ngày: " + err.Error()})
 		return
 	}
 
-	response.Success(c, "Lấy danh sách ngày thành công", dates)
+	c.JSON(http.StatusOK, gin.H{
+		"message":         "Lấy danh sách ngày thành công",
+		"available_dates": dates,
+	})
 }
 
 // API 2: /api/v1/slots/available-times?date=2026-04-21
@@ -39,17 +41,18 @@ func (h *SlotHandler) HandleGetAvailableTimes(c *gin.Context) {
 	// Bắt buộc phải có ngày truyền lên
 	dateParam := c.Query("date")
 	if dateParam == "" {
-		response.Error(c, http.StatusBadRequest, "Thiếu tham số 'date' (VD: ?date=2026-04-21)", "Missing date parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Thiếu tham số 'date' (VD: ?date=2026-04-21)"})
 		return
 	}
 
 	times, err := h.repo.GetAvailableTimes(dateParam)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Lỗi khi truy vấn giờ", err.Error())
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi khi truy vấn giờ: " + err.Error()})
 		return
 	}
 
-	response.Success(c, "Lấy danh sách giờ thành công", gin.H{
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Lấy danh sách giờ thành công",
 		"date":       dateParam,
 		"time_slots": times,
 	})
