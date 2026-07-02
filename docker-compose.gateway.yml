@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  kong-gateway:
+    build:
+      context: ./app/backend/gateway
+      dockerfile: Dockerfile
+    container_name: mindcare-gateway
+    restart: always
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8000, 0.0.0.0:8443 ssl
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_LOG_LEVEL: debug
+    volumes:
+      - ./app/backend/gateway/kong.yml:/usr/local/kong/declarative/kong.yml
+    ports:
+      - "8000:8000" # Cổng Proxy API chính (Frontend sẽ gọi cổng này)
+      - "8001:8001" # Cổng Admin API của Kong
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+    name: graduationproject_app-network # Kết nối chung với network của dự án chính
