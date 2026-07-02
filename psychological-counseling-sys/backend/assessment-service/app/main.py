@@ -4,7 +4,13 @@ from .database import engine, get_db
 from . import models, schemas
 from .services.ai_service import generate_psychological_advice
 
-app = FastAPI(title="MindCare Assessment Service")
+app = FastAPI(
+    title="MindCare Assessment Service API",
+    description="Tài liệu API cho hệ thống Đánh giá Tâm lý (Assessment Service)",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 # Lệnh này tương tự như ddl-auto: update bên Spring Boot
 models.Base.metadata.create_all(bind=engine)

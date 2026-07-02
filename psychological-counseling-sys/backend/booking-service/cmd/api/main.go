@@ -12,7 +12,19 @@ import (
 	"booking-service/pkg/database"
 
 	httpDelivery "booking-service/internal/delivery/http"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "booking-service/docs" // Ignore error if it doesn't exist yet
 )
+
+// @title Booking Service API
+// @version 1.0
+// @description Hệ thống đặt lịch khám bệnh - MindCare
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 
 func main() {
 	// 1. Kết nối Database
@@ -39,6 +51,9 @@ func main() {
 		api.GET("/slots/available-times", slotHandler.HandleGetAvailableTimes)
 	}
 
+	// 3.5. Swagger endpoint
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// 4. Health check API
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
@@ -49,8 +64,8 @@ func main() {
 	})
 
 	// 5. Khởi chạy Server
-	log.Println("Starting Booking Service on port 8080...")
-	if err := router.Run(":8080"); err != nil {
+	log.Println("Starting Booking Service on port 8083...")
+	if err := router.Run(":8083"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

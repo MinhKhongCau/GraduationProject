@@ -5,6 +5,7 @@ import (
 	"profile-service/config"
 	"profile-service/internal/models"
 	"profile-service/internal/schemas"
+	"profile-service/pkg/response"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +18,7 @@ func GetMedicalHistories(c *gin.Context) {
 	// Bước 1: Tìm ID của Bệnh nhân thông qua AccountID
 	var patient models.Patient
 	if err := config.DB.Where("account_id = ?", accountID).First(&patient).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy hồ sơ bệnh nhân!"})
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ bệnh nhân!", err.Error())
 		return
 	}
 
@@ -26,10 +27,7 @@ func GetMedicalHistories(c *gin.Context) {
 	// Chỉ lấy những bệnh án đang active
 	config.DB.Where("patient_id = ? AND is_active = ?", patient.PatientID, true).Find(&histories)
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Lấy danh sách tiền sử bệnh thành công",
-		"data":    histories,
-	})
+	response.Success(c, "Lấy danh sách tiền sử bệnh thành công", histories)
 }
 
 // 2. THÊM MỚI TIỀN SỬ BỆNH
@@ -38,14 +36,14 @@ func AddMedicalHistory(c *gin.Context) {
 
 	var req schemas.CreateMedicalHistoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ: " + err.Error()})
+		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
 
 	// Tìm Bệnh nhân (Giống hệt ở trên)
 	var patient models.Patient
 	if err := config.DB.Where("account_id = ?", accountID).First(&patient).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Bạn cần tạo Hồ sơ cá nhân trước khi thêm Tiền sử bệnh!"})
+		response.Error(c, http.StatusNotFound, "Bạn cần tạo Hồ sơ cá nhân trước khi thêm Tiền sử bệnh!", err.Error())
 		return
 	}
 
@@ -62,12 +60,9 @@ func AddMedicalHistory(c *gin.Context) {
 	}
 
 	if err := config.DB.Create(&newHistory).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi lưu dữ liệu: " + err.Error()})
+		response.Error(c, http.StatusInternalServerError, "Lỗi lưu dữ liệu", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Thêm tiền sử bệnh thành công!",
-		"data":    newHistory,
-	})
+	response.JSON(c, http.StatusCreated, true, "Thêm tiền sử bệnh thành công!", newHistory, "")
 }

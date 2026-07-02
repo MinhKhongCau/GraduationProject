@@ -9,7 +9,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "payment-service/docs" // Ignore error if it doesn't exist yet
 )
+
+// @title Payment Service API
+// @version 1.0
+// @description Hệ thống thanh toán và ví điện tử - MindCare
+// @BasePath /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 
 func main() {
 	// 1. Load biến môi trường từ file .env
@@ -25,6 +37,9 @@ func main() {
 
 	routes.SetupRoutes(r)
 
+	// Swagger endpoint
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "Payment Service is running smoothly!",
@@ -34,7 +49,7 @@ func main() {
 	// 4. Lấy port và chạy server
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8003" // Mặc định nếu quên setup
+		port = "8082" // Mặc định nếu quên setup
 	}
 
 	log.Printf("🚀 Server đang chạy tại http://localhost:%s", port)

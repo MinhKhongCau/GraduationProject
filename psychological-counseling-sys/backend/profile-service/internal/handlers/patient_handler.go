@@ -6,6 +6,7 @@ import (
 	"profile-service/config"
 	"profile-service/internal/models"
 	"profile-service/internal/schemas"
+	"profile-service/pkg/response"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,15 +20,11 @@ func GetPatientProfile(c *gin.Context) {
 	var patient models.Patient
 	// Truy vấn DB qua GORM
 	if err := config.DB.Where("account_id = ?", accountID).First(&patient).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy hồ sơ bệnh nhân!"})
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ bệnh nhân!", err.Error())
 		return
 	}
 
-	// Trả về JSON
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Lấy hồ sơ thành công",
-		"data":    patient,
-	})
+	response.Success(c, "Lấy hồ sơ thành công", patient)
 }
 
 func CreatePatientProfile(c *gin.Context) {
@@ -35,7 +32,7 @@ func CreatePatientProfile(c *gin.Context) {
 
 	var req schemas.UpdatePatientRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ: " + err.Error()})
+		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
 
@@ -56,12 +53,9 @@ func CreatePatientProfile(c *gin.Context) {
 
 	// GORM sẽ cố gắng lưu vào DB. Nếu trùng Bộ 3 (Account + Tên + Ngày sinh), DB sẽ chửi và văng lỗi!
 	if errCreate := config.DB.Create(&newPatient).Error; errCreate != nil {
-		// Kiểm tra xem có phải lỗi do trùng lặp dữ liệu không (Violate Unique Constraint)
-		c.JSON(http.StatusConflict, gin.H{
-			"error": "Hồ sơ cho bệnh nhân này đã tồn tại trong tài khoản của bạn!",
-		})
+		response.Error(c, http.StatusConflict, "Hồ sơ cho bệnh nhân này đã tồn tại trong tài khoản của bạn!", errCreate.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Tạo hồ sơ thành công!", "data": newPatient})
+	response.JSON(c, http.StatusCreated, true, "Tạo hồ sơ thành công!", newPatient, "")
 }

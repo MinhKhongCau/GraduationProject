@@ -5,6 +5,7 @@ import (
 	"profile-service/config"
 	"profile-service/internal/models"
 	"profile-service/internal/schemas"
+	"profile-service/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -13,7 +14,7 @@ import (
 func CreateSpecialization(c *gin.Context) {
 	var req schemas.CreateSpecializationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ: " + err.Error()})
+		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
 
@@ -25,11 +26,11 @@ func CreateSpecialization(c *gin.Context) {
 	}
 
 	if err := config.DB.Create(&newSpec).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi lưu Database!"})
+		response.Error(c, http.StatusInternalServerError, "Lỗi lưu Database!", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Tạo chuyên khoa thành công", "data": newSpec})
+	response.JSON(c, http.StatusCreated, true, "Tạo chuyên khoa thành công", newSpec, "")
 }
 
 // 2. LẤY DANH SÁCH CHUYÊN KHOA (Dùng cho UI để Bác sĩ/Bệnh nhân chọn)
@@ -37,5 +38,5 @@ func GetAllSpecializations(c *gin.Context) {
 	var specs []models.Specialization
 	config.DB.Where("is_active = ?", true).Find(&specs)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Thành công", "data": specs})
+	response.Success(c, "Thành công", specs)
 }

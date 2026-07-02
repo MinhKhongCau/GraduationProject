@@ -1,6 +1,6 @@
 package com.mindcare.auth.config;
 
-import com.mindcare.auth.security.JwtAuthFilter; // Import máy quét thẻ
+import com.mindcare.auth.infrastructure.security.JwtAuthFilter; // Import máy quét thẻ
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
