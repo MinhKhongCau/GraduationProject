@@ -1,0 +1,35 @@
+import { Card } from "@/components/ui";
+import type { AssessmentQuestion } from "@/types";
+
+export interface QuestionStepProps {
+  question: AssessmentQuestion;
+  selectedOptionId?: string;
+  onAnswer: (optionId: string) => void;
+}
+
+export function QuestionStep({ question, selectedOptionId, onAnswer }: QuestionStepProps) {
+  return (
+    <Card className="p-6">
+      <h2 className="mb-5 text-lg font-bold text-foreground">{question.content}</h2>
+      <div className="space-y-2">
+        {question.options
+          .slice()
+          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .map((option) => (
+            <button
+              key={option.optionId}
+              type="button"
+              onClick={() => onAnswer(option.optionId)}
+              className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors ${
+                selectedOptionId === option.optionId
+                  ? "border-primary bg-primary-soft text-primary-soft-text"
+                  : "border-border text-foreground hover:bg-surface"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+      </div>
+    </Card>
+  );
+}
