@@ -1,0 +1,16 @@
+{
+  "patient": {
+    "topics": {
+      "stress": "Stress Management",
+      "anxiety": "Anxiety & Panic",
+      "depression": "Depression",
+      "relationships": "Relationship Issues",
+      "grief": "Grief & Loss",
+      "sleep": "Sleep Problems",
+      "selfEsteem": "Self-Esteem",
+      "trauma": "Trauma & PTSD",
+      "workLife": "Work-Life Balance",
+      "communication": "Communication Skills"
+    }
+  }
+}

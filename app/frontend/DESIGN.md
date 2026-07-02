@@ -1,0 +1,117 @@
+# MindCare Frontend — Design Document
+
+MindCare is the Next.js frontend for a psychological-counseling microservices platform (`app/backend/{auth,booking,profile,payment,assessment}-service`). This document explains the architecture decisions behind the codebase — what to read before making structural changes. For the feature/page inventory and getting-started instructions, see [README.md](./README.md).
+
+The functional spec for the patient/expert/admin flows was migrated from a legacy PHP reference app at `../edoc-doctor-appointment-system` (kept in the repo for context only — it is not run or deployed).
+
+## Tech stack
+
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · TanStack React Query v5 · axios · react-hook-form + zod · Radix UI primitives (Dialog, Dropdown Menu) · Vitest + Testing Library · Capacitor (config only, see below) · `@react-oauth/google`.
+
+**Next.js 16 note**: this version renamed the `middleware.ts` file convention to `proxy.ts` (same purpose — the root `proxy.ts` in this repo, not `middleware.ts`). If you're used to older Next.js docs, check `node_modules/next/dist/docs/` before assuming a convention still applies — see `AGENTS.md`.
+
+## Ground truth about the backend (why some things are mocked)
+
+Roles are `PATIENT` / `EXPERT` / `ADMIN` — this is `auth-service`'s actual `Account.role` enum. Note that `document/API-document.md` and the root Vietnamese `README.md` say `CLIENT` instead of `PATIENT`; the running code is the source of truth here, not those docs.
+
+No API gateway exists yet, so the frontend calls each microservice directly on its own port (see `.env.local.example`). Not every documented endpoint is implemented backend-side yet:
+
+| Area | Status |
+|---|---|
+| auth-service: register/login/refresh/logout/me/profile/change-password | **Implemented** |
+| auth-service: Google OAuth (`POST /auth/google`), forgot/reset password | Documented only — not implemented. The frontend calls them anyway (behind `NEXT_PUBLIC_ENABLE_GOOGLE_AUTH` for Google) and handles the failure gracefully. |
+| profile-service: patient/expert profiles, medical histories, specializations | **Implemented** |
+| payment-service: wallet init/get/top-up/pay/withdraw/process-withdrawal | **Implemented**. No VNPay/MoMo gateway integration exists — it's an internal ledger only. No transaction-history listing endpoint. |
+| booking-service: `GET /slots/available-dates`, `GET /slots/available-times`, `POST /slots/generate` | **Implemented** |
+| booking-service: appointment create/lock, booking history, weekly-schedule POST, leave-requests | Documented only — domain models exist, no HTTP handlers. |
+| clinical records (any service) | Not implemented at all. |
+| chat / messaging (any service) | Not implemented at all (planned as a separate Node/Socket.io service, not present in `app/backend`). |
+
+Wherever a real endpoint doesn't exist, the frontend falls back to an in-memory mock in `/data` (see below) rather than leaving the page broken. This is a deliberate, temporary bridge — as each backend endpoint ships, the corresponding `api/*.ts` function should be pointed at it and its `/data` fallback deleted.
+
+## Folder conventions
+
+```
+app/            Next.js routes only — thin pages that compose page-local components
+constants/      ROUTES, API endpoint paths, nav items, static copy, validation limits
+types/          Request/Response interfaces (PascalCase, Request/Response suffix — see document/code-convention.md)
+api/            axios call functions, one file per backend resource group + the http/ client layer
+hooks/          Custom hooks (useApiQuery/useApiMutation, useAuth, useBreakpoint, ...)
+context/        React context providers (Auth, Error/toast, Locale, React Query)
+data/           In-memory mock data for endpoints not implemented backend-side yet
+router/         Route→role config + the client-side ProtectedRoute guard
+locales/        en/vi translation JSON, one file per feature domain
+components/     Shared/cross-page UI — layout shells (client-shell, admin-shell, landing) and ui/ primitives
+test/           Vitest unit tests
+```
+
+Every barrel is a plain `index.ts` re-export (`export * from './x'`) — `.tsx` is reserved for files that actually author JSX. Each page's own extracted UI pieces live in a sibling `component/` folder (singular), e.g. `app/patient/wallet/component/BalanceCard.tsx`; the top-level `components/` (plural) holds things shared *across* pages, like `ClientShell` or `Button`.
+
+Route segments are named after the real role (`app/patient/`, `app/expert/`, `app/admin/`), not route groups — this is what lets `proxy.ts` and `router/routes.config.ts` do simple prefix matching (`/patient/*` requires `PATIENT`), and avoids a `/dashboard` collision between the patient and expert portals sharing one nav shell. `app/(landing)/` and `app/auth/` are the two segments outside that role-prefix scheme (public).
+
+## API client layer (`api/http/`)
+
+**Five axios instances**, one per backend service (`api/http/instances.ts`), not one shared instance with per-call `baseURL` overrides — each service has an independently movable base URL and, critically, a different JSON casing convention:
+
+- `authClient` (Spring Boot / Jackson) returns **camelCase** JSON.
+- `profileClient`, `paymentClient`, `bookingClient` (Go/Gin) and `assessmentClient` (FastAPI/Pydantic) all return **snake_case** JSON.
+
+`api/http/client.ts`'s `createHttpClient({ baseURL, transformCase })` factory attaches interceptors:
+
+- **Request**: attaches `Authorization: Bearer <token>` from `api/http/session.ts`; if `transformCase`, deep-converts outgoing `camelCase → snake_case`.
+- **Response**: if `transformCase`, deep-converts incoming `snake_case → camelCase` — so every `types/*.ts` interface and every `api/*.ts` call site can stay camelCase (per `document/code-convention.md`) with zero manual per-DTO mapping. The converter lives in `api/http/caseTransform.ts` and is unit-tested in `test/caseTransform.test.ts`.
+- **401 handling**: a de-duplicated refresh-and-retry against `auth-service`'s `/auth/refresh`; on failure, clears the session and redirects to login.
+- **Error normalization**: `api/http/errorNormalizer.ts` always produces `{ message, statusCode, details }`, because backend error shapes are inconsistent — `auth-service`'s register failure is a raw string body, its other failures are `{ message }`, and the Go services use `{ error }`. This normalized shape is the only one `hooks/useApiQuery`/`useApiMutation` and `ErrorContext` ever see.
+- Go services (`profile-service`, at least) wrap list/detail responses as `{ message, data }` — see `ServiceEnvelope<T>` in `types/common.ts`. This is assumed for `payment-service` too since it's the same team/stack, but hasn't been independently confirmed against its source — check if a payment call ever returns unexpectedly-shaped data.
+
+## React Query + automatic error handling
+
+The brief was: page code should only ever handle the success path; errors are handled once, centrally. `hooks/useApiQuery.ts` and `hooks/useApiMutation.ts` wrap `useQuery`/`useMutation` and route every error through `normalizeError()` into `ErrorContext.showError()` (a toast), automatically. Callers only ever pass `onSuccess`.
+
+Two exceptions use plain `useQuery` directly instead: `WalletBadge` (header) and the wallet/medical-history pages' initial profile fetch. A 404 there means "this user hasn't set up a wallet/profile yet" — an expected state, not an error worth toasting on every page load. Real user-initiated actions (top-up, withdraw, profile save) still go through `useApiMutation` and do toast on failure.
+
+React Query v5 note: it removed `onSuccess`/`onError` from `useQuery` — `useApiQuery` replicates `onSuccess` via an internal effect. `useMutation` kept both, but `onError`'s signature grew a 4th parameter (`onMutateResult`) that older tutorials won't mention.
+
+## Auth/session storage — a named tradeoff
+
+There is no BFF or API gateway issuing first-party cookies (`auth-service` is a separate origin), so `accessToken`/`refreshToken`/role are stored in `localStorage` (`api/http/session.ts`, driven by `context/AuthContext.tsx`). A small **non-httpOnly** cookie (`mc_session`, `mc_role` — presence and role only, never the token) is mirrored on login/logout purely so `proxy.ts`, which can only read cookies, can do a coarse, flicker-free redirect before the page renders.
+
+**This cookie provides no XSS protection beyond localStorage** — it's a routing convenience, not a security boundary. The real authorization boundary is each backend service validating the JWT on every request. `router/ProtectedRoute.tsx` is the authoritative client-side guard (exact role check, once `AuthContext` has rehydrated from localStorage); `proxy.ts` + `router/routes.config.ts` is only ever a fast, coarse first line. Production hardening would mean a real BFF (Next.js Route Handlers proxying auth calls) issuing true httpOnly cookies so the JWT never touches client JS — noted here as a deliberate MVP scope cut, not an oversight.
+
+## Responsive "client shell" (`components/layout/client-shell/`)
+
+One shared shell renders three nav variants and lets Tailwind's own breakpoints decide which is visible — no `useMediaQuery`-gated conditional rendering, which would cause a hydration flash (server doesn't know the client's viewport):
+
+- **Desktop** (`lg:` — `DesktopHeaderNav.tsx`): sticky top header with inline horizontal nav links.
+- **Tablet** (`sm:`–`lg:` — `TabletDrawerNav.tsx`): slim top bar with a hamburger that opens a left Radix Dialog sheet.
+- **Mobile** (`<sm:` — `MobileBottomNav.tsx`): fixed bottom tab bar with the 4–5 highest-value nav items (`PATIENT_BOTTOM_NAV_ITEMS`/`EXPERT_BOTTOM_NAV_ITEMS` in `constants/nav.ts`).
+
+`ClientShell` is used by both `app/patient/layout.tsx` and `app/expert/layout.tsx`, each passing its own `navItems`/`settingsItem` — this is the "client" layout the requirements referred to (a shared shell for both patient and expert "clients" of the platform), as distinct from `landing` (public marketing) and `admin` (a separate, desktop-first sidebar layout in `components/layout/admin-shell/`, since admin panels are conventionally desktop tools and weren't worth building a second three-way responsive system for in this pass).
+
+`hooks/useBreakpoint.ts`/`useMediaQuery.ts` still exist (built on `useSyncExternalStore`, SSR-safe) for genuine JS-only behavior that CSS can't express — they are not used to decide what to render in the shell.
+
+## Design tokens (`app/index.css` + `tailwind.config.js`)
+
+Tailwind v4 is CSS-first: `app/index.css`'s `@theme inline` block is the **single real source of truth** for color/radius/shadow tokens (`--color-primary`, `--color-danger`, etc.), migrated from the ad hoc hex values scattered across the original prototype pages. `tailwind.config.js` exists because it was explicitly requested, and is kept intentionally thin — `theme.extend` mirrors the same CSS variables for tooling that expects a JS config, plus a `safelist` for dynamically-built class names Tailwind's static analyzer can't see (e.g. status-pill colors chosen by a JS switch). **Edit `app/index.css` to change a color, not `tailwind.config.js`.**
+
+## i18n (`context/LocaleContext.tsx` + `hooks/useTranslation.ts` + `locales/`)
+
+No URL locale prefixing (`/en/...`, `/vi/...`) — that would double every route under the already-established `/patient`, `/expert`, `/admin` prefix scheme. Instead, `t(key, defaultText, vars?)` takes a **required** English default so every page reads correctly even before a translation exists for a given key — this is why the signature isn't the more familiar `t(key, vars?)`.
+
+The locale is read server-side from the `mc_locale` cookie in `app/layout.tsx` (via `next/headers`'s `cookies()`) and passed into `AppProviders`/`LocaleProvider` as `initialLocale`, so SSR output already matches a returning visitor's saved language — the client only re-detects (via `localStorage`/`navigator.language`) for the one case the server can't see: a first-ever visit with no cookie set yet. Getting this wrong (defaulting to a hardcoded locale in `useState` and only correcting after a `useEffect`) causes a visible flash of the wrong language on every load; this was caught and fixed during development, not by accident.
+
+Dictionaries are split by domain (`locales/{en,vi}/{common,auth,patient,expert,admin,landing}.json`) and statically merged in `locales/index.ts`. Translation coverage is not exhaustive: navigation labels, the booking-topic grid, and the landing page are fully wired through `t()`; most auth/patient/expert page body copy (form labels, headings) is still hardcoded English, tracked as a follow-up in `README.md`. No ICU plural support — only `{{var}}` string interpolation.
+
+## `/data` mock-fallback convention
+
+Each file under `/data` backs exactly the endpoints the "ground truth" table above marks as not implemented — `booking-history.ts` (appointment create/cancel/history, with an in-memory `getNextQueueNumber` matching the legacy PHP app's queue-number-per-session idea, minus its race condition since it's single-threaded JS), `clinical-records.ts`, `schedule.ts` (expert weekly availability), `transactions.ts` (wallet history), `messages.ts` (chat UI), `notifications.ts` (unused this pass, kept for the future `/notifications` page). `experts.ts` is the one exception — it seeds the public landing page's "Featured Experts" section with curated sample data by design, not because the real endpoint is missing (`GET /profiles/experts/` is real and is what `find-experts` actually calls).
+
+Mutations against these mocks (book an appointment, cancel a booking, save a weekly schedule) only persist for the current browser session/module lifetime — a full page reload resets them. This is intentional and documented at each call site; don't mistake it for a bug.
+
+## Known bugs deliberately not carried over from the legacy PHP app
+
+The reference app (`../edoc-doctor-appointment-system`) had: SQL injection via string interpolation, plaintext passwords, auth checks that redirect but don't `exit`/halt (so protected logic still ran), no ownership check before cancelling a booking (any patient could cancel any booking by ID), no capacity check against a session's `nop` limit before booking, and orphaned bookings left behind when a session was deleted. None of these patterns exist in this codebase — every protected route is guarded server-side (whatever backend implements it) and client-side (`ProtectedRoute`), and mock mutations don't skip ownership logic even though nothing currently enforces it across users in the mock layer.
+
+## Capacitor
+
+`@capacitor/core` + `@capacitor/cli` only — `npx cap add ios`/`android` was deliberately not run this pass (see `README.md`). `capacitor.config.ts` points `server.url` at the deployed web app (`NEXT_PUBLIC_APP_URL`) rather than a static export, so it stays compatible with `next.config.ts`'s `output: "standalone"` Docker deploy.
