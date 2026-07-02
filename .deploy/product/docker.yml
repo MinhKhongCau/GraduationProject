@@ -44,7 +44,7 @@ services:
     container_name: mindcare_redis
     restart: always
     expose:
-      - "6379"
+      - "${REDIS_PORT}"
     volumes:
       - redis_data:/data
     networks:
@@ -59,8 +59,8 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     expose:
-      - "5672"
-      - "15672"
+      - "${RABBITMQ_PORT}"
+      - "${RABBITMQ_MANAGEMENT_PORT}"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
