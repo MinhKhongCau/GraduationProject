@@ -1,5 +1,6 @@
 server:
   port: ${PORT:8080} # Mặc định 8081 khi chạy local để không bị đụng với Golang đang chạy cổng 8080
+<<<<<<< HEAD
   forward-headers-strategy: framework
   tomcat:
     remoteip:
@@ -8,6 +9,8 @@ server:
 springdoc:
   cache:
     disabled: true
+=======
+>>>>>>> c59fb14 (làm auth servvice)
 
 spring:
   application:
