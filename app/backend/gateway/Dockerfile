@@ -20,6 +20,9 @@ USER root
 # Copy plugin binary
 COPY --from=builder /mindcare-auth /usr/local/bin/mindcare-auth
 
+# Copy declarative config (routes/plugins)
+COPY kong.yml /usr/local/kong/declarative/kong.yml
+
 # Cấu hình biến môi trường để Kong kích hoạt Go Plugin
 ENV KONG_PLUGINS=bundled,mindcare-auth
 ENV KONG_PLUGINSERVER_NAMES=mindcare-auth
