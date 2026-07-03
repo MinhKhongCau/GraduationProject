@@ -4,7 +4,7 @@ from .database import engine, get_db
 from . import models, schemas
 from .services.ai_service import generate_psychological_advice
 
-app = FastAPI(title="MindCare Assessment Service")
+app = FastAPI(title="MindCare Assessment Service", docs_url="/swagger-ui")
 
 # Lệnh này tương tự như ddl-auto: update bên Spring Boot
 models.Base.metadata.create_all(bind=engine)
@@ -23,6 +23,14 @@ def get_current_user_id(authorization: str = Header(None)):
 def read_root():
     return {
         "message": "Assessment Service is running!"
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "service": "assessment-service",
+        "status": "up and running"
     }
 
 
