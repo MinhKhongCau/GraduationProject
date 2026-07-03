@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// 3.5. Swagger endpoint
-	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 4. Health check API
 	router.GET("/health", func(c *gin.Context) {

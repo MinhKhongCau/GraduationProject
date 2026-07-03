@@ -9,7 +9,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "profile-service/docs" // Ignore error if it doesn't exist yet
 )
+
+// @title Profile Service API
+// @version 1.0
+// @description Hồ sơ người dùng (Patient/Expert) - MindCare
+// @BasePath /api/v1/profiles
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 
 func main() {
 	// 1. Load biến môi trường từ file .env
@@ -25,9 +37,19 @@ func main() {
 
 	routes.SetupRoutes(r)
 
+	// Swagger endpoint
+	r.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "Profile Service is running smoothly!",
+		})
+	})
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"service": "profile-service",
+			"status":  "up and running",
 		})
 	})
 

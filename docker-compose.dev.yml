@@ -1,51 +1,97 @@
-version: "3.9"
-
 services:
-
-  # ================== POSTGRES ==================
-  postgres:
-    image: postgres:16
-    container_name: postgres-db
+  # 1. FRONTEND SERVICE (Next.js)
+  frontend:
+    build:
+      context: ./app/frontend
+      dockerfile: Dockerfile
+    container_name: frontend-app
     restart: always
-
-    environment:
-      # format: psychology_<service name>_db
-      POSTGRES_DB: psychology_assessment_db
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin
-
     ports:
-      - "5432:5432"
-
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
+      - "${PORT_FRONTEND}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
     networks:
       - app-network
 
-  # ================== REDIS ==================
+  # 2. POSTGRES DATABASE (shared by all services)
+  postgres-db:
+    image: postgres:16
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PROFILE_DB_NAME: ${PROFILE_DB_NAME}
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME}
+      BOOKING_DB_NAME: ${BOOKING_DB_NAME}
+      ASSESSMENT_DB_NAME: ${ASSESSMENT_DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # 3. REDIS
   redis:
     image: redis:7-alpine
     container_name: mindcare_redis
+    restart: always
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - app-network
 
-  # ================== RABBITMQ ==================
+  # 4. RABBITMQ
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: mindcare_rabbitmq
+    restart: always
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
 
-  # ================== PROFILE SERVICE ==================
+  # 5. AUTH SERVICE (Java / Spring Boot)
+  auth-service:
+    build:
+      context: ./app/backend/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    restart: always
+    ports:
+      - "${PORT_AUTH_SERVICE}:${PORT_AUTH_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${AUTH_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_AUTH_SERVICE}
+
+  # 6. GO SERVICES (Profile, Payment, Booking)
   profile-service:
     build:
       context: ./app/backend/profile-service
@@ -53,23 +99,107 @@ services:
     container_name: profile-service
     restart: always
     ports:
-      - "8081:8081"
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=admin
-      - DB_PASSWORD=admin
-      - DB_NAME=psychology_assessment_db
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_PORT=5672
-      - RABBITMQ_USER=admin
-      - RABBITMQ_PASSWORD=admin123
+      - "${PORT_PROFILE_SERVICE}:${PORT_PROFILE_SERVICE}"
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${PROFILE_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_PROFILE_SERVICE}
+
+  payment-service:
+    build:
+      context: ./app/backend/payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    restart: always
+    ports:
+      - "${PORT_PAYMENT_SERVICE}:${PORT_PAYMENT_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
+      - PORT=${PORT_PAYMENT_SERVICE}
+
+  booking-service:
+    build:
+      context: ./app/backend/booking-service
+      dockerfile: Dockerfile
+    container_name: booking-service
+    restart: always
+    ports:
+      - "${PORT_BOOKING_SERVICE}:${PORT_BOOKING_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - BOOKING_DB_NAME=${BOOKING_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_BOOKING_SERVICE}
+
+  # 7. ASSESSMENT SERVICE (Python)
+  assessment-service:
+    build:
+      context: ./app/backend/assessment-service
+      dockerfile: Dockerfile
+    container_name: assessment-service
+    restart: always
+    ports:
+      - "${PORT_ASSESSMENT_SERVICE}:${PORT_ASSESSMENT_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - ENV=${APP_ENV}
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${ASSESSMENT_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_ASSESSMENT_SERVICE}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
+  # 8. API GATEWAY (Kong)
+  api-gateway:
+    build:
+      context: ./app/backend/gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: always
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+    ports:
+      - "${PORT_API_GATEWAY}:8000"
+    depends_on:
+      - auth-service
+      - profile-service
+      - payment-service
+      - booking-service
+      - assessment-service
     networks:
       - app-network
 

@@ -9,14 +9,27 @@ services:
         paths:
           - /api/v1/auth
         strip_path: false
+      - name: auth-docs-routes
+        paths:
+          - /auth
+        strip_path: true
+      - name: auth-docs-spec-routes
+        # springdoc luôn nạp spec từ path tuyệt đối "/v3/api-docs"
+        paths:
+          - /v3/api-docs
+        strip_path: false
 
   - name: profile-service
     url: http://profile-upstream
     routes:
       - name: profile-routes
         paths:
-          - /api/v1/profile
+          - /api/v1/profiles
         strip_path: false
+      - name: profile-docs-routes
+        paths:
+          - /profile
+        strip_path: true
 
   - name: payment-service
     url: http://payment-upstream
@@ -25,6 +38,10 @@ services:
         paths:
           - /api/v1/payment
         strip_path: false
+      - name: payment-docs-routes
+        paths:
+          - /payment
+        strip_path: true
 
   - name: booking-service
     url: http://booking-upstream
@@ -43,6 +60,10 @@ services:
           - name: mindcare-auth
             config:
               jwt_secret: "my_super_secret_key_12345678901234567890"
+      - name: booking-docs-routes
+        paths:
+          - /booking
+        strip_path: true
 
   - name: assessment-service
     url: http://assessment-upstream
@@ -51,12 +72,21 @@ services:
         paths:
           - /api/v1/assessments
         strip_path: false
+      - name: assessment-docs-routes
+        paths:
+          - /assessment
+        strip_path: true
+      - name: assessment-docs-spec-routes
+        # FastAPI luôn nạp openapi.json/redoc từ path tuyệt đối
+        paths:
+          - /openapi.json
+          - /redoc
+        strip_path: false
 
 upstreams:
   - name: auth-upstream
     targets:
       - target: auth-service:8080
-      - target: host.docker.internal:8080 # Fallback cho chạy local ngoài Docker
     healthchecks:
       active:
         type: http
@@ -75,7 +105,6 @@ upstreams:
   - name: profile-upstream
     targets:
       - target: profile-service:8081
-      - target: host.docker.internal:8081
     healthchecks:
       active:
         type: http
@@ -91,7 +120,6 @@ upstreams:
   - name: payment-upstream
     targets:
       - target: payment-service:8082
-      - target: host.docker.internal:8082
     healthchecks:
       active:
         type: http
@@ -107,7 +135,6 @@ upstreams:
   - name: booking-upstream
     targets:
       - target: booking-service:8083
-      - target: host.docker.internal:8083
     healthchecks:
       active:
         type: http
@@ -123,7 +150,6 @@ upstreams:
   - name: assessment-upstream
     targets:
       - target: assessment-service:5000
-      - target: host.docker.internal:5000
     healthchecks:
       active:
         type: http
