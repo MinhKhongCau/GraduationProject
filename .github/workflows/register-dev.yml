@@ -37,6 +37,10 @@ jobs:
             context: ./app/backend/assessment-service
             dockerfile: ./app/backend/assessment-service/Dockerfile
             image-tag: assessment-service-dev
+          - service-name: api-gateway
+            context: ./app/backend/gateway
+            dockerfile: ./app/backend/gateway/Dockerfile
+            image-tag: api-gateway-dev
 
     steps:
       - name: Checkout Code
