@@ -38,11 +38,18 @@ func main() {
 	routes.SetupRoutes(r)
 
 	// Swagger endpoint
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "Payment Service is running smoothly!",
+		})
+	})
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"service": "payment-service",
+			"status":  "up and running",
 		})
 	})
 
