@@ -9,6 +9,8 @@ import (
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	_ "time/tzdata"
 )
 
 // Khai báo một biến toàn cục để chứa kết nối DB
