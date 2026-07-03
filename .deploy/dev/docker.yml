@@ -123,7 +123,7 @@ services:
       - app-network
     environment:
       - GO_ENV=${APP_ENV}
-      - DB_URL=${DB_HOST}
+      - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${PAYMENT_DB_NAME}
@@ -144,10 +144,10 @@ services:
       - app-network
     environment:
       - GO_ENV=${APP_ENV}
-      - DB_URL=${DB_HOST}
+      - DB_HOST=${DB_HOST}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${BOOKING_DB_NAME}
+      - BOOKING_DB_NAME=${BOOKING_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_BOOKING_SERVICE}
