@@ -174,6 +174,26 @@ services:
       - PORT=${PORT_ASSESSMENT_SERVICE}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
 
+  # 8. API GATEWAY (Kong)
+  api-gateway:
+    image: ${DOCKERHUB_USERNAME}/api-gateway-dev:latest
+    container_name: api-gateway
+    restart: always
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+    ports:
+      - "${PORT_API_GATEWAY}:8000"
+    depends_on:
+      - auth-service
+      - profile-service
+      - payment-service
+      - booking-service
+      - assessment-service
+    networks:
+      - app-network
+
 volumes:
   postgres_data:
   redis_data:
