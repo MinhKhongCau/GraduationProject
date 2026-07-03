@@ -100,6 +100,30 @@ jobs:
         working-directory: ./app/backend/auth-service
         run: ./mvnw clean package
 
+  build-gateway:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache: true
+          cache-dependency-path: app/backend/gateway/go-plugins/mindcare-auth/go.sum
+
+      - name: Build Go Plugin
+        working-directory: ./app/backend/gateway/go-plugins/mindcare-auth
+        run: go build -v ./...
+
+      - name: Test Go Plugin
+        working-directory: ./app/backend/gateway/go-plugins/mindcare-auth
+        run: go test -v ./...
+
+      - name: Build Gateway Docker Image
+        run: docker build -f ./app/backend/gateway/Dockerfile -t api-gateway:ci ./app/backend/gateway
+
   build-assessment-service:
     runs-on: ubuntu-latest
 
