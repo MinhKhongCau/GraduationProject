@@ -1,13 +1,18 @@
 package domain
 
-// AppointmentStatus - Trạng thái cuộc hẹn (Enum)
-type AppointmentStatus string
+type AppointmentStatus int
 
 const (
-	AppointmentStatusPendingPayment AppointmentStatus = "PENDING_PAYMENT"
-	AppointmentStatusConfirmed      AppointmentStatus = "CONFIRMED"
-	AppointmentStatusCancelled      AppointmentStatus = "CANCELLED"
+	// iota sẽ tự động tăng từ 0, 1, 2...
+	AppointmentStatusPendingPayment AppointmentStatus = iota // 0
+	AppointmentStatusConfirmed                               // 1
+	AppointmentStatusCancelled                               // 2
 )
+
+// Viết thêm hàm String() để khi cần in log hoặc trả JSON về client vẫn ra chuỗi tường minh
+func (s AppointmentStatus) String() string {
+	return [...]string{"PENDING_PAYMENT", "CONFIRMED", "CANCELLED"}[s]
+}
 
 // Appointment - Cuộc hẹn đã đặt
 type Appointment struct {
