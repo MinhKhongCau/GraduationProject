@@ -1,7 +1,7 @@
-package com.mindcare.auth.security;
+package com.mindcare.auth.infrastructure.security;
 
 import com.mindcare.auth.domain.entity.Account;
-import com.mindcare.auth.repository.AccountRepository;
+import com.mindcare.auth.application.port.out.AccountPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
@@ -16,19 +16,19 @@ import java.util.Collections;
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
 
-    private final AccountRepository accountRepository;
+    private final AccountPort accountPort;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        // Lấy thông tin user từ DB của chúng ta
-        Account account = accountRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy email: " + email));
+        // Láº¥y thÃ´ng tin user tá»« DB cá»§a chÃºng ta
+        Account account = accountPort.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("KhÃ´ng tÃ¬m tháº¥y email: " + email));
 
-        // Chuyển đổi sang định dạng mà Spring Security hiểu được
+        // Chuyá»ƒn Ä‘á»•i sang Ä‘á»‹nh dáº¡ng mÃ  Spring Security hiá»ƒu Ä‘Æ°á»£c
         return new User(
                 account.getEmail(),
                 account.getPasswordHash(),
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + account.getRole()))
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + account.getRole().name()))
         );
     }
 }

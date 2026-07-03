@@ -28,7 +28,7 @@ public class JwtUtils {
     // 1. Hàm in Access Token
     public String generateAccessToken(Account account) {
         Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", account.getRole());
+        extraClaims.put("role", account.getRole().name());
         extraClaims.put("accountId", account.getAccountId().toString()); // Đính kèm ID để Booking Service biết ai đang gọi
         
         return buildToken(extraClaims, account.getEmail(), jwtExpiration);
