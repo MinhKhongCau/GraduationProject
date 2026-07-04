@@ -175,13 +175,13 @@ func (h *AppointmentHandler) HandlePaymentWebhook(c *gin.Context) {
 		}
 		response.Success(c, "Xác nhận thanh toán thành công! Lịch hẹn đã được xác nhận.", gin.H{
 			"appointment_id": req.AppointmentID,
-			"status":         string(domain.AppointmentStatusConfirmed),
+			"status":         domain.AppointmentStatusConfirmed.String(),
 		})
 	} else {
 		// Thanh toán thất bại: Mở lock tức thì (Worker sẽ dọn định kỳ nếu miss)
 		response.Success(c, "Đã nhận thông báo thanh toán thất bại. Slot sẽ được mở lại sau ít phút.", gin.H{
 			"appointment_id": req.AppointmentID,
-			"status":         string(domain.AppointmentStatusCancelled),
+			"status":         domain.AppointmentStatusCancelled.String(),
 		})
 	}
 }
