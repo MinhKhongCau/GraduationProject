@@ -80,7 +80,7 @@ class OptionResponse(BaseModel):
 class QuestionWithOptionsResponse(BaseModel):
     question_id: uuid.UUID
     content: str
-    dimension: str
+    dimension: Optional[str] = None
     question_order: int
     options: list[OptionResponse]
 

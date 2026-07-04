@@ -1,3 +1,5 @@
+import uuid
+
 from fastapi import FastAPI, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from .database import engine, get_db
@@ -7,7 +9,7 @@ from .services.ai_service import generate_psychological_advice
 app = FastAPI(title="MindCare Assessment Service", docs_url="/swagger-ui")
 
 # Lệnh này tương tự như ddl-auto: update bên Spring Boot
-models.Base.metadata.create_all(bind=engine)
+# models.Base.metadata.create_all(bind=engine)
 
 
 def get_current_user_id(authorization: str = Header(None)):
@@ -228,7 +230,7 @@ def submit_assessment(
 def get_all_templates(db: Session = Depends(get_db)):
     templates = (
         db.query(models.AssessTemplate)
-        .filter(models.AssessTemplate.is_active is True)
+        .filter(models.AssessTemplate.is_active.is_(True))
         .all()
     )
     return templates
@@ -242,9 +244,21 @@ def get_all_templates(db: Session = Depends(get_db)):
     response_model=list[schemas.QuestionWithOptionsResponse]
 )
 def get_questions_by_template(
-    template_id: str,
+    template_id: uuid.UUID,
     db: Session = Depends(get_db)
 ):
+    # 0. Kiểm tra bài test có tồn tại không
+    db_template = (
+        db.query(models.AssessTemplate)
+        .filter(models.AssessTemplate.template_id == template_id)
+        .first()
+    )
+    if not db_template:
+        raise HTTPException(
+            status_code=404,
+            detail="Lỗi: Không tìm thấy bài test này!"
+        )
+
     # 1. Lấy tất cả câu hỏi thuộc bài test này, sắp xếp theo thứ tự
     questions = (
         db.query(models.AssessQuestion)
