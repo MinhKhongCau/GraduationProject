@@ -3,7 +3,7 @@
 # ========================
 node_modules/
 .next/
-out/
+/out/
 npm-debug.log
 yarn-error.log
 .env.local

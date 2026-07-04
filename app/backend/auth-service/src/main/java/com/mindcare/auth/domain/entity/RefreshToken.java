@@ -40,9 +40,13 @@ public class RefreshToken {
     private Boolean isRevoked = false;
 
     @Column(name = "expires_at")
-    private LocalDateTime expiresAt;
+    private Long expiresAt;
 
-    @CreationTimestamp
     @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    private Long createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = System.currentTimeMillis();
+    }
 }

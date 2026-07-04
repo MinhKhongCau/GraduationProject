@@ -1,0 +1,146 @@
+services:
+  # 1. POSTGRES DATABASE (shared by backend services)
+  postgres-db:
+    image: postgres:16
+    container_name: postgres-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PAYMENT_DB_NAME: ${PAYMENT_DB_NAME}
+      BOOKING_DB_NAME: ${BOOKING_DB_NAME}
+    ports:
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # 2. REDIS
+  redis:
+    image: redis:7-alpine
+    container_name: mindcare_redis
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+  # 3. RABBITMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: mindcare_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+
+  # 4. AUTH SERVICE (Java / Spring Boot)
+  auth-service:
+    build:
+      context: ./app/backend/auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    restart: always
+    ports:
+      - "${PORT_AUTH_SERVICE}:${PORT_AUTH_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - DB_URL=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${AUTH_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_AUTH_SERVICE}
+
+  # 5. GO SERVICES (Payment, Booking)
+  payment-service:
+    build:
+      context: ./app/backend/payment-service
+      dockerfile: Dockerfile
+    container_name: payment-service
+    restart: always
+    ports:
+      - "${PORT_PAYMENT_SERVICE}:${PORT_PAYMENT_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
+      - PORT=${PORT_PAYMENT_SERVICE}
+
+  booking-service:
+    build:
+      context: ./app/backend/booking-service
+      dockerfile: Dockerfile
+    container_name: booking-service
+    restart: always
+    ports:
+      - "${PORT_BOOKING_SERVICE}:${PORT_BOOKING_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - BOOKING_DB_NAME=${BOOKING_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_BOOKING_SERVICE}
+
+  # 6. API GATEWAY (Kong)
+  api-gateway:
+    build:
+      context: ./app/backend/gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: always
+    environment:
+      - KONG_DATABASE=off
+      - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
+      - KONG_PROXY_LISTEN=0.0.0.0:8000
+    ports:
+      - "${PORT_API_GATEWAY}:8000"
+    depends_on:
+      - auth-service
+      - payment-service
+      - booking-service
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+
+networks:
+  app-network:
+    driver: bridge
