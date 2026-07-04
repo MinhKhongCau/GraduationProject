@@ -30,13 +30,4 @@ public class SwaggerConfig {
                                 .bearerFormat("JWT")));
     }
 
-    @Bean
-    public OpenApiCustomizer dynamicServerDescriptionCustomizer() {
-        return openApi -> {
-            io.swagger.v3.oas.models.servers.Server server = new io.swagger.v3.oas.models.servers.Server();
-            server.setUrl("/");
-            server.setDescription("Default Gateway Server");
-            openApi.setServers(java.util.List.of(server));
-        };
-    }
 }
