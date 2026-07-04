@@ -57,7 +57,7 @@ public class DataSeeder implements CommandLineRunner {
                     .dateOfBirth(LocalDate.of(1990, 1, 1))
                     .build();
             accountPort.save(admin);
-            log.info("Created Admin Account: admin@mindcare.com / Admin123!");
+            log.info("Created Admin Account: admin@mindcare.com / admin@mindcare.com");
 
             // 2. EXPERT
             Account expert = Account.builder()
@@ -70,7 +70,7 @@ public class DataSeeder implements CommandLineRunner {
                     .dateOfBirth(LocalDate.of(1985, 5, 15))
                     .build();
             accountPort.save(expert);
-            log.info("Created Expert Account: expert@mindcare.com / Expert123!");
+            log.info("Created Expert Account: expert@mindcare.com / expert@mindcare.com");
 
             // 3. PATIENT
             Account patient = Account.builder()
@@ -83,7 +83,7 @@ public class DataSeeder implements CommandLineRunner {
                     .dateOfBirth(LocalDate.of(2000, 10, 10))
                     .build();
             accountPort.save(patient);
-            log.info("Created Patient Account: patient@mindcare.com / Patient123!");
+            log.info("Created Patient Account: patient@mindcare.com / patient@mindcare.com");
             
             log.info("===========================================");
         }
