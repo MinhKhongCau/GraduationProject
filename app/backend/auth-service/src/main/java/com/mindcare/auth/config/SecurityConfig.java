@@ -1,6 +1,6 @@
 package com.mindcare.auth.config;
 
-import com.mindcare.auth.security.JwtAuthFilter; // Import máy quét thẻ
+import com.mindcare.auth.infrastructure.security.JwtAuthFilter; // Import máy quét thẻ
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,12 +34,24 @@ public class SecurityConfig {
             // Chuẩn Microservices: Không lưu trạng thái Session (Stateless)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Cửa mở tự do cho các API Auth
-                .requestMatchers("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
                 // Health check cho Kong Gateway, không cần token
                 .requestMatchers("/health").permitAll()
                 // Swagger UI / OpenAPI docs, không cần token
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                .requestMatchers(
+                    "/api/v1/auth/register", 
+                    "/api/v1/auth/login", 
+                    "/api/v1/auth/refresh", 
+                    "/api/v1/auth/logout",
+                    "/api/v1/auth/verify-email",
+                    "/api/v1/auth/resend-verification",
+                    "/api/v1/auth/forgot-password",
+                    "/api/v1/auth/reset-password",
+                    "/api/v1/auth/test-gateway",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/swagger-ui.html"
+                ).permitAll()
                 // Tất cả các cửa khác phải quét thẻ
                 .anyRequest().authenticated()
             );
