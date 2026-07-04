@@ -9,7 +9,9 @@ import io.swagger.v3.oas.annotations.servers.Server;
 @SpringBootApplication
 @OpenAPIDefinition(
 		servers = {
-				@Server(url = "/", description = "Default Gateway Server")
+				@Server(url = "https://api.qmcloud.io.vn", description = "Cloud API Gateway (Production)"),
+				@Server(url = "http://localhost:8000", description = "Local API Gateway (Docker)"),
+				@Server(url = "http://localhost:8080", description = "Local Auth Service (Direct)")
 		}
 )
 public class AuthServiceApplication {
