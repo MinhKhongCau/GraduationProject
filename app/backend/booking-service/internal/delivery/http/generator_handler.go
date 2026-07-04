@@ -26,17 +26,46 @@ func NewGeneratorHandler(repo *postgres.GeneratorRepository) *GeneratorHandler {
 	return &GeneratorHandler{repo: repo}
 }
 
-// HandleGenerateSlots là hàm xử lý khi có request POST gọi tới
+// HandleGenerateSlots - POST /api/v1/slots/generate
+// Phân quyền: Chỉ EXPERT mới được phép sinh lịch cho chính mình
+//
+//	@Summary      Sinh lịch khám tự động cho chuyên gia
+//	@Description  Expert tự kích hoạt để hệ thống sinh slot trong N ngày tới dựa trên cấu hình lịch rảnh
+//	@Tags         Slots
+//	@Accept       json
+//	@Produce      json
+//	@Security     BearerAuth
+//	@Param        body  body      GenerateRequest  true  "Expert ID và số ngày cần sinh"
+//	@Success      200   {object}  map[string]interface{}
+//	@Failure      400   {object}  map[string]interface{}
+//	@Failure      403   {object}  map[string]interface{}
+//	@Failure      500   {object}  map[string]interface{}
+//	@Router       /slots/generate [post]
 func (h *GeneratorHandler) HandleGenerateSlots(c *gin.Context) {
+	// ---- PHÂN QUYỀN: Chỉ EXPERT được sinh lịch ----
+	userRole := c.GetHeader("X-User-Role")
+	if userRole != "EXPERT" {
+		response.Error(c, http.StatusForbidden, "Chỉ chuyên gia mới có quyền sinh lịch", "Forbidden")
+		return
+	}
+
+	callerID := c.GetHeader("X-User-Id")
+
 	var req GenerateRequest
 
-	// 1. Kiểm tra dữ liệu đầu vào xem có đúng chuẩn không
+	// Kiểm tra dữ liệu đầu vào
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
 
-	// 2. Lấy nguyên liệu từ Database (Repository)
+	// ---- PHÂN QUYỀN: Expert chỉ được sinh lịch cho chính mình ----
+	if callerID != req.ExpertID {
+		response.Error(c, http.StatusForbidden, "Bạn không thể sinh lịch thay cho chuyên gia khác", "Forbidden")
+		return
+	}
+
+	// Lấy nguyên liệu từ Database (Repository)
 	avails, err := h.repo.GetAvailabilities(req.ExpertID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Lỗi khi lấy lịch rảnh", err.Error())
@@ -55,7 +84,7 @@ func (h *GeneratorHandler) HandleGenerateSlots(c *gin.Context) {
 		return
 	}
 
-	// 3. Đưa nguyên liệu vào máy xay (Usecase - Hàm Goroutines siêu tốc)
+	// Đưa nguyên liệu vào máy xay (Usecase - Goroutines sinh lịch song song)
 	generatedSlots, err := usecase.GenerateSlotsForNextDays(req.ExpertID, req.DaysToGenerate, avails, templates, timeOffs)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Lỗi thuật toán cắt lịch", err.Error())
@@ -67,14 +96,13 @@ func (h *GeneratorHandler) HandleGenerateSlots(c *gin.Context) {
 		return
 	}
 
-	// 4. Lưu toàn bộ sản phẩm xuống Database bằng lệnh Bulk Insert
+	// Lưu xuống Database bằng Bulk Insert + ON CONFLICT DO NOTHING (Idempotent)
 	if err := h.repo.BulkInsertSlots(generatedSlots); err != nil {
 		response.Error(c, http.StatusInternalServerError, "Lỗi khi lưu lịch xuống DB", err.Error())
 		return
 	}
 
-	// 5. Trả kết quả thành công!
-	response.Success(c, "Sinh lịch thành công rực rỡ!", gin.H{
+	response.Success(c, "Sinh lịch thành công!", gin.H{
 		"expert_id":     req.ExpertID,
 		"slots_created": len(generatedSlots),
 	})
