@@ -33,18 +33,10 @@ public class SwaggerConfig {
     @Bean
     public OpenApiCustomizer dynamicServerDescriptionCustomizer() {
         return openApi -> {
-            if (openApi.getServers() != null) {
-                openApi.getServers().forEach(server -> {
-                    String url = server.getUrl();
-                    if (url != null) {
-                        if (url.contains(":8000")) {
-                            server.setDescription("API Gateway (Port 8000)");
-                        } else if (url.contains(":8080")) {
-                            server.setDescription("Auth Service Direct (Port 8080)");
-                        }
-                    }
-                });
-            }
+            io.swagger.v3.oas.models.servers.Server server = new io.swagger.v3.oas.models.servers.Server();
+            server.setUrl("/");
+            server.setDescription("Default Gateway Server");
+            openApi.setServers(java.util.List.of(server));
         };
     }
 }
