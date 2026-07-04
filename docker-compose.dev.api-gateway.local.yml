@@ -1,0 +1,63 @@
+name: "dev-booking-local"
+
+# =======================================================================
+# Docker Compose - Local Dev | Booking Service
+# =======================================================================
+# Chỉ chạy DUY NHẤT Kong Gateway.
+# File kong.yml GỐC được dùng nguyên vẹn — không tách file, không sửa gì.
+#
+# Cơ chế:
+#   kong.yml luôn gọi service qua tên ảo nội bộ (vd: booking-service:8083).
+#   Docker Compose dùng "extra_hosts" để phân giải tên đó về đúng địa chỉ thật:
+#
+#     booking-service  → host-gateway (máy của bạn, port 8083)
+#     auth/profile/... → Kong không cần giải quyết local,
+#                        developer lấy JWT từ Cloud rồi dùng thẳng.
+#
+# Luồng test:
+#   1. Lấy JWT: POST https://api.qmcloud.io.vn/api/v1/auth/login
+#   2. Chạy Booking Go: go run ./cmd/api       (port 8083)
+#   3. Chạy file này:   docker compose -f docker-compose.dev.booking.yml up -d
+#   4. Gọi API:         http://localhost:8000/api/v1/slots/available-dates
+#      (Kèm header:     Authorization: Bearer <JWT lấy ở bước 1>)
+#
+# Swagger Booking (truy cập thẳng, không qua Kong):
+#   http://localhost:8083/swagger/index.html
+# =======================================================================
+
+services:
+  api-gateway:
+    image: ${DOCKERHUB_USERNAME:-mindcare}/api-gateway-dev:latest
+    container_name: kong-local-dev
+
+    ports:
+      - "8000:8000"   # Kong Proxy  → http://localhost:8000
+      - "8001:8001"   # Kong Admin  → http://localhost:8001 (debug)
+
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: "0.0.0.0:8001"
+      KONG_PROXY_LISTEN: "0.0.0.0:8000"
+      KONG_PLUGINS: "bundled,mindcare-auth"
+      KONG_PLUGINSERVER_NAMES: "mindcare-auth"
+      KONG_PLUGINSERVER_MINDCARE_AUTH_QUERY_CMD: "/usr/local/bin/mindcare-auth -dump"
+      KONG_PLUGINSERVER_MINDCARE_AUTH_START_CMD: "/usr/local/bin/mindcare-auth"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+
+    volumes:
+      # Dùng nguyên file kong.yml gốc, KHÔNG cần file riêng
+      - ./app/backend/gateway/kong.yml:/usr/local/kong/declarative/kong.yml:ro
+
+    extra_hosts:
+      # "booking-service" trong kong.yml sẽ được Docker DNS phân giải
+      # về địa chỉ máy host (nơi Go service đang chạy ở port 8083).
+      # Các service khác (auth, profile...) sẽ không resolve được local
+      # → developer dùng JWT lấy từ Cloud để test, hoàn toàn bình thường.
+      - "booking-service:host-gateway"
+
+    restart: unless-stopped

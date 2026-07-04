@@ -59,7 +59,7 @@ services:
         plugins:
           - name: mindcare-auth
             config:
-              jwt_secret: "my_super_secret_key_12345678901234567890"
+              jwt_secret: "${JWT_SECRET_KEY}"
       - name: booking-docs-routes
         paths:
           - /booking
