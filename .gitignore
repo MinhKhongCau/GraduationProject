@@ -25,3 +25,5 @@ build/
 *.tar.gz
 *.tar.bz2
 *.tar.xz
+*.env
+docker-compose.dev.huy.yml
