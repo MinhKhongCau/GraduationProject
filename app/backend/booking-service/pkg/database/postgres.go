@@ -37,7 +37,6 @@ func ConnectDB() {
 	}
 	dbname := os.Getenv("BOOKING_DB_NAME")
 	if dbname == "" {
-		// Mặc định dùng chung DB được khởi tạo trong docker-compose.dev.yml
 		dbname = "psychology_assessment_db"
 	}
 	sslmode := os.Getenv("DB_SSLMODE")
@@ -55,8 +54,11 @@ func ConnectDB() {
 
 	fmt.Println("✅ Successfully connected to PostgreSQL!")
 
-	// --- BẠN PASTE ĐOẠN NÀY VÀO ĐÂY ---
-	fmt.Println("⏳ Running database migrations...")
+	// Chạy pre-migration để xử lý các thay đổi kiểu dữ liệu mà AutoMigrate không tự làm được.
+	// Hàm này an toàn để chạy nhiều lần: nó kiểm tra kiểu cột hiện tại trước khi ALTER.
+	runPreMigrations(database)
+
+	fmt.Println("⏳ Running AutoMigrate...")
 	err = database.AutoMigrate(
 		&domain.TimeTemplate{},
 		&domain.Availability{},
@@ -71,6 +73,97 @@ func ConnectDB() {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
-	fmt.Println("✅ 7 Database tables migrated successfully!")
+	fmt.Println("✅ Database migrated successfully!")
 	DB = database
+}
+
+// runPreMigrations xử lý các thay đổi kiểu cột mà AutoMigrate không thể tự cast.
+// Mỗi bước đều kiểm tra kiểu cột hiện tại trước → an toàn khi chạy nhiều lần (idempotent).
+func runPreMigrations(db *gorm.DB) {
+	fmt.Println("🔄 Running pre-migrations (column type fixes)...")
+
+	// 1. Chuyển Booking_Expert_Slots.status: varchar → smallint
+	//    Lý do: Code dùng enum int (0=AVAILABLE, 1=LOCKED, 2=OCCUPIED)
+	if isColumnType(db, "Booking_Expert_Slots", "status", "character varying") {
+		fmt.Println("   → Migrating Booking_Expert_Slots.status: varchar → smallint")
+		err := db.Exec(`
+			ALTER TABLE "Booking_Expert_Slots"
+			  ALTER COLUMN status TYPE smallint
+			  USING CASE status
+			    WHEN 'AVAILABLE' THEN 0
+			    WHEN 'LOCKED'    THEN 1
+			    WHEN 'OCCUPIED'  THEN 2
+			    ELSE 0
+			  END
+		`).Error
+		if err != nil {
+			log.Fatalf("Pre-migration failed (Slots.status): %v", err)
+		}
+		db.Exec(`ALTER TABLE "Booking_Expert_Slots" ALTER COLUMN status SET DEFAULT 0`)
+		fmt.Println("   ✅ Done.")
+	}
+
+	// 2. Chuyển Booking_Appointments.status: varchar → smallint
+	//    Lý do: Code dùng enum int (0=PENDING_PAYMENT, 1=CONFIRMED, 2=CANCELLED)
+	if isColumnType(db, "Booking_Appointments", "status", "character varying") {
+		fmt.Println("   → Migrating Booking_Appointments.status: varchar → smallint")
+		err := db.Exec(`
+			ALTER TABLE "Booking_Appointments"
+			  ALTER COLUMN status TYPE smallint
+			  USING CASE status
+			    WHEN 'PENDING_PAYMENT' THEN 0
+			    WHEN 'CONFIRMED'       THEN 1
+			    WHEN 'CANCELLED'       THEN 2
+			    ELSE 0
+			  END
+		`).Error
+		if err != nil {
+			log.Fatalf("Pre-migration failed (Appointments.status): %v", err)
+		}
+		db.Exec(`ALTER TABLE "Booking_Appointments" ALTER COLUMN status SET DEFAULT 0`)
+		fmt.Println("   ✅ Done.")
+	}
+
+	// 3. Chuyển Booking_Expert_Time_Off.start_datetime & end_datetime: timestamp → bigint (Unix ms)
+	if isColumnType(db, "Booking_Expert_Time_Off", "start_datetime", "timestamp with time zone") {
+		fmt.Println("   → Migrating Booking_Expert_Time_Off: timestamp → bigint (Unix ms)")
+		err := db.Exec(`
+			ALTER TABLE "Booking_Expert_Time_Off"
+			  ALTER COLUMN start_datetime TYPE bigint
+			  USING EXTRACT(EPOCH FROM start_datetime)::bigint * 1000
+		`).Error
+		if err != nil {
+			log.Fatalf("Pre-migration failed (TimeOff.start_datetime): %v", err)
+		}
+		err = db.Exec(`
+			ALTER TABLE "Booking_Expert_Time_Off"
+			  ALTER COLUMN end_datetime TYPE bigint
+			  USING EXTRACT(EPOCH FROM end_datetime)::bigint * 1000
+		`).Error
+		if err != nil {
+			log.Fatalf("Pre-migration failed (TimeOff.end_datetime): %v", err)
+		}
+		fmt.Println("   ✅ Done.")
+	}
+
+	fmt.Println("✅ Pre-migrations completed.")
+}
+
+// isColumnType kiểm tra kiểu dữ liệu hiện tại của một cột trong DB.
+// Trả về true nếu cột đang có kiểu dữ liệu khớp với expectedType.
+// Dùng để đảm bảo pre-migration chỉ chạy khi thực sự cần, an toàn khi restart nhiều lần.
+func isColumnType(db *gorm.DB, tableName, columnName, expectedType string) bool {
+	var dataType string
+	err := db.Raw(`
+		SELECT data_type
+		FROM information_schema.columns
+		WHERE table_name = ? AND column_name = ?
+		LIMIT 1
+	`, tableName, columnName).Scan(&dataType).Error
+
+	if err != nil || dataType == "" {
+		// Bảng/cột chưa tồn tại → AutoMigrate sẽ tạo mới với đúng kiểu
+		return false
+	}
+	return dataType == expectedType
 }
