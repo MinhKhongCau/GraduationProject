@@ -7,7 +7,380 @@
         "version": "1.0"
     },
     "basePath": "/api/v1",
-    "paths": {},
+    "paths": {
+        "/appointments": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bệnh nhân xác nhận đặt lịch sau khi đã giữ chỗ thành công, trạng thái PENDING_PAYMENT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Tạo cuộc hẹn mới",
+                "parameters": [
+                    {
+                        "description": "Thông vị cuộc hẹn",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateAppointmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/appointments/webhook": {
+            "post": {
+                "description": "Cổng thanh toán gọi endpoint này để thông báo kết quả. SUCCESS -\u003e CONFIRMED, FAILED -\u003e CANCELLED",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "Nhận kết quả thanh toán từ cổng thanh toán (Webhook)",
+                "parameters": [
+                    {
+                        "description": "Kết quả thanh toán",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.PaymentWebhookRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/slots/available-dates": {
+            "get": {
+                "description": "Trả về mảng ngày định dạng \"YYYY-MM-DD\" có slot khả dụng trong 1 tháng tới",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "Lấy danh sách ngày có lịch trống",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID của chuyên gia",
+                        "name": "expert_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/slots/available-times": {
+            "get": {
+                "description": "Trả về danh sách slot khả dụng của một ngày, gồm slot_id và timestamp Unix 13 số",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "Lấy danh sách khung giờ trống trong ngày",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Ngày cần tra cứu (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID của chuyên gia",
+                        "name": "expert_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/slots/generate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Expert tự kích hoạt để hệ thống sinh slot trong N ngày tới dựa trên cấu hình lịch rảnh",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "Sinh lịch khám tự động cho chuyên gia",
+                "parameters": [
+                    {
+                        "description": "Expert ID và số ngày cần sinh",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.GenerateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/slots/{id}/lock": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Bệnh nhân click chọn giờ, hệ thống khóa slot trong 15 phút để tiến hành thanh toán",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "Giữ chỗ slot tạm thời 15 phút",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Slot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handler.CreateAppointmentRequest": {
+            "type": "object",
+            "required": [
+                "expert_id",
+                "slot_id"
+            ],
+            "properties": {
+                "expert_id": {
+                    "type": "string"
+                },
+                "slot_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.GenerateRequest": {
+            "type": "object",
+            "required": [
+                "days_to_generate",
+                "expert_id"
+            ],
+            "properties": {
+                "days_to_generate": {
+                    "type": "integer",
+                    "maximum": 30,
+                    "minimum": 1
+                },
+                "expert_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.PaymentWebhookRequest": {
+            "type": "object",
+            "required": [
+                "appointment_id",
+                "status"
+            ],
+            "properties": {
+                "appointment_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"SUCCESS\" hoặc \"FAILED\"",
+                    "type": "string"
+                }
+            }
+        }
+    },
     "securityDefinitions": {
         "BearerAuth": {
             "type": "apiKey",

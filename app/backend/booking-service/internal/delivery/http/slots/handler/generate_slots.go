@@ -1,11 +1,10 @@
-package http
+package handler
 
 import (
 	"booking-service/internal/repository/postgres"
 	"booking-service/internal/usecase"
 	"booking-service/pkg/response"
 	"net/http"
-
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,16 +16,15 @@ type GenerateRequest struct {
 	DaysToGenerate int    `json:"days_to_generate" binding:"required,min=1,max=30"`
 }
 
-// GeneratorHandler chứa các API liên quan đến việc tạo lịch
-type GeneratorHandler struct {
+type GenerateSlotsHandler struct {
 	repo *postgres.GeneratorRepository
 }
 
-func NewGeneratorHandler(repo *postgres.GeneratorRepository) *GeneratorHandler {
-	return &GeneratorHandler{repo: repo}
+func NewGenerateSlotsHandler(repo *postgres.GeneratorRepository) *GenerateSlotsHandler {
+	return &GenerateSlotsHandler{repo: repo}
 }
 
-// HandleGenerateSlots - POST /api/v1/slots/generate
+// Handle - POST /api/v1/slots/generate
 // Phân quyền: Chỉ EXPERT mới được phép sinh lịch cho chính mình
 //
 //	@Summary      Sinh lịch khám tự động cho chuyên gia
@@ -41,7 +39,7 @@ func NewGeneratorHandler(repo *postgres.GeneratorRepository) *GeneratorHandler {
 //	@Failure      403   {object}  map[string]interface{}
 //	@Failure      500   {object}  map[string]interface{}
 //	@Router       /slots/generate [post]
-func (h *GeneratorHandler) HandleGenerateSlots(c *gin.Context) {
+func (h *GenerateSlotsHandler) Handle(c *gin.Context) {
 	// ---- PHÂN QUYỀN: Chỉ EXPERT được sinh lịch ----
 	userRole := c.GetHeader("X-User-Role")
 	if userRole != "EXPERT" {

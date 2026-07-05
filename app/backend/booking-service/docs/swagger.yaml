@@ -1,10 +1,265 @@
 basePath: /api/v1
+definitions:
+  handler.CreateAppointmentRequest:
+    properties:
+      expert_id:
+        type: string
+      slot_id:
+        type: string
+    required:
+    - expert_id
+    - slot_id
+    type: object
+  handler.GenerateRequest:
+    properties:
+      days_to_generate:
+        maximum: 30
+        minimum: 1
+        type: integer
+      expert_id:
+        type: string
+    required:
+    - days_to_generate
+    - expert_id
+    type: object
+  handler.PaymentWebhookRequest:
+    properties:
+      appointment_id:
+        type: string
+      status:
+        description: '"SUCCESS" hoặc "FAILED"'
+        type: string
+    required:
+    - appointment_id
+    - status
+    type: object
 info:
   contact: {}
   description: Hệ thống đặt lịch khám bệnh - MindCare
   title: Booking Service API
   version: "1.0"
-paths: {}
+paths:
+  /appointments:
+    post:
+      consumes:
+      - application/json
+      description: Bệnh nhân xác nhận đặt lịch sau khi đã giữ chỗ thành công, trạng
+        thái PENDING_PAYMENT
+      parameters:
+      - description: Thông vị cuộc hẹn
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateAppointmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Tạo cuộc hẹn mới
+      tags:
+      - Appointments
+  /appointments/webhook:
+    post:
+      consumes:
+      - application/json
+      description: Cổng thanh toán gọi endpoint này để thông báo kết quả. SUCCESS
+        -> CONFIRMED, FAILED -> CANCELLED
+      parameters:
+      - description: Kết quả thanh toán
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.PaymentWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Nhận kết quả thanh toán từ cổng thanh toán (Webhook)
+      tags:
+      - Appointments
+  /slots/{id}/lock:
+    post:
+      description: Bệnh nhân click chọn giờ, hệ thống khóa slot trong 15 phút để tiến
+        hành thanh toán
+      parameters:
+      - description: Slot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Giữ chỗ slot tạm thời 15 phút
+      tags:
+      - Slots
+  /slots/available-dates:
+    get:
+      description: Trả về mảng ngày định dạng "YYYY-MM-DD" có slot khả dụng trong
+        1 tháng tới
+      parameters:
+      - description: ID của chuyên gia
+        in: query
+        name: expert_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Lấy danh sách ngày có lịch trống
+      tags:
+      - Slots
+  /slots/available-times:
+    get:
+      description: Trả về danh sách slot khả dụng của một ngày, gồm slot_id và timestamp
+        Unix 13 số
+      parameters:
+      - description: Ngày cần tra cứu (YYYY-MM-DD)
+        in: query
+        name: date
+        required: true
+        type: string
+      - description: ID của chuyên gia
+        in: query
+        name: expert_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Lấy danh sách khung giờ trống trong ngày
+      tags:
+      - Slots
+  /slots/generate:
+    post:
+      consumes:
+      - application/json
+      description: Expert tự kích hoạt để hệ thống sinh slot trong N ngày tới dựa
+        trên cấu hình lịch rảnh
+      parameters:
+      - description: Expert ID và số ngày cần sinh
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.GenerateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Sinh lịch khám tự động cho chuyên gia
+      tags:
+      - Slots
 securityDefinitions:
   BearerAuth:
     in: header
