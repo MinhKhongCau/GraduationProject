@@ -83,13 +83,16 @@ func runPreMigrations(db *gorm.DB) {
 	fmt.Println("🔄 Running pre-migrations (column type fixes)...")
 
 	// 1. Chuyển Booking_Expert_Slots.status: varchar → smallint
-	//    Lý do: Code dùng enum int (0=AVAILABLE, 1=LOCKED, 2=OCCUPIED)
 	if isColumnType(db, "Booking_Expert_Slots", "status", "character varying") {
 		fmt.Println("   → Migrating Booking_Expert_Slots.status: varchar → smallint")
+		
+		// Phải DROP DEFAULT trước, nếu không Postgres sẽ báo lỗi không thể ép kiểu (SQLSTATE 42804)
+		db.Exec(`ALTER TABLE "Booking_Expert_Slots" ALTER COLUMN status DROP DEFAULT`)
+		
 		err := db.Exec(`
 			ALTER TABLE "Booking_Expert_Slots"
 			  ALTER COLUMN status TYPE smallint
-			  USING CASE status
+			  USING CASE status::text
 			    WHEN 'AVAILABLE' THEN 0
 			    WHEN 'LOCKED'    THEN 1
 			    WHEN 'OCCUPIED'  THEN 2
@@ -104,13 +107,15 @@ func runPreMigrations(db *gorm.DB) {
 	}
 
 	// 2. Chuyển Booking_Appointments.status: varchar → smallint
-	//    Lý do: Code dùng enum int (0=PENDING_PAYMENT, 1=CONFIRMED, 2=CANCELLED)
 	if isColumnType(db, "Booking_Appointments", "status", "character varying") {
 		fmt.Println("   → Migrating Booking_Appointments.status: varchar → smallint")
+		
+		db.Exec(`ALTER TABLE "Booking_Appointments" ALTER COLUMN status DROP DEFAULT`)
+		
 		err := db.Exec(`
 			ALTER TABLE "Booking_Appointments"
 			  ALTER COLUMN status TYPE smallint
-			  USING CASE status
+			  USING CASE status::text
 			    WHEN 'PENDING_PAYMENT' THEN 0
 			    WHEN 'CONFIRMED'       THEN 1
 			    WHEN 'CANCELLED'       THEN 2
@@ -185,7 +190,7 @@ func isColumnType(db *gorm.DB, tableName, columnName, expectedType string) bool 
 	err := db.Raw(`
 		SELECT data_type
 		FROM information_schema.columns
-		WHERE table_name = ? AND column_name = ?
+		WHERE table_name ILIKE ? AND column_name ILIKE ?
 		LIMIT 1
 	`, tableName, columnName).Scan(&dataType).Error
 
