@@ -6,11 +6,15 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  accountId: string;
-  fullName: string;
-  role: UserRole;
+  success: boolean;
+  message: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    accountId: string;
+    fullName: string;
+    role: UserRole;
+  }
 }
 
 export interface RegisterRequest {

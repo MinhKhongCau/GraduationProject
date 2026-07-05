@@ -31,11 +31,11 @@ export function useAuth() {
 
   function logout() {
     const refreshToken = getRefreshToken();
-    auth.clearAuth();
-    router.push(ROUTES.AUTH.LOGIN);
     if (refreshToken) {
       authApi.logout(refreshToken).catch(() => undefined);
     }
+    auth.clearAuth();
+    router.push(ROUTES.AUTH.LOGIN);
   }
 
   return { ...auth, login, loginMutation, registerMutation, logout };
