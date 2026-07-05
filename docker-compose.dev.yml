@@ -192,6 +192,7 @@ services:
       - KONG_DATABASE=off
       - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
       - KONG_PROXY_LISTEN=0.0.0.0:8000
+      - CORS_ORIGINS=${CORS_ORIGINS}
     ports:
       - "${PORT_API_GATEWAY}:8000"
     depends_on:
