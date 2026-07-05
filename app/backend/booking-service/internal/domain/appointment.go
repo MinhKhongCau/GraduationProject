@@ -1,5 +1,7 @@
 package domain
 
+import "gorm.io/gorm"
+
 type AppointmentStatus int
 
 const (
@@ -28,7 +30,7 @@ type Appointment struct {
 func (Appointment) TableName() string { return "Booking_Appointments" }
 
 // AfterFind - GORM hook: tự động chạy sau mỗi lần SELECT từ DB
-func (a *Appointment) AfterFind(tx interface{}) error {
+func (a *Appointment) AfterFind(tx *gorm.DB) error {
 	a.StatusLabel = a.Status.String()
 	return nil
 }
