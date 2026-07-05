@@ -124,7 +124,35 @@ func runPreMigrations(db *gorm.DB) {
 		fmt.Println("   ✅ Done.")
 	}
 
-	// 3. Chuyển Booking_Expert_Time_Off.start_datetime & end_datetime: timestamp → bigint (Unix ms)
+	// 3. Chuyển các cột int64 (thời gian) đang là timestamp with time zone trên DB cũ sang bigint (Unix ms)
+	timestampColumns := []struct {
+		table string
+		col   string
+	}{
+		{"Booking_Expert_Slots", "start_time"},
+		{"Booking_Expert_Slots", "end_time"},
+		{"Booking_Expert_Slots", "locked_expires_at"},
+		{"Booking_Appointments", "created_at"},
+		{"Booking_Medical_Records", "created_at"},
+		{"Booking_Reviews", "created_at"},
+	}
+
+	for _, tc := range timestampColumns {
+		if isColumnType(db, tc.table, tc.col, "timestamp with time zone") {
+			fmt.Printf("   → Migrating %s.%s: timestamp → bigint (Unix ms)\n", tc.table, tc.col)
+			err := db.Exec(fmt.Sprintf(`
+				ALTER TABLE "%s"
+				  ALTER COLUMN "%s" TYPE bigint
+				  USING EXTRACT(EPOCH FROM "%s")::bigint * 1000
+			`, tc.table, tc.col, tc.col)).Error
+			if err != nil {
+				log.Fatalf("Pre-migration failed (%s.%s): %v", tc.table, tc.col, err)
+			}
+			fmt.Println("   ✅ Done.")
+		}
+	}
+
+	// 4. Chuyển Booking_Expert_Time_Off.start_datetime & end_datetime: timestamp → bigint (Unix ms)
 	if isColumnType(db, "Booking_Expert_Time_Off", "start_datetime", "timestamp with time zone") {
 		fmt.Println("   → Migrating Booking_Expert_Time_Off: timestamp → bigint (Unix ms)")
 		err := db.Exec(`
