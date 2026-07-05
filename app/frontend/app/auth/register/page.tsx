@@ -117,7 +117,7 @@ export default function RegisterPage() {
           googleLoginMutation.mutate(idToken, {
             onSuccess: (response) => {
               applySession(response, decodeGoogleEmail(idToken));
-              router.push(dashboardForRole(response.role));
+              router.push(dashboardForRole(response.data.role));
             },
           })
         }
