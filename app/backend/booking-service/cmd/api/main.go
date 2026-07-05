@@ -12,7 +12,9 @@ import (
 	"booking-service/internal/repository/postgres"
 	"booking-service/pkg/database"
 
-	httpDelivery "booking-service/internal/delivery/http"
+	"booking-service/internal/delivery/http/appointments"
+	"booking-service/internal/delivery/http/slots"
+	"booking-service/internal/worker"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -41,28 +43,10 @@ func main() {
 	slotRepo := postgres.NewSlotRepository(database.DB)
 	appointmentRepo := postgres.NewAppointmentRepository(database.DB)
 
-	// Handler
-	generatorHandler := httpDelivery.NewGeneratorHandler(generatorRepo)
-	slotHandler := httpDelivery.NewSlotHandler(slotRepo)
-	appointmentHandler := httpDelivery.NewAppointmentHandler(appointmentRepo)
-
 	// 3. Khai báo API Endpoints
 	api := router.Group("/api/v1")
-	{
-		// === GIAI ĐOẠN 1: Expert Sinh Lịch ===
-		// Yêu cầu Header từ Gateway: X-User-Role=EXPERT, X-User-Id=<expert_uuid>
-		api.POST("/slots/generate", generatorHandler.HandleGenerateSlots)
-
-		// === GIAI ĐOẠN 2: Patient Xem Lịch Trống ===
-		api.GET("/slots/available-dates", slotHandler.HandleGetAvailableDates)   // ?expert_id=xxx
-		api.GET("/slots/available-times", slotHandler.HandleGetAvailableTimes)   // ?date=YYYY-MM-DD&expert_id=xxx
-
-		// === GIAI ĐOẠN 3: Khóa Chỗ, Đặt Lịch & Thanh Toán ===
-		// Yêu cầu Header từ Gateway: X-User-Role=PATIENT, X-User-Id=<patient_uuid>
-		api.POST("/slots/:id/lock", appointmentHandler.HandleLockSlot)
-		api.POST("/appointments", appointmentHandler.HandleCreateAppointment)
-		api.POST("/appointments/webhook", appointmentHandler.HandlePaymentWebhook)
-	}
+	slots.RegisterRoutes(api, slotRepo, generatorRepo, appointmentRepo)
+	appointments.RegisterRoutes(api, appointmentRepo)
 
 	// 3.5. Swagger endpoint
 	router.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -77,21 +61,7 @@ func main() {
 	})
 
 	// 5. Khởi chạy Background Worker: Dọn dẹp Expired Locks mỗi 60 giây
-	// Worker này thay thế cho việc dùng Cronjob bên ngoài, chạy ngầm trong cùng process
-	go func() {
-		ticker := time.NewTicker(60 * time.Second)
-		defer ticker.Stop()
-		log.Println("🔄 Expired Lock Worker đã khởi động, quét mỗi 60 giây...")
-
-		for range ticker.C {
-			cleaned, err := appointmentRepo.CancelExpiredLocks()
-			if err != nil {
-				log.Printf("⚠️  Worker lỗi khi dọn expired locks: %v", err)
-			} else if cleaned > 0 {
-				log.Printf("🧹 Worker đã dọn %d slot hết hạn, mở lại cho bệnh nhân khác.", cleaned)
-			}
-		}
-	}()
+	worker.StartExpiredLockWorker(appointmentRepo)
 
 	// 6. Khởi chạy Server
 	log.Println("🚀 Starting Booking Service on port 8083...")
