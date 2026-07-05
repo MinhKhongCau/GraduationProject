@@ -8,7 +8,7 @@ interface RetryableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
-const AUTH_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_URL ?? "http://localhost:8080/api/v1";
+const AUTH_BASE_URL = process.env.NEXT_PUBLIC_AUTH_API_URL ?? "https://api.qmcloud.io.vn/api/v1";
 
 let refreshPromise: Promise<string | null> | null = null;
 
