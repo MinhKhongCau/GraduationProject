@@ -169,6 +169,7 @@ plugins:
       origins:
         - http://localhost:3000
         - http://localhost:3001
+        - https://sandbox.qmcloud.io.vn
       methods:
         - GET
         - POST
