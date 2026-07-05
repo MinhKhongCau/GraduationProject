@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { ClientShell } from "@/components/layout/client-shell";
 import { ProtectedRoute } from "@/router";

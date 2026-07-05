@@ -38,14 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySession = (response: LoginResponse, email: string) => {
     setSession({
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      accountId: response.accountId,
-      fullName: response.fullName,
+      accessToken: response.data.accessToken,
+      refreshToken: response.data.refreshToken,
+      accountId: response.data.accountId,
+      fullName: response.data.fullName,
       email,
-      role: response.role,
+      role: response.data.role,
     });
-    setUser({ id: response.accountId, fullName: response.fullName, email, role: response.role });
+    setUser({ id: response.data.accountId, fullName: response.data.fullName, email, role: response.data.role });
   };
 
   const clearAuth = () => {
