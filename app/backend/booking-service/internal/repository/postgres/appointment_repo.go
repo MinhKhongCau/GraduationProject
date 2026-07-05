@@ -26,7 +26,7 @@ func (r *AppointmentRepository) LockSlot(slotID string, patientID string) error 
 	lockedExpiresAt := time.Now().UnixMilli() + 900_000 // Khoá 15 phút = 900,000 ms
 
 	result := r.db.Model(&domain.ExpertSlot{}).
-		Where("slot_id = ? AND is_locked = ? AND status = ?", slotID, false, domain.SlotStatusAvailable.String()).
+		Where("slot_id = ? AND is_locked = ? AND status = ?", slotID, false, domain.SlotStatusAvailable).
 		Updates(map[string]interface{}{
 			"is_locked":         true,
 			"locked_expires_at": lockedExpiresAt,
@@ -89,7 +89,7 @@ func (r *AppointmentRepository) ConfirmPayment(appointmentID string) error {
 		}
 
 		// Cập nhật trạng thái cuộc hẹn thành CONFIRMED
-		if err := tx.Model(&appt).Update("status", domain.AppointmentStatusConfirmed.String()).Error; err != nil {
+		if err := tx.Model(&appt).Update("status", domain.AppointmentStatusConfirmed).Error; err != nil {
 			return err
 		}
 
@@ -97,7 +97,7 @@ func (r *AppointmentRepository) ConfirmPayment(appointmentID string) error {
 		if err := tx.Model(&domain.ExpertSlot{}).
 			Where("slot_id = ?", appt.SlotID).
 			Updates(map[string]interface{}{
-				"status":            domain.SlotStatusOccupied.String(),
+				"status":            domain.SlotStatusOccupied,
 				"is_locked":         false,
 				"locked_expires_at": nil,
 				"locked_by":         nil,
@@ -122,7 +122,7 @@ func (r *AppointmentRepository) CancelExpiredLocks() (int64, error) {
 		var expiredSlots []domain.ExpertSlot
 		if err := tx.
 			Where("is_locked = ? AND status = ? AND locked_expires_at < ?",
-				true, domain.SlotStatusAvailable.String(), nowMs).
+				true, domain.SlotStatusAvailable, nowMs).
 			Find(&expiredSlots).Error; err != nil {
 			return err
 		}
@@ -139,9 +139,9 @@ func (r *AppointmentRepository) CancelExpiredLocks() (int64, error) {
 
 		// 2. Hủy các Appointment PENDING_PAYMENT liên quan đến slot hết hạn
 		result := tx.Model(&domain.Appointment{}).
-			Where("slot_id IN ? AND status = ?", slotIDs, domain.AppointmentStatusPendingPayment.String()).
+			Where("slot_id IN ? AND status = ?", slotIDs, domain.AppointmentStatusPendingPayment).
 			Updates(map[string]interface{}{
-				"status":              domain.AppointmentStatusCancelled.String(),
+				"status":              domain.AppointmentStatusCancelled,
 				"cancellation_reason": "Quá hạn thanh toán 15 phút",
 			})
 		if result.Error != nil {
