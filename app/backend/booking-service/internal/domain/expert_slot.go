@@ -1,6 +1,10 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 // SlotStatus - Trạng thái slot khám (Enum - lưu int trong DB)
 type SlotStatus int
@@ -35,7 +39,7 @@ func (ExpertSlot) TableName() string { return "Booking_Expert_Slots" }
 
 // AfterFind - GORM hook: tự động chạy sau mỗi lần SELECT từ DB
 // Điền StatusLabel để JSON response luôn trả về cả int lẫn string
-func (s *ExpertSlot) AfterFind(tx interface{}) error {
+func (s *ExpertSlot) AfterFind(tx *gorm.DB) error {
 	s.StatusLabel = s.Status.String()
 	return nil
 }
