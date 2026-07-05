@@ -64,6 +64,8 @@ jobs:
           RABBITMQ_DEFAULT_PASS=${{ secrets.RABBITMQ_DEFAULT_PASS }}
           RABBITMQ_PORT=${{ vars.RABBITMQ_PORT }}
           RABBITMQ_MANAGEMENT_PORT=${{ vars.RABBITMQ_MANAGEMENT_PORT }}
+
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
           EOF
 
       # Bước 3: Pull Image lasted from Docker Hub before deploy.
