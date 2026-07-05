@@ -40,12 +40,12 @@ export default function LoginPage() {
     mutationFn: (idToken) => authApi.loginWithGoogle({ idToken }),
   });
 
-  function redirectAfterLogin(role: LoginResponse["role"]) {
+  function redirectAfterLogin(role: LoginResponse["data"]["role"]) {
     router.push(searchParams.get("redirect") || dashboardForRole(role));
   }
 
   function onSubmit(values: LoginFormValues) {
-    login(values, (response) => redirectAfterLogin(response.role));
+    login(values, (response) => redirectAfterLogin(response.data.role));
   }
 
   return (
@@ -78,7 +78,7 @@ export default function LoginPage() {
           googleLoginMutation.mutate(idToken, {
             onSuccess: (response) => {
               applySession(response, decodeGoogleEmail(idToken));
-              redirectAfterLogin(response.role);
+              redirectAfterLogin(response.data.role);
             },
           })
         }
