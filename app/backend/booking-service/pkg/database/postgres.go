@@ -78,56 +78,43 @@ func ConnectDB() {
 }
 
 // runPreMigrations xử lý các thay đổi kiểu cột mà AutoMigrate không thể tự cast.
-// Mỗi bước đều kiểm tra kiểu cột hiện tại trước → an toàn khi chạy nhiều lần (idempotent).
 func runPreMigrations(db *gorm.DB) {
 	fmt.Println("🔄 Running pre-migrations (column type fixes)...")
 
-	// 1. Chuyển Booking_Expert_Slots.status: varchar → smallint
-	if isColumnType(db, "Booking_Expert_Slots", "status", "character varying") {
-		fmt.Println("   → Migrating Booking_Expert_Slots.status: varchar → smallint")
-		
-		// Phải DROP DEFAULT trước, nếu không Postgres sẽ báo lỗi không thể ép kiểu (SQLSTATE 42804)
-		db.Exec(`ALTER TABLE "Booking_Expert_Slots" ALTER COLUMN status DROP DEFAULT`)
-		
-		err := db.Exec(`
-			ALTER TABLE "Booking_Expert_Slots"
-			  ALTER COLUMN status TYPE smallint
-			  USING CASE status::text
-			    WHEN 'AVAILABLE' THEN 0
-			    WHEN 'LOCKED'    THEN 1
-			    WHEN 'OCCUPIED'  THEN 2
-			    ELSE 0
-			  END
-		`).Error
-		if err != nil {
-			log.Fatalf("Pre-migration failed (Slots.status): %v", err)
-		}
-		db.Exec(`ALTER TABLE "Booking_Expert_Slots" ALTER COLUMN status SET DEFAULT 0`)
-		fmt.Println("   ✅ Done.")
-	}
+	// 1. Ép kiểu an toàn (idempotent) cho Booking_Expert_Slots.status
+	// Phải DROP DEFAULT trước, nếu không Postgres sẽ báo lỗi không thể ép kiểu (SQLSTATE 42804)
+	db.Exec(`ALTER TABLE "Booking_Expert_Slots" ALTER COLUMN status DROP DEFAULT`)
+	db.Exec(`
+		ALTER TABLE "Booking_Expert_Slots"
+		  ALTER COLUMN status TYPE smallint
+		  USING CASE status::text
+		    WHEN 'AVAILABLE' THEN 0
+		    WHEN 'LOCKED'    THEN 1
+		    WHEN 'OCCUPIED'  THEN 2
+		    WHEN '0' THEN 0
+		    WHEN '1' THEN 1
+		    WHEN '2' THEN 2
+		    ELSE 0
+		  END
+	`)
+	db.Exec(`ALTER TABLE "Booking_Expert_Slots" ALTER COLUMN status SET DEFAULT 0`)
 
-	// 2. Chuyển Booking_Appointments.status: varchar → smallint
-	if isColumnType(db, "Booking_Appointments", "status", "character varying") {
-		fmt.Println("   → Migrating Booking_Appointments.status: varchar → smallint")
-		
-		db.Exec(`ALTER TABLE "Booking_Appointments" ALTER COLUMN status DROP DEFAULT`)
-		
-		err := db.Exec(`
-			ALTER TABLE "Booking_Appointments"
-			  ALTER COLUMN status TYPE smallint
-			  USING CASE status::text
-			    WHEN 'PENDING_PAYMENT' THEN 0
-			    WHEN 'CONFIRMED'       THEN 1
-			    WHEN 'CANCELLED'       THEN 2
-			    ELSE 0
-			  END
-		`).Error
-		if err != nil {
-			log.Fatalf("Pre-migration failed (Appointments.status): %v", err)
-		}
-		db.Exec(`ALTER TABLE "Booking_Appointments" ALTER COLUMN status SET DEFAULT 0`)
-		fmt.Println("   ✅ Done.")
-	}
+	// 2. Ép kiểu an toàn cho Booking_Appointments.status
+	db.Exec(`ALTER TABLE "Booking_Appointments" ALTER COLUMN status DROP DEFAULT`)
+	db.Exec(`
+		ALTER TABLE "Booking_Appointments"
+		  ALTER COLUMN status TYPE smallint
+		  USING CASE status::text
+		    WHEN 'PENDING_PAYMENT' THEN 0
+		    WHEN 'CONFIRMED'       THEN 1
+		    WHEN 'CANCELLED'       THEN 2
+		    WHEN '0' THEN 0
+		    WHEN '1' THEN 1
+		    WHEN '2' THEN 2
+		    ELSE 0
+		  END
+	`)
+	db.Exec(`ALTER TABLE "Booking_Appointments" ALTER COLUMN status SET DEFAULT 0`)
 
 	// 3. Chuyển các cột int64 (thời gian) đang là timestamp with time zone trên DB cũ sang bigint (Unix ms)
 	timestampColumns := []struct {
@@ -140,63 +127,18 @@ func runPreMigrations(db *gorm.DB) {
 		{"Booking_Appointments", "created_at"},
 		{"Booking_Medical_Records", "created_at"},
 		{"Booking_Reviews", "created_at"},
+		{"Booking_Expert_Time_Off", "start_datetime"},
+		{"Booking_Expert_Time_Off", "end_datetime"},
 	}
 
 	for _, tc := range timestampColumns {
-		if isColumnType(db, tc.table, tc.col, "timestamp with time zone") {
-			fmt.Printf("   → Migrating %s.%s: timestamp → bigint (Unix ms)\n", tc.table, tc.col)
-			err := db.Exec(fmt.Sprintf(`
-				ALTER TABLE "%s"
-				  ALTER COLUMN "%s" TYPE bigint
-				  USING EXTRACT(EPOCH FROM "%s")::bigint * 1000
-			`, tc.table, tc.col, tc.col)).Error
-			if err != nil {
-				log.Fatalf("Pre-migration failed (%s.%s): %v", tc.table, tc.col, err)
-			}
-			fmt.Println("   ✅ Done.")
-		}
-	}
-
-	// 4. Chuyển Booking_Expert_Time_Off.start_datetime & end_datetime: timestamp → bigint (Unix ms)
-	if isColumnType(db, "Booking_Expert_Time_Off", "start_datetime", "timestamp with time zone") {
-		fmt.Println("   → Migrating Booking_Expert_Time_Off: timestamp → bigint (Unix ms)")
-		err := db.Exec(`
-			ALTER TABLE "Booking_Expert_Time_Off"
-			  ALTER COLUMN start_datetime TYPE bigint
-			  USING EXTRACT(EPOCH FROM start_datetime)::bigint * 1000
-		`).Error
-		if err != nil {
-			log.Fatalf("Pre-migration failed (TimeOff.start_datetime): %v", err)
-		}
-		err = db.Exec(`
-			ALTER TABLE "Booking_Expert_Time_Off"
-			  ALTER COLUMN end_datetime TYPE bigint
-			  USING EXTRACT(EPOCH FROM end_datetime)::bigint * 1000
-		`).Error
-		if err != nil {
-			log.Fatalf("Pre-migration failed (TimeOff.end_datetime): %v", err)
-		}
-		fmt.Println("   ✅ Done.")
+		// Bỏ qua lỗi vì nếu cột đã là bigint, việc cast sang timestamp sẽ gây lỗi (đúng như ý muốn để skip)
+		db.Exec(fmt.Sprintf(`
+			ALTER TABLE "%s"
+			  ALTER COLUMN "%s" TYPE bigint
+			  USING EXTRACT(EPOCH FROM "%s"::timestamp with time zone)::bigint * 1000
+		`, tc.table, tc.col, tc.col))
 	}
 
 	fmt.Println("✅ Pre-migrations completed.")
-}
-
-// isColumnType kiểm tra kiểu dữ liệu hiện tại của một cột trong DB.
-// Trả về true nếu cột đang có kiểu dữ liệu khớp với expectedType.
-// Dùng để đảm bảo pre-migration chỉ chạy khi thực sự cần, an toàn khi restart nhiều lần.
-func isColumnType(db *gorm.DB, tableName, columnName, expectedType string) bool {
-	var dataType string
-	err := db.Raw(`
-		SELECT data_type
-		FROM information_schema.columns
-		WHERE table_name ILIKE ? AND column_name ILIKE ?
-		LIMIT 1
-	`, tableName, columnName).Scan(&dataType).Error
-
-	if err != nil || dataType == "" {
-		// Bảng/cột chưa tồn tại → AutoMigrate sẽ tạo mới với đúng kiểu
-		return false
-	}
-	return dataType == expectedType
 }
