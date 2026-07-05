@@ -256,7 +256,119 @@ Retrieve appointment history.
 
 # 3. Clinical Records & Assessment
 
-## 3.1 Submit Psychological Test
+## 3.1 Assessment Templates & Questions
+
+### Get Assessment Templates
+
+```
+GET /assessments/templates
+```
+
+Retrieve all active psychological assessment templates.
+
+**Permissions:** `Public`
+
+---
+
+### Create Assessment Template
+
+```
+POST /assessments/templates
+```
+
+Create a new assessment template.
+
+**Permissions:** `Public` / `ADMIN`
+
+**Request Body Example**
+
+```json
+{
+  "code": "DASS_21",
+  "title": "DASS-21 Assessment",
+  "description": "Depression, Anxiety and Stress Scale - 21 Items"
+}
+```
+
+---
+
+### Create Option Group
+
+```
+POST /assessments/option-groups
+```
+
+Create a new option group (response options with scores) for questions.
+
+**Permissions:** `Public` / `ADMIN`
+
+**Request Body Example**
+
+```json
+{
+  "group_code": "OSS_2",
+  "group_name": "OSS_2",
+  "description": "Yes/No Option Group",
+  "options": [
+    {
+      "label": "1",
+      "value": "Co",
+      "score_value": "10",
+      "order_index": 1
+    },
+    {
+      "label": "2",
+      "value": "Khong",
+      "score_value": "0",
+      "order_index": 2
+    }
+  ]
+}
+```
+
+---
+
+### Bulk Create Questions
+
+```
+POST /assessments/questions/bulk
+```
+
+Bulk import questions associated with a specific template and option group.
+
+**Permissions:** `Public` / `ADMIN`
+
+**Request Body Example**
+
+```json
+{
+  "template_id": "99cd6a3e-1e1e-4ec0-9d2f-b78d3a65e7c6",
+  "group_id": "2badb8be-9368-4297-976b-b6c554b0d148",
+  "questions": [
+    {
+      "content": "Have you found it difficult to wind down?",
+      "dimension": "STRESS",
+      "question_order": 0
+    }
+  ]
+}
+```
+
+---
+
+### Get Questions by Template
+
+```
+GET /assessments/templates/:templateId/questions
+```
+
+Retrieve all questions and their response options for a specific template.
+
+**Permissions:** `Public`
+
+---
+
+## 3.2 Submit Psychological Test
 
 ```
 POST /assessments/submit
@@ -351,6 +463,11 @@ Supported payment gateways:
 | Expert   | `/experts/leave-requests`      | POST      | EXPERT         | Submit sudden leave request   |
 | Booking  | `/bookings/lock`               | POST      | CLIENT         | Lock slot for 15 minutes      |
 | Booking  | `/bookings/history`            | GET       | CLIENT, EXPERT | View booking history          |
+| Clinical | `/assessments/templates`       | GET       | Public         | Get all assessment templates  |
+| Clinical | `/assessments/templates`       | POST      | ADMIN          | Create assessment template    |
+| Clinical | `/assessments/option-groups`   | POST      | ADMIN          | Create option group           |
+| Clinical | `/assessments/questions/bulk`  | POST      | ADMIN          | Bulk create questions         |
+| Clinical | `/assessments/templates/:id/questions` | GET | Public       | Get questions by template     |
 | Clinical | `/assessments/submit`          | POST      | CLIENT         | Submit psychological test     |
 | Clinical | `/clinical-records`            | POST      | EXPERT         | Create clinical record        |
 | Clinical | `/clinical-records/my-history` | GET       | CLIENT         | View personal medical history |
