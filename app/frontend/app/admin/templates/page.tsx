@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Plus, Edit2, Trash2, ShieldAlert } from "lucide-react";
 import { Card, Button, Spinner, Modal } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
@@ -8,6 +9,10 @@ import { assessmentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
 import { useErrorContext } from "@/context/ErrorContext";
 import type { AssessmentTemplate } from "@/types";
+
+const MDXEditor = dynamic(() => import("@/components/ui/MDXEditor"), {
+  ssr: false,
+});
 
 export default function AdminTemplatesPage() {
   const { showSuccess, showError } = useErrorContext();
@@ -205,7 +210,7 @@ export default function AdminTemplatesPage() {
       )}
 
       {/* Create Modal */}
-      <Modal open={isCreateOpen} onOpenChange={setIsCreateOpen} title="Tạo bài test mới">
+      <Modal open={isCreateOpen} onOpenChange={setIsCreateOpen} title="Tạo bài test mới" size="3xl">
         <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-foreground">Mã Code (e.g. PHQ_9)</label>
@@ -246,12 +251,10 @@ export default function AdminTemplatesPage() {
                 {countWords(instruction)}/3000 từ
               </span>
             </div>
-            <textarea
-              rows={3}
-              placeholder="Hướng dẫn thực hiện bài test..."
+            <MDXEditor
               value={instruction}
-              onChange={(e) => setInstruction(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              onChange={setInstruction}
+              placeholder="Hướng dẫn thực hiện bài test..."
             />
           </div>
           <div>
@@ -261,12 +264,10 @@ export default function AdminTemplatesPage() {
                 {countWords(certification)}/3000 từ
               </span>
             </div>
-            <textarea
-              rows={3}
-              placeholder="Thông tin chứng nhận chuyên môn..."
+            <MDXEditor
               value={certification}
-              onChange={(e) => setCertification(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              onChange={setCertification}
+              placeholder="Thông tin chứng nhận chuyên môn..."
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
@@ -281,7 +282,7 @@ export default function AdminTemplatesPage() {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal open={isEditOpen} onOpenChange={setIsEditOpen} title="Chỉnh sửa bài test">
+      <Modal open={isEditOpen} onOpenChange={setIsEditOpen} title="Chỉnh sửa bài test" size="3xl">
         <form onSubmit={handleEditSubmit} className="space-y-4 pt-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-foreground">Mã Code</label>
@@ -319,12 +320,10 @@ export default function AdminTemplatesPage() {
                 {countWords(instruction)}/3000 từ
               </span>
             </div>
-            <textarea
-              rows={3}
-              placeholder="Hướng dẫn thực hiện bài test..."
+            <MDXEditor
               value={instruction}
-              onChange={(e) => setInstruction(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              onChange={setInstruction}
+              placeholder="Hướng dẫn thực hiện bài test..."
             />
           </div>
           <div>
@@ -334,12 +333,10 @@ export default function AdminTemplatesPage() {
                 {countWords(certification)}/3000 từ
               </span>
             </div>
-            <textarea
-              rows={3}
-              placeholder="Thông tin chứng nhận chuyên môn..."
+            <MDXEditor
               value={certification}
-              onChange={(e) => setCertification(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+              onChange={setCertification}
+              placeholder="Thông tin chứng nhận chuyên môn..."
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
