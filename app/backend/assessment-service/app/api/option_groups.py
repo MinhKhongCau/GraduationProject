@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -5,6 +6,36 @@ from .. import models, types
 from .dependencies import get_option_group_by_slug, check_admin_role, generate_unique_slug
 
 router = APIRouter(prefix="/api/v1/assessments/option-groups", tags=["Option Groups"])
+
+
+@router.get("", response_model=List[types.OptionGroupResponse])
+def list_option_groups(db: Session = Depends(get_db)):
+    groups = (
+        db.query(models.AssessOptionGroup)
+        .filter(models.AssessOptionGroup.is_active.is_(True))
+        .all()
+    )
+    result = []
+    for g in groups:
+        options = (
+            db.query(models.AssessOption)
+            .filter(
+                models.AssessOption.group_id == g.group_id,
+                models.AssessOption.is_active.is_(True)
+            )
+            .order_by(models.AssessOption.order_index.asc())
+            .all()
+        )
+        result.append(
+            types.OptionGroupResponse(
+                group_code=g.group_code,
+                group_name=g.group_name,
+                description=g.description,
+                slug=g.slug,
+                options=[types.OptionResponse.model_validate(opt) for opt in options]
+            )
+        )
+    return result
 
 
 @router.post("")

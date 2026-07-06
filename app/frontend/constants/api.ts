@@ -49,8 +49,13 @@ export const PAYMENT_ENDPOINTS = {
 
 export const ASSESSMENT_ENDPOINTS = {
   TEMPLATES: "/assessments/templates",
+  TEMPLATE: (slug: string) => `/assessments/templates/${slug}`,
   QUESTIONS: (templateId: string) => `/assessments/templates/${templateId}/questions`,
   SUBMIT: "/assessments/submit",
+  OPTION_GROUPS: "/assessments/option-groups",
+  OPTION_GROUP: (slug: string) => `/assessments/option-groups/${slug}`,
+  QUESTION: (slug: string) => `/assessments/questions/${slug}`,
+  BULK_QUESTIONS: "/assessments/questions/bulk",
 };
 
 /** Documented only — no service implements clinical records yet, uses /data fallback. */
@@ -90,5 +95,8 @@ export const QUERY_KEYS = {
   wallet: (ownerId: string) => ["payment", "wallet", ownerId] as const,
   assessmentTemplates: () => ["assessment", "templates"] as const,
   assessmentQuestions: (templateId: string) => ["assessment", "questions", templateId] as const,
+  assessmentOptionGroups: () => ["assessment", "optionGroups"] as const,
+  assessmentOptionGroup: (slug: string) => ["assessment", "optionGroup", slug] as const,
+  assessmentQuestion: (slug: string) => ["assessment", "question", slug] as const,
   myMedicalRecordHistory: () => ["clinical-records", "my-history"] as const,
 };

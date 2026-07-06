@@ -26,7 +26,7 @@ export default function AssessmentListPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((template) => (
-            <AssessmentCard key={template.templateId} template={template} />
+            <AssessmentCard key={template.slug} template={template} />
           ))}
         </div>
       )}
