@@ -4,6 +4,17 @@ Hệ thống cung cấp nền tảng tư vấn tâm lý trực tuyến toàn di�
 
 ---
 
+## 🔗 Liên kết dịch vụ & Tài liệu API (Service Links & API Docs)
+
+* **Frontend Sandbox**: [https://sandbox.qmcloud.io.vn](https://sandbox.qmcloud.io.vn)
+* **Auth Service API Docs**: [https://api.qmcloud.io.vn/auth/swagger-ui/index.html#/](https://api.qmcloud.io.vn/auth/swagger-ui/index.html#/)
+* **Booking Service API Docs**: [https://api.qmcloud.io.vn/booking/swagger-ui/index.html#/](https://api.qmcloud.io.vn/booking/swagger-ui/index.html#/)
+* **Payment Service API Docs**: [https://api.qmcloud.io.vn/payment/swagger-ui/index.html#/](https://api.qmcloud.io.vn/payment/swagger-ui/index.html#/)
+* **Assessment Service API Docs**: [https://api.qmcloud.io.vn/assessment/swagger-ui](https://api.qmcloud.io.vn/assessment/swagger-ui)
+* **Profile Service API Docs**: [https://api.qmcloud.io.vn/profile/swagger-ui/index.html#/](https://api.qmcloud.io.vn/profile/swagger-ui/index.html#/)
+
+---
+
 ## 1. Tổng quan hệ thống (System Overview)
 Mục đích chính của hệ thống là cung cấp một hệ sinh thái chăm sóc sức khỏe tinh thần khép kín:
 * **Đặt lịch & Tư vấn:** Quy trình đặt lịch tự động, thực hiện tư vấn trực tuyến.
