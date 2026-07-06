@@ -54,7 +54,7 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
   const isLastQuestion = currentIndex === sortedQuestions.length - 1;
 
   function handleAnswer(optionId: string) {
-    setAnswers((current) => ({ ...current, [currentQuestion.questionId]: optionId }));
+    setAnswers((current) => ({ ...current, [currentQuestion.slug]: optionId }));
   }
 
   return (
@@ -66,7 +66,7 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
       {currentQuestion && (
         <QuestionStep
           question={currentQuestion}
-          selectedOptionId={answers[currentQuestion.questionId]}
+          selectedOptionId={answers[currentQuestion.slug]}
           onAnswer={handleAnswer}
         />
       )}
@@ -77,14 +77,14 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
         </Button>
         {isLastQuestion ? (
           <Button
-            disabled={!currentQuestion || !answers[currentQuestion.questionId] || submitMutation.isPending}
+            disabled={!currentQuestion || !answers[currentQuestion.slug] || submitMutation.isPending}
             onClick={() => submitMutation.mutate()}
           >
             {submitMutation.isPending ? "Submitting..." : "Submit"}
           </Button>
         ) : (
           <Button
-            disabled={!currentQuestion || !answers[currentQuestion.questionId]}
+            disabled={!currentQuestion || !answers[currentQuestion.slug]}
             onClick={() => setCurrentIndex((i) => i + 1)}
           >
             Next
