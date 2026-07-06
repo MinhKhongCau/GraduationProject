@@ -1,34 +1,36 @@
 export type AssessmentDimension = "DEPRESSION" | "ANXIETY" | "STRESS";
 
 export interface AssessmentTemplate {
-  templateId: string;
   code: string;
   title: string;
   description?: string;
+  slug: string;
+  isActive?: boolean;
 }
 
 export interface AssessmentOption {
-  optionId: string;
   label: string;
+  value: string;
   scoreValue: number;
   orderIndex: number;
+  slug: string;
 }
 
 export interface AssessmentQuestion {
-  questionId: string;
   content: string;
-  dimension: AssessmentDimension;
+  dimension: string;
   questionOrder: number;
+  slug: string;
   options: AssessmentOption[];
 }
 
 export interface AnswerSubmit {
-  questionId: string;
-  optionId: string;
+  questionId: string; // holds question slug
+  optionId: string;   // holds option slug
 }
 
 export interface AssessmentSubmitRequest {
-  templateId: string;
+  templateId: string; // holds template slug
   userId: string;
   answers: AnswerSubmit[];
 }

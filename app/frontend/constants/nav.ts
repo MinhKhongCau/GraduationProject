@@ -66,6 +66,9 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "appointments", labelKey: "nav.appointments", label: "Appointments", href: ROUTES.ADMIN.APPOINTMENTS, icon: CalendarCheck },
   { id: "schedules", labelKey: "nav.schedules", label: "Schedules", href: ROUTES.ADMIN.SCHEDULES, icon: CalendarClock },
   { id: "withdrawals", labelKey: "nav.withdrawals", label: "Withdrawals", href: ROUTES.ADMIN.WITHDRAWALS, icon: Wallet },
+  { id: "templates", labelKey: "nav.templates", label: "Templates", href: ROUTES.ADMIN.TEMPLATES, icon: ClipboardCheck },
+  { id: "option-groups", labelKey: "nav.optionGroups", label: "Option Groups", href: ROUTES.ADMIN.OPTION_GROUPS, icon: ClipboardList },
+  { id: "questions", labelKey: "nav.questions", label: "Questions", href: ROUTES.ADMIN.QUESTIONS, icon: FileText },
 ];
 
 export const SETTINGS_NAV_ITEM = {
