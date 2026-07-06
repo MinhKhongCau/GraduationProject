@@ -41,5 +41,8 @@ export const ROUTES = {
     APPOINTMENTS: "/admin/appointments",
     SCHEDULES: "/admin/schedules",
     WITHDRAWALS: "/admin/withdrawals",
+    TEMPLATES: "/admin/templates",
+    OPTION_GROUPS: "/admin/option-groups",
+    QUESTIONS: "/admin/questions",
   },
 } as const;
