@@ -4,16 +4,18 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 
 	// Import các package nội bộ của dự án
 	"booking-service/internal/repository/postgres"
 	"booking-service/pkg/database"
 
 	"booking-service/internal/delivery/http/appointments"
+	"booking-service/internal/delivery/http/schedules"
 	"booking-service/internal/delivery/http/slots"
+	"booking-service/internal/delivery/http/timeoff"
 	"booking-service/internal/worker"
 
 	swaggerFiles "github.com/swaggo/files"
@@ -30,6 +32,11 @@ import (
 // @name Authorization
 
 func main() {
+	// 0. Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("⚠️  Không tìm thấy file .env, sử dụng biến môi trường hệ thống")
+	}
+
 	// 1. Kết nối Database
 	database.ConnectDB()
 
@@ -42,11 +49,16 @@ func main() {
 	generatorRepo := postgres.NewGeneratorRepository(database.DB)
 	slotRepo := postgres.NewSlotRepository(database.DB)
 	appointmentRepo := postgres.NewAppointmentRepository(database.DB)
+	timeoffRepo := postgres.NewTimeOffRepository(database.DB)
 
 	// 3. Khai báo API Endpoints
-	api := router.Group("/api/v1")
-	slots.RegisterRoutes(api, slotRepo, generatorRepo, appointmentRepo)
-	appointments.RegisterRoutes(api, appointmentRepo)
+	publicAPI := router.Group("/api/v1/public/booking")
+	privateAPI := router.Group("/api/v1/booking")
+
+	slots.RegisterRoutes(publicAPI, privateAPI, slotRepo, generatorRepo, appointmentRepo)
+	appointments.RegisterRoutes(publicAPI, privateAPI, appointmentRepo)
+	timeoff.RegisterRoutes(privateAPI, timeoffRepo, slotRepo, appointmentRepo)
+	schedules.RegisterRoutes(publicAPI, privateAPI, generatorRepo)
 
 	// 3.5. Swagger endpoint
 	router.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -60,8 +72,9 @@ func main() {
 		})
 	})
 
-	// 5. Khởi chạy Background Worker: Dọn dẹp Expired Locks mỗi 60 giây
+	// 5. Khởi chạy Background Workers
 	worker.StartExpiredLockWorker(appointmentRepo)
+	worker.StartTimeOffWorker(timeoffRepo, slotRepo, appointmentRepo)
 
 	// 6. Khởi chạy Server
 	log.Println("🚀 Starting Booking Service on port 8083...")

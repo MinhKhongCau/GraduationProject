@@ -7,17 +7,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(rg *gin.RouterGroup, slotRepo *postgres.SlotRepository, generatorRepo *postgres.GeneratorRepository, appointmentRepo *postgres.AppointmentRepository) {
+func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, slotRepo *postgres.SlotRepository, generatorRepo *postgres.GeneratorRepository, appointmentRepo *postgres.AppointmentRepository) {
 	getDatesHandler := handler.NewGetAvailableDatesHandler(slotRepo)
 	getTimesHandler := handler.NewGetAvailableTimesHandler(slotRepo)
 	generateHandler := handler.NewGenerateSlotsHandler(generatorRepo)
 	lockSlotHandler := handler.NewLockSlotHandler(appointmentRepo)
 
-	slotsGroup := rg.Group("/slots")
+	publicSlotsGroup := publicGroup.Group("/slots")
 	{
-		slotsGroup.POST("/generate", generateHandler.Handle)
-		slotsGroup.GET("/available-dates", getDatesHandler.Handle)
-		slotsGroup.GET("/available-times", getTimesHandler.Handle)
-		slotsGroup.POST("/:id/lock", lockSlotHandler.Handle)
+		publicSlotsGroup.GET("/available-dates", getDatesHandler.Handle)
+		publicSlotsGroup.GET("/available-times", getTimesHandler.Handle)
+	}
+
+	privateSlotsGroup := privateGroup.Group("/slots")
+	{
+		privateSlotsGroup.POST("/generate", generateHandler.Handle)
+		privateSlotsGroup.POST("/:id/lock", lockSlotHandler.Handle)
 	}
 }

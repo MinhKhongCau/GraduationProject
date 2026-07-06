@@ -44,6 +44,8 @@ func ConnectDB() {
 		sslmode = "disable"
 	}
 
+	log.Printf("Connecting to database: host=%s user=%s password=%s dbname=%s port=%s sslmode=%s", host, user, password, dbname, port, sslmode)
+
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=Asia/Ho_Chi_Minh",
 		host, user, password, dbname, port, sslmode)
 
@@ -74,7 +76,40 @@ func ConnectDB() {
 	}
 
 	fmt.Println("✅ Database migrated successfully!")
+	seedDefaultTemplates(database)
 	DB = database
+}
+
+// seedDefaultTemplates tự động chèn các ca mẫu mặc định nếu DB trống
+func seedDefaultTemplates(db *gorm.DB) {
+	var count int64
+	db.Model(&domain.TimeTemplate{}).Count(&count)
+	if count == 0 {
+		fmt.Println("🌱 Seeding default Time Templates...")
+		templates := []domain.TimeTemplate{
+			{
+				TemplateID:          "t1-uuid-ca-sang-001",
+				ShiftName:           "Ca Sáng (08h-12h)",
+				StartTime:           "08:00",
+				EndTime:             "12:00",
+				SlotDurationMinutes: 60,
+				IsActive:            true,
+			},
+			{
+				TemplateID:          "t2-uuid-ca-chieu-002",
+				ShiftName:           "Ca Chiều (13h-17h)",
+				StartTime:           "13:00",
+				EndTime:             "17:00",
+				SlotDurationMinutes: 60,
+				IsActive:            true,
+			},
+		}
+		if err := db.Create(&templates).Error; err != nil {
+			log.Printf("⚠️  Failed to seed default templates: %v", err)
+		} else {
+			fmt.Println("✅ Default Time Templates seeded successfully!")
+		}
+	}
 }
 
 // runPreMigrations xử lý các thay đổi kiểu cột mà AutoMigrate không thể tự cast.

@@ -5,9 +5,10 @@ package domain
 type TimeTemplate struct {
 	TemplateID string `gorm:"column:template_id;primaryKey;type:uuid"`
 	ShiftName  string `gorm:"column:shift_name"`
-	StartTime  string `gorm:"column:start_time;type:varchar(5)"` // "HH:MM", ví dụ: "08:00"
-	EndTime    string `gorm:"column:end_time;type:varchar(5)"`   // "HH:MM", ví dụ: "12:00"
-	IsActive   bool   `gorm:"column:is_active"`
+	StartTime           string `gorm:"column:start_time;type:varchar(5)"` // "HH:MM", ví dụ: "08:00"
+	EndTime             string `gorm:"column:end_time;type:varchar(5)"`   // "HH:MM", ví dụ: "12:00"
+	SlotDurationMinutes int    `gorm:"column:slot_duration_minutes"`      // Thời lượng mỗi slot (phút)
+	IsActive            bool   `gorm:"column:is_active"`
 }
 
 func (TimeTemplate) TableName() string { return "Booking_Config_Time_Templates" }
@@ -19,6 +20,8 @@ type Availability struct {
 	TemplateID     string `json:"template_id" gorm:"column:template_id;type:uuid;not null"`
 	DayOfWeek      int    `json:"day_of_week" gorm:"column:day_of_week"` // 1=Mon...7=Sun
 	IsEnabled      bool   `json:"is_enabled" gorm:"column:is_enabled"`
+	EffectiveFrom  int64  `json:"effective_from" gorm:"column:effective_from"`   // Unix ms
+	EffectiveUntil *int64 `json:"effective_until" gorm:"column:effective_until"` // Unix ms, nullable
 }
 
 func (Availability) TableName() string { return "Booking_Config_Availability" }
