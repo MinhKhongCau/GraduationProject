@@ -19,6 +19,14 @@ export default function AdminTemplatesPage() {
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [instruction, setInstruction] = useState("");
+  const [certification, setCertification] = useState("");
+
+  const countWords = (text: string) => {
+    return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+  };
+
+  const isWordCountInvalid = countWords(instruction) > 3000 || countWords(certification) > 3000;
 
   const { data: templates = [], isLoading, refetch } = useApiQuery({
     queryKey: QUERY_KEYS.assessmentTemplates(),
@@ -26,7 +34,7 @@ export default function AdminTemplatesPage() {
   });
 
   const createMutation = useApiMutation({
-    mutationFn: (payload: { code: string; title: string; description?: string }) =>
+    mutationFn: (payload: { code: string; title: string; description?: string; instruction?: string; certification?: string }) =>
       assessmentApi.createTemplate(payload),
     onSuccess: () => {
       showSuccess("Tạo bài test thành công!");
@@ -69,6 +77,8 @@ export default function AdminTemplatesPage() {
     setCode("");
     setTitle("");
     setDescription("");
+    setInstruction("");
+    setCertification("");
   }
 
   function handleOpenCreate() {
@@ -81,21 +91,23 @@ export default function AdminTemplatesPage() {
     setCode(template.code);
     setTitle(template.title);
     setDescription(template.description || "");
+    setInstruction(template.instruction || "");
+    setCertification(template.certification || "");
     setIsEditOpen(true);
   }
 
   function handleCreateSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!code.trim() || !title.trim()) return;
-    createMutation.mutate({ code, title, description });
+    if (!code.trim() || !title.trim() || isWordCountInvalid) return;
+    createMutation.mutate({ code, title, description, instruction, certification });
   }
 
   function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedTemplate || !code.trim() || !title.trim()) return;
+    if (!selectedTemplate || !code.trim() || !title.trim() || isWordCountInvalid) return;
     updateMutation.mutate({
       slug: selectedTemplate.slug,
-      payload: { code, title, description },
+      payload: { code, title, description, instruction, certification },
     });
   }
 
@@ -227,11 +239,41 @@ export default function AdminTemplatesPage() {
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-sm font-medium text-foreground">Hướng dẫn (Instruction - Markdown)</label>
+              <span className={`text-xs ${countWords(instruction) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
+                {countWords(instruction)}/3000 từ
+              </span>
+            </div>
+            <textarea
+              rows={3}
+              placeholder="Hướng dẫn thực hiện bài test..."
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-sm font-medium text-foreground">Chứng nhận (Certification - Markdown)</label>
+              <span className={`text-xs ${countWords(certification) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
+                {countWords(certification)}/3000 từ
+              </span>
+            </div>
+            <textarea
+              rows={3}
+              placeholder="Thông tin chứng nhận chuyên môn..."
+              value={certification}
+              onChange={(e) => setCertification(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+            />
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
               Hủy
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
+            <Button type="submit" disabled={createMutation.isPending || isWordCountInvalid}>
               {createMutation.isPending ? "Đang lưu..." : "Tạo mới"}
             </Button>
           </div>
@@ -270,11 +312,41 @@ export default function AdminTemplatesPage() {
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-sm font-medium text-foreground">Hướng dẫn (Instruction - Markdown)</label>
+              <span className={`text-xs ${countWords(instruction) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
+                {countWords(instruction)}/3000 từ
+              </span>
+            </div>
+            <textarea
+              rows={3}
+              placeholder="Hướng dẫn thực hiện bài test..."
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between items-center mb-1">
+              <label className="text-sm font-medium text-foreground">Chứng nhận (Certification - Markdown)</label>
+              <span className={`text-xs ${countWords(certification) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
+                {countWords(certification)}/3000 từ
+              </span>
+            </div>
+            <textarea
+              rows={3}
+              placeholder="Thông tin chứng nhận chuyên môn..."
+              value={certification}
+              onChange={(e) => setCertification(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+            />
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
               Hủy
             </Button>
-            <Button type="submit" disabled={updateMutation.isPending}>
+            <Button type="submit" disabled={updateMutation.isPending || isWordCountInvalid}>
               {updateMutation.isPending ? "Đang lưu..." : "Cập nhật"}
             </Button>
           </div>
