@@ -30,8 +30,8 @@ func (r *SlotRepository) GetAvailableDates(startDate, endDate time.Time) ([]stri
 	// DISTINCT DATE: gom tất cả các slot trong cùng ngày thành 1 dòng
 	// Lọc: chỉ lấy ngày có ít nhất 1 slot AVAILABLE, chưa bị khóa, và chưa qua (start_time > now)
 	err := r.db.Table(`"Booking_Expert_Slots"`).
-		Where(`date_slot >= ? AND date_slot <= ? AND status = ? AND is_locked = ? AND start_time > ?`,
-			startDate, endDate, domain.SlotStatusAvailable, false, nowMs).
+		Where(`date_slot >= ? AND date_slot <= ? AND status = ? AND start_time > ?`,
+			startDate, endDate, domain.SlotStatusAvailable, nowMs).
 		Select(`DISTINCT TO_CHAR(date_slot, 'YYYY-MM-DD')`).
 		Pluck(`TO_CHAR(date_slot, 'YYYY-MM-DD')`, &dates).Error
 
@@ -52,8 +52,8 @@ func (r *SlotRepository) GetAvailableTimes(date string, expertID string) ([]Slot
 	nowMs := time.Now().UnixMilli()
 
 	err := r.db.Table(`"Booking_Expert_Slots"`).
-		Where(`TO_CHAR(date_slot, 'YYYY-MM-DD') = ? AND expert_id = ? AND status = ? AND is_locked = ? AND start_time > ?`,
-			date, expertID, domain.SlotStatusAvailable, false, nowMs).
+		Where(`TO_CHAR(date_slot, 'YYYY-MM-DD') = ? AND expert_id = ? AND status = ? AND start_time > ?`,
+			date, expertID, domain.SlotStatusAvailable, nowMs).
 		Select("slot_id, start_time, end_time").
 		Order("start_time ASC").
 		Scan(&times).Error

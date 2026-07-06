@@ -7,13 +7,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(rg *gin.RouterGroup, appointmentRepo *postgres.AppointmentRepository) {
+func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, appointmentRepo *postgres.AppointmentRepository) {
 	createHandler := handler.NewCreateAppointmentHandler(appointmentRepo)
 	webhookHandler := handler.NewPaymentWebhookHandler(appointmentRepo)
 
-	appointmentsGroup := rg.Group("/appointments")
+	publicAppointmentsGroup := publicGroup.Group("/appointments")
 	{
-		appointmentsGroup.POST("", createHandler.Handle)
-		appointmentsGroup.POST("/webhook", webhookHandler.Handle)
+		publicAppointmentsGroup.POST("/webhook", webhookHandler.Handle)
+	}
+
+	privateAppointmentsGroup := privateGroup.Group("/appointments")
+	{
+		privateAppointmentsGroup.POST("", createHandler.Handle)
 	}
 }

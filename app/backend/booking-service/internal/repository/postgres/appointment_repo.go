@@ -17,18 +17,61 @@ func NewAppointmentRepository(db *gorm.DB) *AppointmentRepository {
 	return &AppointmentRepository{db: db}
 }
 
+// Lấy Appointment theo SlotID
+func (r *AppointmentRepository) GetAppointmentBySlotID(slotID string) (*domain.Appointment, error) {
+	var appt domain.Appointment
+	err := r.db.Where("slot_id = ?", slotID).First(&appt).Error
+	if err != nil {
+		return nil, err
+	}
+	return &appt, nil
+}
+
+// Hủy Appointment do bác sĩ nghỉ phép (TimeOff)
+func (r *AppointmentRepository) CancelAppointmentByExpert(appointmentID string, reason string) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		var appt domain.Appointment
+		if err := tx.Where("appointment_id = ?", appointmentID).First(&appt).Error; err != nil {
+			return err
+		}
+
+		canceledBy := "EXPERT"
+		if err := tx.Model(&appt).Updates(map[string]interface{}{
+			"status":              domain.AppointmentStatusCancelled,
+			"cancellation_reason": reason,
+			"cancelled_by":        &canceledBy,
+			"updated_at":          time.Now().UnixMilli(),
+		}).Error; err != nil {
+			return err
+		}
+
+		// Trả Slot về AVAILABLE
+		if err := tx.Model(&domain.ExpertSlot{}).
+			Where("slot_id = ?", appt.SlotID).
+			Updates(map[string]interface{}{
+				"status":            domain.SlotStatusAvailable,
+				"locked_expires_at": nil,
+				"locked_by":         nil,
+			}).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 // =====================================================================
 // 1. KHÓA SLOT TẠM THỜI (Atomic Update - Chống Race Condition)
-// Chỉ khóa nếu slot đang AVAILABLE và chưa bị khóa
+// Chỉ khóa nếu slot đang AVAILABLE
 // Trả về lỗi nếu không có dòng nào được cập nhật (slot đã bị người khác lấy)
 // =====================================================================
 func (r *AppointmentRepository) LockSlot(slotID string, patientID string) error {
 	lockedExpiresAt := time.Now().UnixMilli() + 900_000 // Khoá 15 phút = 900,000 ms
 
 	result := r.db.Model(&domain.ExpertSlot{}).
-		Where("slot_id = ? AND is_locked = ? AND status = ?", slotID, false, domain.SlotStatusAvailable).
+		Where("slot_id = ? AND status = ?", slotID, domain.SlotStatusAvailable).
 		Updates(map[string]interface{}{
-			"is_locked":         true,
+			"status":            domain.SlotStatusLocked,
 			"locked_expires_at": lockedExpiresAt,
 			"locked_by":         patientID,
 		})
@@ -56,7 +99,7 @@ func (r *AppointmentRepository) CreateAppointment(appointment *domain.Appointmen
 		}
 
 		// Đảm bảo slot đang được giữ bởi đúng bệnh nhân này
-		if !slot.IsLocked || slot.LockedBy == nil || *slot.LockedBy != appointment.PatientID {
+		if slot.Status != domain.SlotStatusLocked || slot.LockedBy == nil || *slot.LockedBy != appointment.PatientID {
 			return errors.New("slot không được giữ bởi bạn, vui lòng thực hiện lại từ đầu")
 		}
 
@@ -68,6 +111,7 @@ func (r *AppointmentRepository) CreateAppointment(appointment *domain.Appointmen
 
 		// Tạo cuộc hẹn với trạng thái PENDING_PAYMENT
 		appointment.CreatedAt = nowMs
+		appointment.UpdatedAt = nowMs
 		if err := tx.Create(appointment).Error; err != nil {
 			return errors.New("lỗi khi tạo cuộc hẹn: " + err.Error())
 		}
@@ -89,7 +133,12 @@ func (r *AppointmentRepository) ConfirmPayment(appointmentID string) error {
 		}
 
 		// Cập nhật trạng thái cuộc hẹn thành CONFIRMED
-		if err := tx.Model(&appt).Update("status", domain.AppointmentStatusConfirmed).Error; err != nil {
+		nowMs := time.Now().UnixMilli()
+		if err := tx.Model(&appt).Updates(map[string]interface{}{
+			"status":       domain.AppointmentStatusConfirmed,
+			"updated_at":   nowMs,
+			"confirmed_at": nowMs,
+		}).Error; err != nil {
 			return err
 		}
 
@@ -98,7 +147,6 @@ func (r *AppointmentRepository) ConfirmPayment(appointmentID string) error {
 			Where("slot_id = ?", appt.SlotID).
 			Updates(map[string]interface{}{
 				"status":            domain.SlotStatusOccupied,
-				"is_locked":         false,
 				"locked_expires_at": nil,
 				"locked_by":         nil,
 			}).Error; err != nil {
@@ -121,8 +169,8 @@ func (r *AppointmentRepository) CancelExpiredLocks() (int64, error) {
 		// 1. Tìm tất cả các slot đã hết hạn lock
 		var expiredSlots []domain.ExpertSlot
 		if err := tx.
-			Where("is_locked = ? AND status = ? AND locked_expires_at < ?",
-				true, domain.SlotStatusAvailable, nowMs).
+			Where("status = ? AND locked_expires_at < ?",
+				domain.SlotStatusLocked, nowMs).
 			Find(&expiredSlots).Error; err != nil {
 			return err
 		}
@@ -138,11 +186,14 @@ func (r *AppointmentRepository) CancelExpiredLocks() (int64, error) {
 		}
 
 		// 2. Hủy các Appointment PENDING_PAYMENT liên quan đến slot hết hạn
+		canceledBy := "SYSTEM"
 		result := tx.Model(&domain.Appointment{}).
 			Where("slot_id IN ? AND status = ?", slotIDs, domain.AppointmentStatusPendingPayment).
 			Updates(map[string]interface{}{
 				"status":              domain.AppointmentStatusCancelled,
 				"cancellation_reason": "Quá hạn thanh toán 15 phút",
+				"cancelled_by":        &canceledBy,
+				"updated_at":          nowMs,
 			})
 		if result.Error != nil {
 			return result.Error
@@ -152,7 +203,7 @@ func (r *AppointmentRepository) CancelExpiredLocks() (int64, error) {
 		result = tx.Model(&domain.ExpertSlot{}).
 			Where("slot_id IN ?", slotIDs).
 			Updates(map[string]interface{}{
-				"is_locked":         false,
+				"status":            domain.SlotStatusAvailable,
 				"locked_expires_at": nil,
 				"locked_by":         nil,
 			})

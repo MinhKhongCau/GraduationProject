@@ -19,7 +19,7 @@ func nowMs() int64 {
 // Đọc chuỗi "HH:MM" từ TimeTemplate, kết hợp ngày mục tiêu để tạo
 // ra StartTime/EndTime dưới dạng Unix timestamp 13 số (milliseconds).
 // =====================================================================
-func SliceShiftIntoSlots(expertID string, targetDate time.Time, tplStartStr, tplEndStr string, durationMinutes int) ([]domain.ExpertSlot, error) {
+func SliceShiftIntoSlots(expertID string, availabilityID string, targetDate time.Time, tplStartStr, tplEndStr string, durationMinutes int) ([]domain.ExpertSlot, error) {
 	var slots []domain.ExpertSlot
 
 	// 1. Lấy Ngày-Tháng-Năm từ targetDate (ví dụ: 2026-07-05)
@@ -41,6 +41,7 @@ func SliceShiftIntoSlots(expertID string, targetDate time.Time, tplStartStr, tpl
 	shiftEnd := time.Date(year, month, day, endHour, endMin, 0, 0, loc)
 
 	currentTime := shiftStart
+	nowMs := time.Now().UnixMilli()
 
 	for currentTime.Before(shiftEnd) {
 		slotEndTime := currentTime.Add(time.Duration(durationMinutes) * time.Minute)
@@ -52,13 +53,15 @@ func SliceShiftIntoSlots(expertID string, targetDate time.Time, tplStartStr, tpl
 		dateOnly := time.Date(year, month, day, 0, 0, 0, 0, loc)
 
 		slot := domain.ExpertSlot{
-			SlotID:    uuid.New().String(),
-			ExpertID:  expertID,
-			DateSlot:  dateOnly,
-			StartTime: currentTime.UnixMilli(),   // Unix timestamp 13 số (ms)
-			EndTime:   slotEndTime.UnixMilli(),   // Unix timestamp 13 số (ms)
-			Status:    domain.SlotStatusAvailable,
-			IsLocked:  false,
+			SlotID:         uuid.New().String(),
+			ExpertID:       expertID,
+			AvailabilityID: &availabilityID,
+			DateSlot:       dateOnly,
+			StartTime:      currentTime.UnixMilli(), // Unix timestamp 13 số (ms)
+			EndTime:        slotEndTime.UnixMilli(), // Unix timestamp 13 số (ms)
+			Status:         domain.SlotStatusAvailable,
+			CreatedAt:      nowMs,
+			UpdatedAt:      nowMs,
 		}
 
 		slots = append(slots, slot)
@@ -105,7 +108,7 @@ func GenerateSlotsForNextDays(
 					if template != nil && template.IsActive {
 
 						// Cắt lịch (đọc chuỗi "HH:MM" từ template)
-						slots, err := SliceShiftIntoSlots(expertID, date, template.StartTime, template.EndTime, 60)
+						slots, err := SliceShiftIntoSlots(expertID, avail.AvailabilityID, date, template.StartTime, template.EndTime, template.SlotDurationMinutes)
 
 						if err == nil {
 							mu.Lock()

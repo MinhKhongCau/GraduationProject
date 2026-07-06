@@ -53,3 +53,13 @@ func (r *GeneratorRepository) BulkInsertSlots(slots []domain.ExpertSlot) error {
 		Clauses(clause.OnConflict{DoNothing: true}).
 		CreateInBatches(slots, 100).Error
 }
+
+// CreateTimeTemplate lưu ca làm việc mẫu mới
+func (r *GeneratorRepository) CreateTimeTemplate(template *domain.TimeTemplate) error {
+	return r.db.Create(template).Error
+}
+
+// CreateAvailability đăng ký cấu hình lịch rảnh mới cho chuyên gia
+func (r *GeneratorRepository) CreateAvailability(avail *domain.Availability) error {
+	return r.db.Create(avail).Error
+}
