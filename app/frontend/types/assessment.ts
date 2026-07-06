@@ -4,6 +4,8 @@ export interface AssessmentTemplate {
   code: string;
   title: string;
   description?: string;
+  instruction?: string;
+  certification?: string;
   slug: string;
   isActive?: boolean;
 }

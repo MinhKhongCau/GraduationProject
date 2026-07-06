@@ -9,6 +9,8 @@ class TemplateDBSchema(BaseModel):
     code: str
     title: str
     description: Optional[str] = None
+    instruction: Optional[str] = None
+    certification: Optional[str] = None
     slug: Optional[str] = Field(default=None, min_length=10, max_length=10)
     is_active: bool
 
