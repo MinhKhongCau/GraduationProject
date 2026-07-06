@@ -20,6 +20,8 @@ class AssessTemplate(Base):
     code = Column(String, unique=True, index=True)
     title = Column(String)
     description = Column(Text)
+    instruction = Column(Text, nullable=True)
+    certification = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
     slug = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(

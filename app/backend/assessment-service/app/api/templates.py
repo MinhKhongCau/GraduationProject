@@ -34,6 +34,8 @@ def create_template(
         code=template.code,
         title=template.title,
         description=template.description,
+        instruction=template.instruction,
+        certification=template.certification,
         slug=slug
     )
 
