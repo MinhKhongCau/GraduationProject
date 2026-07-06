@@ -21,6 +21,7 @@ class AssessTemplate(Base):
     title = Column(String)
     description = Column(Text)
     is_active = Column(Boolean, default=True)
+    slug = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -37,6 +38,8 @@ class AssessOptionGroup(Base):
     group_code = Column(String, unique=True)
     group_name = Column(String)
     description = Column(Text)
+    is_active = Column(Boolean, default=True)
+    slug = Column(String, unique=True, index=True, nullable=True)
 
 
 # =============================================
@@ -55,6 +58,8 @@ class AssessOption(Base):
     value = Column(String)
     score_value = Column(Integer)
     order_index = Column(Integer)
+    is_active = Column(Boolean, default=True)
+    slug = Column(String, unique=True, index=True, nullable=True)
 
 
 # =============================================
@@ -78,6 +83,8 @@ class AssessQuestion(Base):
     dimension = Column(String)
     question_order = Column(Integer)
     is_required = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
+    slug = Column(String, unique=True, index=True, nullable=True)
 
 
 # =============================================
