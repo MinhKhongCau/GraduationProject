@@ -17,11 +17,11 @@ export function QuestionStep({ question, selectedOptionId, onAnswer }: QuestionS
           .sort((a, b) => a.orderIndex - b.orderIndex)
           .map((option) => (
             <button
-              key={option.optionId}
+              key={option.slug}
               type="button"
-              onClick={() => onAnswer(option.optionId)}
+              onClick={() => onAnswer(option.slug)}
               className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors ${
-                selectedOptionId === option.optionId
+                selectedOptionId === option.slug
                   ? "border-primary bg-primary-soft text-primary-soft-text"
                   : "border-border text-foreground hover:bg-surface"
               }`}

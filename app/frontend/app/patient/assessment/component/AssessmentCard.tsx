@@ -6,7 +6,7 @@ import type { AssessmentTemplate } from "@/types";
 
 export function AssessmentCard({ template }: { template: AssessmentTemplate }) {
   return (
-    <Link href={ROUTES.PATIENT.ASSESSMENT_DETAIL(template.templateId)}>
+    <Link href={ROUTES.PATIENT.ASSESSMENT_DETAIL(template.slug)}>
       <Card className="flex h-full flex-col p-6 transition-shadow hover:shadow-elevated">
         <ClipboardCheck className="mb-4 h-8 w-8 text-primary" />
         <h3 className="mb-2 font-bold text-foreground">{template.title}</h3>
