@@ -41,7 +41,21 @@ export default function LoginPage() {
   });
 
   function redirectAfterLogin(role: LoginResponse["data"]["role"]) {
-    router.push(searchParams.get("redirect") || dashboardForRole(role));
+    const redirect = searchParams.get("redirect");
+    
+    if (redirect) {
+      const isAllowed = 
+        (role === "ADMIN" && redirect.startsWith("/admin")) ||
+        (role === "EXPERT" && redirect.startsWith("/expert")) ||
+        (role === "PATIENT" && redirect.startsWith("/patient"));
+      
+      if (isAllowed) {
+        router.push(redirect);
+        return;
+      }
+    }
+
+    router.push(dashboardForRole(role));
   }
 
   function onSubmit(values: LoginFormValues) {

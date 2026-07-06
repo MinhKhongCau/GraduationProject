@@ -14,7 +14,8 @@ export interface LoginResponse {
     accountId: string;
     fullName: string;
     role: UserRole;
-  }
+  };
+  error?: string;
 }
 
 export interface RegisterRequest {
