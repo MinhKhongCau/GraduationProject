@@ -29,6 +29,7 @@ def upgrade() -> None:
         sa.Column(
             "is_active", sa.Boolean, server_default=sa.text("true")
         ),
+        sa.Column("slug", sa.String, unique=True, index=True, nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -42,6 +43,10 @@ def upgrade() -> None:
         sa.Column("group_code", sa.String, unique=True),
         sa.Column("group_name", sa.String),
         sa.Column("description", sa.Text),
+        sa.Column(
+            "is_active", sa.Boolean, server_default=sa.text("true")
+        ),
+        sa.Column("slug", sa.String, unique=True, index=True, nullable=True),
     )
 
     op.create_table(
@@ -56,6 +61,10 @@ def upgrade() -> None:
         sa.Column("value", sa.String),
         sa.Column("score_value", sa.Integer),
         sa.Column("order_index", sa.Integer),
+        sa.Column(
+            "is_active", sa.Boolean, server_default=sa.text("true")
+        ),
+        sa.Column("slug", sa.String, unique=True, index=True, nullable=True),
     )
 
     op.create_table(
@@ -77,6 +86,10 @@ def upgrade() -> None:
         sa.Column(
             "is_required", sa.Boolean, server_default=sa.text("true")
         ),
+        sa.Column(
+            "is_active", sa.Boolean, server_default=sa.text("true")
+        ),
+        sa.Column("slug", sa.String, unique=True, index=True, nullable=True),
     )
 
     op.create_table(
