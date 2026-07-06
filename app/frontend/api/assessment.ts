@@ -7,6 +7,13 @@ export async function getTemplates(): Promise<AssessmentTemplate[]> {
   return response.data;
 }
 
+export async function getTemplate(slug: string): Promise<AssessmentTemplate> {
+  const response = await assessmentClient.get<AssessmentTemplate>(
+    ASSESSMENT_ENDPOINTS.TEMPLATE(slug)
+  );
+  return response.data;
+}
+
 export async function getQuestionsByTemplate(templateId: string): Promise<AssessmentQuestion[]> {
   const response = await assessmentClient.get<AssessmentQuestion[]>(
     ASSESSMENT_ENDPOINTS.QUESTIONS(templateId)
@@ -29,6 +36,8 @@ export async function createTemplate(payload: {
   code: string;
   title: string;
   description?: string;
+  instruction?: string;
+  certification?: string;
 }): Promise<any> {
   const response = await assessmentClient.post(ASSESSMENT_ENDPOINTS.TEMPLATES, payload);
   return response.data;
@@ -36,7 +45,14 @@ export async function createTemplate(payload: {
 
 export async function updateTemplate(
   slug: string,
-  payload: { code?: string; title?: string; description?: string; isActive?: boolean }
+  payload: {
+    code?: string;
+    title?: string;
+    description?: string;
+    instruction?: string;
+    certification?: string;
+    isActive?: boolean;
+  }
 ): Promise<any> {
   const response = await assessmentClient.patch(ASSESSMENT_ENDPOINTS.TEMPLATE(slug), payload);
   return response.data;

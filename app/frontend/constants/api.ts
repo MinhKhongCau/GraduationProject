@@ -94,6 +94,7 @@ export const QUERY_KEYS = {
   bookingHistory: () => ["booking", "history"] as const,
   wallet: (ownerId: string) => ["payment", "wallet", ownerId] as const,
   assessmentTemplates: () => ["assessment", "templates"] as const,
+  assessmentTemplate: (slug: string) => ["assessment", "template", slug] as const,
   assessmentQuestions: (templateId: string) => ["assessment", "questions", templateId] as const,
   assessmentOptionGroups: () => ["assessment", "optionGroups"] as const,
   assessmentOptionGroup: (slug: string) => ["assessment", "optionGroup", slug] as const,
