@@ -50,8 +50,13 @@ services:
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
 
     volumes:
-      # Dùng nguyên file kong.yml gốc, KHÔNG cần file riêng
-      - ./app/backend/gateway/kong.yml:/usr/local/kong/declarative/kong.yml:ro
+      # Mount file kong.yml vào container để có thể sửa
+      - ./app/backend/gateway/kong.yml:/usr/local/kong/declarative/kong.yml.template:ro
+    command: >
+      /bin/sh -c "
+      sed 's/$${{JWT_SECRET_KEY}}/'\"$$JWT_SECRET_KEY\"'/g' /usr/local/kong/declarative/kong.yml.template > /tmp/kong.yml &&
+      KONG_DECLARATIVE_CONFIG=/tmp/kong.yml /docker-entrypoint.sh kong docker-start
+      "
 
     extra_hosts:
       # "booking-service" trong kong.yml sẽ được Docker DNS phân giải

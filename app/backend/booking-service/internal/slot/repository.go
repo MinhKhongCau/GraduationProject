@@ -1,0 +1,98 @@
+package slot
+
+import (
+	"booking-service/internal/domain"
+	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+type Repository interface {
+	GetAvailableDates(expertID string, startDate, endDate time.Time) ([]string, error)
+	GetAvailableTimes(date string, expertID string) ([]SlotTimeResult, error)
+	GetSlotsByExpert(expertID string, fromDate, toDate int64) ([]domain.ExpertSlot, error)
+	BulkInsertSlots(slots []domain.ExpertSlot) error
+}
+
+type pgRepository struct {
+	db *gorm.DB
+}
+
+func NewRepository(db *gorm.DB) Repository {
+	return &pgRepository{db: db}
+}
+
+// AvailableDateResult - Kết quả ngày có lịch trống trả về cho bệnh nhân
+type AvailableDateResult struct {
+	DateSlot string `json:"date_slot"` // Định dạng "YYYY-MM-DD"
+}
+
+// 1. Lấy danh sách NGÀY có lịch trống trong khoảng thời gian
+// Điều kiện: status=AVAILABLE, is_locked=false, và start_time > thời điểm hiện tại (không hiển thị slot quá khứ)
+func (r *pgRepository) GetAvailableDates(expertID string, startDate, endDate time.Time) ([]string, error) {
+	var dates []string
+	nowMs := time.Now().UnixMilli()
+
+	// DISTINCT DATE: gom tất cả các slot trong cùng ngày thành 1 dòng
+	// Lọc: chỉ lấy ngày có ít nhất 1 slot AVAILABLE, chưa bị khóa, và chưa qua (start_time > now)
+	err := r.db.Table(`"Booking_Expert_Slots"`).
+		Where(`expert_id = ? AND date_slot >= ? AND date_slot <= ? AND status = ? AND start_time > ?`,
+			expertID, startDate, endDate, domain.SlotStatusAvailable, nowMs).
+		Select(`DISTINCT TO_CHAR(date_slot, 'YYYY-MM-DD')`).
+		Pluck(`TO_CHAR(date_slot, 'YYYY-MM-DD')`, &dates).Error
+
+	return dates, err
+}
+
+// SlotTimeResult - Kết quả khung giờ trả về cho bệnh nhân (dùng Unix ms 13 số)
+type SlotTimeResult struct {
+	SlotID    string `json:"slot_id"`
+	StartTime int64  `json:"start_time"` // Unix timestamp 13 số (ms)
+	EndTime   int64  `json:"end_time"`   // Unix timestamp 13 số (ms)
+}
+
+// 2. Lấy danh sách KHUNG GIỜ trống của một ngày cụ thể (theo expert_id)
+// Điều kiện: status=AVAILABLE, is_locked=false, start_time > now (loại slot quá khứ)
+func (r *pgRepository) GetAvailableTimes(date string, expertID string) ([]SlotTimeResult, error) {
+	var times []SlotTimeResult
+	nowMs := time.Now().UnixMilli()
+
+	err := r.db.Table(`"Booking_Expert_Slots"`).
+		Where(`TO_CHAR(date_slot, 'YYYY-MM-DD') = ? AND expert_id = ? AND status = ? AND start_time > ?`,
+			date, expertID, domain.SlotStatusAvailable, nowMs).
+		Select("slot_id, start_time, end_time").
+		Order("start_time ASC").
+		Scan(&times).Error
+
+	return times, err
+}
+
+// 3. Lấy toàn bộ danh sách Slot của Expert (bao gồm AVAILABLE, LOCKED, OCCUPIED)
+func (r *pgRepository) GetSlotsByExpert(expertID string, fromDate, toDate int64) ([]domain.ExpertSlot, error) {
+	var slots []domain.ExpertSlot
+	query := r.db.Where("expert_id = ?", expertID)
+
+	if fromDate > 0 {
+		query = query.Where("start_time >= ?", fromDate)
+	}
+	if toDate > 0 {
+		query = query.Where("start_time <= ?", toDate)
+	}
+
+	err := query.Order("start_time ASC").Find(&slots).Error
+	return slots, err
+}
+
+// 4. LƯU HÀNG LOẠT (BULK INSERT) với cơ chế chống trùng lịch (Idempotency)
+// Sử dụng ON CONFLICT DO NOTHING: nếu slot (expert_id, start_time) đã tồn tại thì bỏ qua, không báo lỗi
+func (r *pgRepository) BulkInsertSlots(slots []domain.ExpertSlot) error {
+	if len(slots) == 0 {
+		return nil
+	}
+
+	// CreateInBatches + OnConflict DoNothing: chia nhỏ 100 dòng/lần và bỏ qua khi trùng
+	return r.db.
+		Clauses(clause.OnConflict{DoNothing: true}).
+		CreateInBatches(slots, 100).Error
+}
