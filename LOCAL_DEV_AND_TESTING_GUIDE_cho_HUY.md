@@ -1,173 +1,49 @@
-# 📘 CẨM NANG HƯỚNG DẪN: CHẠY & TEST DỰ ÁN BOOKING SERVICE
-> **MindCare Project** - Hệ thống đặt lịch khám chuyên gia tâm lý tích hợp API Gateway (Kong) và Go Microservice.
+# 📘 CẨM NANG HƯỚNG DẪN: TEST NHANH LUỒNG ĐẶT LỊCH
 
-Tài liệu này hướng dẫn chi tiết cách thiết lập môi trường phát triển local, khởi chạy các service và thực hiện kiểm thử (test) 7 API cốt lõi qua cổng API Gateway.
+Tài liệu này tập trung vào hướng dẫn bạn cách gọi các API tuần tự để test luồng hoạt động chính (từ lúc bác sĩ sinh lịch -> bệnh nhân đặt lịch -> thanh toán -> bác sĩ nghỉ đột xuất).
 
----
-
-## 1. Chuẩn Bị Môi Trường Local
-
-### 1.1. Cấu hình biến môi trường (`.env`)
-Đảm bảo bạn đã có file `.env` ở **thư mục gốc** (`GraduationProject/.env`) và trong **booking-service** (`GraduationProject/app/backend/booking-service/.env`) với nội dung port đã được điều chỉnh thành **`5433`** để tránh tranh chấp với Postgres cài trên Windows.
-
-```ini
-# GraduationProject/app/backend/booking-service/.env
-APP_ENV=dev
-DB_HOST=127.0.0.1
-DB_PORT=5433
-DB_USER=admin
-DB_PASSWORD=admin
-BOOKING_DB_NAME=booking_db
-DB_SSLMODE=disable
-JWT_SECRET_KEY=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-```
+Toàn bộ API dưới đây đều gọi qua API Gateway tại cổng **`8000`** (bạn dùng Postman để test cho tiện nhé).
 
 ---
 
-## 2. Hướng Dẫn Khởi Chạy Hệ Thống
+## GIAI ĐOẠN 1: BÁC SĨ SINH LỊCH (GENERATE SLOTS)
 
-### Bước 1: Khởi động Database Postgres
-1. Mở Terminal tại thư mục gốc của dự án (`GraduationProject`).
-2. Chạy lệnh dựng database:
-   ```bash
-   docker-compose -f docker-compose.dev.yml up -d postgres-db
-   ```
-   > [!TIP]
-   > Cổng kết nối vào Database từ ngoài máy thật lúc này sẽ là `5433`.
-
-### Bước 2: Build Gateway & Khởi chạy Kong
-1. Đứng ở thư mục gốc `GraduationProject`.
-2. Build image gateway chứa Go plugin (chỉ cần chạy 1 lần đầu tiên):
-   ```bash
-   docker build -t mindcare/api-gateway-dev:latest ./app/backend/gateway
-   ```
-3. Thiết lập biến môi trường `JWT_SECRET_KEY` cho Kong (PowerShell):
-   ```powershell
-   $env:JWT_SECRET_KEY="404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
-   ```
-4. Khởi chạy Gateway:
-   ```bash
-   docker-compose -f docker-compose.dev.api-gateway.local.yml up -d
-   ```
-
-### Bước 3: Tạo Dữ Liệu Mẫu (Seed Data)
-Để sinh được các slot khám, bạn cần chèn dữ liệu mẫu về ca làm việc (`Booking_Config_Time_Templates`) và lịch rảnh (`Booking_Config_Availability`) của chuyên gia vào database.
-
-Kết nối vào Postgres thông qua **DBeaver / pgAdmin** (hoặc dùng terminal) với thông tin:
-- **Host**: `127.0.0.1`
-- **Port**: `5433`
-- **User**: `admin`
-- **Password**: `admin`
-- **Database**: `booking_db`
-
-Chạy đoạn mã SQL sau để chèn dữ liệu mẫu:
-```sql
--- 1. Chèn Ca mẫu dùng chung hệ thống
-INSERT INTO "Booking_Config_Time_Templates" (template_id, shift_name, start_time, end_time, slot_duration_minutes, is_active)
-VALUES 
-('t1-uuid-ca-sang-001', 'Ca Sáng (08h-12h)', '08:00', '12:00', 60, true),
-('t2-uuid-ca-chieu-002', 'Ca Chiều (13h-17h)', '13:00', '17:00', 60, true);
-
--- 2. Cài lịch rảnh cho chuyên gia (Expert ID: "expert-uuid-111")
--- Thứ 2 (day_of_week = 1) làm Ca Sáng
--- Thứ 4 (day_of_week = 3) làm Ca Chiều
-INSERT INTO "Booking_Config_Availability" (availability_id, expert_id, template_id, day_of_week, is_enabled, effective_from, effective_until)
-VALUES 
-('a1-avail-mon', 'expert-uuid-111', 't1-uuid-ca-sang-001', 1, true, 1719680400000, NULL), -- 1719680400000 = timestamp ms
-('a2-avail-wed', 'expert-uuid-111', 't2-uuid-ca-chieu-002', 3, true, 1719680400000, NULL);
-```
-
-### Bước 4: Chạy Booking Service ở máy thật
-1. Mở Terminal mới, đi vào thư mục `booking-service`:
-   ```bash
-   cd app/backend/booking-service
-   ```
-2. Khởi chạy ứng dụng:
-   ```bash
-   go run ./cmd/api
-   ```
-   > [!NOTE]
-   > Chương trình sẽ kết nối thành công vào port `5433`, tự động migrate dữ liệu và chạy ở cổng `8083`.
-
----
-
-## 3. Quy Trình Kiểm Thử (Test) Chi Tiết 7 API qua Gateway (Port 8000)
-
-> [!IMPORTANT]
-> Toàn bộ các API được test dưới đây đều gọi qua Gateway tại cổng **`8000`** thay vì gọi trực tiếp cổng `8083`.
-
----
-
-### GIAI ĐOẠN 1: CẤU HÌNH & SINH LỊCH
-
-### API 1: Sinh Lịch Khám Tự Động (Generate Slots)
-Bác sĩ yêu cầu hệ thống sinh tự động các slot trống cho mình dựa trên cấu hình Availability.
+Bác sĩ yêu cầu hệ thống sinh tự động các khung giờ trống cho mình dựa trên cấu hình sẵn có (đã được tự động seed lúc chạy app).
 
 - **URL**: `POST http://localhost:8000/api/v1/booking/slots/generate`
 - **Headers**:
   - `X-User-Role`: `EXPERT`
-  - `X-User-Id`: `expert-uuid-111`
+  - `X-User-Id`: `ce7b23b0-6b42-4e71-a482-84a8b0839422` (ID bác sĩ mặc định)
 - **Body (JSON)**:
   ```json
   {
-    "expert_id": "expert-uuid-111",
+    "expert_id": "ce7b23b0-6b42-4e71-a482-84a8b0839422",
     "days_to_generate": 14
   }
   ```
-- **Kết quả mong đợi**: Trả về thông báo thành công và số lượng slot được sinh ra (Ví dụ: `slots_created: 8`). Hệ thống tự chia nhỏ ca 4h thành các slot 60 phút và bỏ qua các ngày trùng lịch nghỉ.
+- **Kiểm tra**: Sẽ thấy trả về `slots_created: ...` thành công.
 
 ---
 
-### GIAI ĐOẠN 2: BỆNH NHÂN TRA CỨU & GIỮ CHỖ
+## GIAI ĐOẠN 2: BỆNH NHÂN TRA CỨU & GIỮ CHỖ
 
-### API 2: Xem Các Ngày Có Lịch Trống (Get Available Dates)
-Bệnh nhân tìm xem những ngày nào chuyên gia có lịch rảnh.
+### 1. Xem ngày nào có lịch trống
+- **URL**: `GET http://localhost:8000/api/v1/public/booking/slots/available-dates?expert_id=ce7b23b0-6b42-4e71-a482-84a8b0839422`
+- **Kiểm tra**: Trả về danh sách ngày có lịch rảnh, dạng `["2026-07-07", "2026-07-08", ...]`. Lấy một ngày bất kỳ để dùng cho API dưới.
 
-- **URL**: `GET http://localhost:8000/api/v1/public/booking/slots/available-dates`
-- **Params**:
-  - `expert_id`: `expert-uuid-111`
-  - `start_date`: `2026-07-06`
-  - `end_date`: `2026-07-20`
-- **Kết quả mong đợi**: Trả về mảng các chuỗi ngày dạng `["2026-07-06", "2026-07-08", ...]` tương ứng với những ngày có Slot rảnh.
+### 2. Xem khung giờ trống trong ngày
+- **URL**: `GET http://localhost:8000/api/v1/public/booking/slots/available-times?expert_id=ce7b23b0-6b42-4e71-a482-84a8b0839422&date=2026-07-08` (đổi date thành ngày bạn thấy ở bước trên)
+- **Kiểm tra**: Trả về danh sách các slot. Copy một `slot_id` bất kỳ.
 
----
-
-### API 3: Xem Khung Giờ Trống Trong Ngày (Get Available Times)
-Bệnh nhân chọn một ngày cụ thể để xem chi tiết các khung giờ.
-
-- **URL**: `GET http://localhost:8000/api/v1/public/booking/slots/available-times`
-- **Params**:
-  - `expert_id`: `expert-uuid-111`
-  - `date`: `2026-07-06`
-- **Kết quả mong đợi**: Trả về danh sách các slot trống:
-  ```json
-  [
-    {
-      "slot_id": "cfa84bb6-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "start_time": 1783324800000,
-      "end_time": 1783328400000
-    }
-  ]
-  ```
-
----
-
-### API 4: Giữ Chỗ Tạm Thời (Lock Slot)
-Bệnh nhân bấm chọn khung giờ và giữ chỗ trong vòng 15 phút.
-
-- **URL**: `POST http://localhost:8000/api/v1/booking/slots/:id/lock` (thay `:id` bằng `slot_id` thực tế ở API 3)
+### 3. Giữ chỗ (Lock Slot)
+Giữ slot đó trong 15 phút để chuẩn bị thanh toán.
+- **URL**: `POST http://localhost:8000/api/v1/booking/slots/:slot_id/lock` (thay `:slot_id` bằng ID vừa copy)
 - **Headers**:
   - `X-User-Role`: `PATIENT`
   - `X-User-Id`: `patient-uuid-999`
-- **Kết quả mong đợi**: Trả về `200 OK`. Slot chuyển sang trạng thái `LOCKED (1)` trên DB.
-- **Kịch bản test phụ**:
-  - Thử lấy User khác gọi API Lock slot đó tiếp -> Hệ thống phải trả về lỗi `409 Conflict` báo slot đã bị giữ chỗ.
+- **Kiểm tra**: Nhận được thông báo thành công. (Thử dùng user khác gọi lại API này sẽ bị lỗi `409 Conflict`).
 
----
-
-### API 5: Tạo Lịch Hẹn (Create Appointment)
-Trong vòng 15 phút giữ chỗ, bệnh nhân điền thông tin và xác nhận đặt lịch.
-
+### 4. Tạo cuộc hẹn (Create Appointment)
 - **URL**: `POST http://localhost:8000/api/v1/booking/appointments`
 - **Headers**:
   - `X-User-Role`: `PATIENT`
@@ -175,69 +51,111 @@ Trong vòng 15 phút giữ chỗ, bệnh nhân điền thông tin và xác nhậ
 - **Body (JSON)**:
   ```json
   {
-    "slot_id": "uuid-cua-slot-da-lock",
-    "patient_id": "patient-uuid-999",
-    "expert_id": "expert-uuid-111"
+    "slot_id": "<slot_id_vừa_lock>",
+    "expert_id": "ce7b23b0-6b42-4e71-a482-84a8b0839422"
   }
   ```
-- **Kết quả mong đợi**: Trả về thông tin cuộc hẹn được tạo với trạng thái ban đầu là `PENDING_PAYMENT (0)`.
+- **Kiểm tra**: Trả về thành công kèm theo `appointment_id`. Trạng thái cuộc hẹn lúc này là `PENDING_PAYMENT (0)`. Copy `appointment_id` này lại.
 
 ---
 
-### GIAI ĐOẠN 3: XÁC NHẬN THANH TOÁN (MOCK)
+## GIAI ĐOẠN 3: XÁC NHẬN THANH TOÁN (WEBHOOK MOCK)
 
-### API 6: Mock Payment Webhook
-Giả lập phản hồi từ cổng thanh toán báo về hệ thống khi người dùng thanh toán xong.
+Giả lập cổng thanh toán VNPay/Momo gọi webhook báo thanh toán thành công.
 
 - **URL**: `POST http://localhost:8000/api/v1/public/booking/appointments/webhook`
 - **Body (JSON)**:
   ```json
   {
-    "appointment_id": "uuid-appointment-cua-buoc-5",
-    "status": "success"
+    "appointment_id": "<appointment_id_vừa_copy>",
+    "status": "SUCCESS"
   }
   ```
-- **Kết quả mong đợi**: Trả về xác nhận thành công. Trạng thái `Appointment` chuyển sang `CONFIRMED (1)` và trạng thái của `ExpertSlot` chuyển sang `OCCUPIED (2)`.
+- **Kiểm tra**: Cuộc hẹn chuyển sang trạng thái `CONFIRMED (1)` và slot thành `OCCUPIED (2)`.
 
 ---
 
-### GIAI ĐOẠN 4: ĐĂNG KÝ NGHỈ PHÉP ĐỘT XUẤT
+## GIAI ĐOẠN 4: BÁC SĨ NGHỈ ĐỘT XUẤT (TIME-OFF)
 
-### API 7: Bác Sĩ Đăng Ký Nghỉ Đột Xuất (Time Off)
-Bác sĩ đăng ký nghỉ phép đột xuất chèn qua các slot đã sinh.
+Bác sĩ báo bận đột xuất, đè lên chính khung giờ có người vừa đặt ở trên.
 
+### Bước 1: Khai báo nghỉ phép
+Bạn cần truyền timestamp (milliseconds) bao trùm cái slot vừa bị chiếm.
 - **URL**: `POST http://localhost:8000/api/v1/booking/time-off`
 - **Headers**:
   - `X-User-Role`: `EXPERT`
-  - `X-User-Id`: `expert-uuid-111`
+  - `X-User-Id`: `ce7b23b0-6b42-4e71-a482-84a8b0839422`
 - **Body (JSON)**:
   ```json
   {
     "start_datetime": 1783324800000, 
     "end_datetime": 1783342800000,
-    "reason": "Bận họp chuyên môn đột xuất",
-    "force": false
+    "reason": "Bận họp chuyên môn đột xuất"
   }
   ```
+- **Kiểm tra**: Do khoảng thời gian này đã có cuộc hẹn `CONFIRMED` bên trên, hệ thống sẽ từ chối và trả về HTTP `409 Conflict` kèm danh sách các `affected_appointments`.
 
-#### Kịch Bản Test Khác Biệt:
-- **Trường hợp A (Chỉ đè lên slot rảnh):** 
-  - Gọi API với `"force": false`. Nếu trong khoảng giờ đó không có lịch nào đã được đặt (`OCCUPIED`), hệ thống tạo `TimeOff` thành công.
-- **Trường hợp B (Đè trúng lịch hẹn của bệnh nhân - Cảnh báo):**
-  - Giả sử khung giờ này chứa Slot ở bước 5 đã chuyển sang `OCCUPIED`.
-  - Gọi API với `"force": false`. Hệ thống từ chối và trả về HTTP `409 Conflict` kèm mảng `affected_appointments` chứa ID lịch hẹn bị đụng để bác sĩ tự cân nhắc.
-- **Trường hợp C (Đè trúng lịch hẹn - Cưỡng chế):**
-  - Gửi lại request trên với `"force": true`.
-  - Hệ thống tạo `TimeOff` thành công. 
-  - Quá 30 giây sau, Background Worker sẽ quét qua, tự động chuyển trạng thái lịch hẹn bị đè sang `CANCELLED (2)` (ghi rõ `cancelled_by = EXPERT`) và xoá các slot trống để không cho ai đặt nữa. Check log để thấy thông báo TODO của dịch vụ notification.
+### Bước 2: Ép buộc huỷ lịch (Confirm Time-Off)
+Bác sĩ xác nhận bắt buộc phải nghỉ, hệ thống sẽ lưu TimeOff và huỷ cuộc hẹn.
+- **URL**: `POST http://localhost:8000/api/v1/booking/time-off/confirm`
+- **Headers**:
+  - `X-User-Role`: `EXPERT`
+  - `X-User-Id`: `ce7b23b0-6b42-4e71-a482-84a8b0839422`
+- **Body (JSON)**: Dùng lại y chang Body của Bước 1.
+- **Kiểm tra**: Trả về `200 OK`. 
+- **Worker chạy ngầm**: Bạn đợi khoảng 1-2 phút, nhìn vào log terminal của ứng dụng sẽ thấy Worker quét qua và tự động đổi trạng thái cuộc hẹn kia thành `CANCELLED`.
+
+### Bước 3: Xem lại lịch nghỉ đã tạo
+- **URL**: `GET http://localhost:8000/api/v1/booking/time-off`
+- **Headers**:
+  - `X-User-Role`: `EXPERT`
+  - `X-User-Id`: `ce7b23b0-6b42-4e71-a482-84a8b0839422`
+- **Kiểm tra**: Thấy TimeOff đã được lưu.
+
+### Bước 4: Xoá lịch nghỉ (nếu lỡ tạo nhầm)
+- **URL**: `DELETE http://localhost:8000/api/v1/booking/time-off/:time_off_id`
+- **Headers**: (giống Bước 3)
+- **Kiểm tra**: Lịch nghỉ bị xoá khỏi DB. *(Lưu ý: Các cuộc hẹn đã bị huỷ bởi worker sẽ KHÔNG tự động phục hồi).*
 
 ---
 
-## 4. Xử Lý Các Sự Cố Hay Gặp (Troubleshooting)
+## GIAI ĐOẠN 5: CÁC API QUẢN LÝ BỔ SUNG ĐỂ TEST ĐỦ LUỒNG
 
-1. **Lỗi `cannot execute: required file not found` khi khởi động database:**
-   - Do file `init-db.sh` bị lưu bằng định dạng dòng Windows (CRLF). 
-   - Khắc phục bằng cách chạy PowerShell chuyển về LF như đã hướng dẫn ở trên, sau đó xoá sạch volume cũ bằng `docker-compose -f docker-compose.dev.yml down -v` và khởi chạy lại.
-2. **Lỗi `Only one usage of each socket address is normally permitted`:**
-   - Cổng `8083` (Booking service) hoặc `5433` (Postgres) đang bị chiếm bởi một tiến trình chạy ngầm trước đó.
-   - Kiểm tra bằng netstat: `netstat -ano | findstr 8083` và kill tiến trình đó trước khi chạy lại Go.
+Nếu bạn muốn test toàn diện hệ thống (chủ yếu là các luồng Create, Read, Update cho cấu hình), hãy gọi tiếp các API sau:
+
+### Nhóm 1: Quản lý Template (Ca Khám)
+1. **Tạo Ca Khám (Admin)**
+   - `POST http://localhost:8000/api/v1/booking/templates`
+   - Role: `ADMIN`
+   - Body: `{"shift_name": "Ca Tối", "start_time": "18:00", "end_time": "21:00", "slot_duration_minutes": 60, "is_active": true}`
+2. **Xem Danh Sách Ca Khám (Public)**
+   - `GET http://localhost:8000/api/v1/public/booking/templates`
+
+### Nhóm 2: Quản lý Availability (Lịch Rảnh Cố Định)
+3. **Đăng Ký Lịch Rảnh (Expert)**
+   - `POST http://localhost:8000/api/v1/booking/availabilities`
+   - Role: `EXPERT`
+   - Body: `{"template_id": "...", "day_of_week": 4, "effective_from": 1719680400000}`
+4. **Xem Lịch Rảnh Của Mình (Expert)**
+   - `GET http://localhost:8000/api/v1/booking/availabilities`
+   - Role: `EXPERT`
+5. **Chỉnh Sửa Lịch Rảnh (Expert)**
+   - `PATCH http://localhost:8000/api/v1/booking/availabilities/:id`
+   - Role: `EXPERT`
+   - Body: `{"is_enabled": false}` (Ví dụ tắt lịch rảnh này đi)
+
+### Nhóm 3: Quản lý Cuộc Hẹn & Slot (Appt & Slot)
+6. **Xem Tổng Hợp Slot (Expert)**
+   - `GET http://localhost:8000/api/v1/booking/slots/expert`
+   - Role: `EXPERT`
+   - Trả về tất cả slot (AVAILABLE, LOCKED, OCCUPIED) để vẽ lên lịch.
+7. **Xem Lịch Hẹn Bệnh Nhân (Patient)**
+   - `GET http://localhost:8000/api/v1/booking/appointments`
+   - Role: `PATIENT`
+8. **Xem Lịch Hẹn Bác Sĩ (Expert)**
+   - `GET http://localhost:8000/api/v1/booking/appointments/expert`
+   - Role: `EXPERT`
+9. **Huỷ Cuộc Hẹn (Patient / Expert)**
+   - `PATCH http://localhost:8000/api/v1/booking/appointments/:appointment_id/cancel`
+   - Role: `PATIENT` hoặc `EXPERT`
+   - Body: `{"reason": "Bận việc gia đình"}`

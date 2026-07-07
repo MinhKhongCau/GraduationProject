@@ -6,17 +6,19 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 
 	// Import các package nội bộ của dự án
-	"booking-service/internal/repository/postgres"
+	"booking-service/internal/config"
 	"booking-service/pkg/database"
 
-	"booking-service/internal/delivery/http/appointments"
-	"booking-service/internal/delivery/http/schedules"
-	"booking-service/internal/delivery/http/slots"
-	"booking-service/internal/delivery/http/timeoff"
-	"booking-service/internal/worker"
+	"booking-service/internal/appointment"
+	apptHandler "booking-service/internal/appointment/handler"
+	"booking-service/internal/schedule"
+	schedHandler "booking-service/internal/schedule/handler"
+	"booking-service/internal/slot"
+	slotHandler "booking-service/internal/slot/handler"
+	"booking-service/internal/timeoff"
+	timeoffHandler "booking-service/internal/timeoff/handler"
 
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -32,10 +34,8 @@ import (
 // @name Authorization
 
 func main() {
-	// 0. Load .env file
-	if err := godotenv.Load(); err != nil {
-		log.Println("⚠️  Không tìm thấy file .env, sử dụng biến môi trường hệ thống")
-	}
+	// 0. Load Configuration
+	config.LoadConfig()
 
 	// 1. Kết nối Database
 	database.ConnectDB()
@@ -46,19 +46,25 @@ func main() {
 	// ---- KHỞI TẠO CÁC TẦNG LÕI ----
 
 	// Repository
-	generatorRepo := postgres.NewGeneratorRepository(database.DB)
-	slotRepo := postgres.NewSlotRepository(database.DB)
-	appointmentRepo := postgres.NewAppointmentRepository(database.DB)
-	timeoffRepo := postgres.NewTimeOffRepository(database.DB)
+	scheduleRepo := schedule.NewRepository(database.DB)
+	slotRepo := slot.NewRepository(database.DB)
+	appointmentRepo := appointment.NewRepository(database.DB)
+	timeoffRepo := timeoff.NewRepository(database.DB)
+	
+	// Usecase
+	slotUsecase := slot.NewUsecase(slotRepo, appointmentRepo)
+	scheduleUsecase := schedule.NewUsecase(scheduleRepo)
+	timeoffUsecase := timeoff.NewUsecase(timeoffRepo, slotRepo, appointmentRepo)
+	appointmentUsecase := appointment.NewUsecase(appointmentRepo)
 
 	// 3. Khai báo API Endpoints
 	publicAPI := router.Group("/api/v1/public/booking")
 	privateAPI := router.Group("/api/v1/booking")
 
-	slots.RegisterRoutes(publicAPI, privateAPI, slotRepo, generatorRepo, appointmentRepo)
-	appointments.RegisterRoutes(publicAPI, privateAPI, appointmentRepo)
-	timeoff.RegisterRoutes(privateAPI, timeoffRepo, slotRepo, appointmentRepo)
-	schedules.RegisterRoutes(publicAPI, privateAPI, generatorRepo)
+	slotHandler.RegisterRoutes(publicAPI, privateAPI, slotRepo, appointmentRepo, slotUsecase, scheduleRepo, timeoffRepo)
+	apptHandler.RegisterRoutes(publicAPI, privateAPI, appointmentUsecase)
+	timeoffHandler.RegisterRoutes(privateAPI, timeoffUsecase)
+	schedHandler.RegisterRoutes(publicAPI, privateAPI, scheduleUsecase)
 
 	// 3.5. Swagger endpoint
 	router.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -73,12 +79,13 @@ func main() {
 	})
 
 	// 5. Khởi chạy Background Workers
-	worker.StartExpiredLockWorker(appointmentRepo)
-	worker.StartTimeOffWorker(timeoffRepo, slotRepo, appointmentRepo)
+	slot.StartExpiredLockWorker(appointmentRepo)
+	timeoff.StartWorker(timeoffUsecase)
 
 	// 6. Khởi chạy Server
-	log.Println("🚀 Starting Booking Service on port 8083...")
-	if err := router.Run(":8083"); err != nil {
+	port := config.AppConfig.ServerPort
+	log.Printf("🚀 Starting Booking Service on port %s...", port)
+	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

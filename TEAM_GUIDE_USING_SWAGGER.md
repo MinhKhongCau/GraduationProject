@@ -26,8 +26,20 @@ Dưới đây là danh sách tài khoản:
 | Vai trò (Role) | Tài khoản đăng nhập (Email) | Mật khẩu (Password) |
 | :--- | :--- | :--- |
 | **Quản trị viên** (ADMIN) | `admin@mindcare.com` | `admin@mindcare.com` |
+{
+  "email": "admin@mindcare.com",
+  "password": "admin@mindcare.com"
+}
 | **Chuyên gia/Bác sĩ** (EXPERT) | `expert@mindcare.com` | `expert@mindcare.com` |
+{
+  "email": "expert@mindcare.com",
+  "password": "expert@mindcare.com"
+}
 | **Bệnh nhân/Khách hàng** (PATIENT) | `patient@mindcare.com` | `patient@mindcare.com` |
+{
+  "email": "patient@mindcare.com",
+  "password": "patient@mindcare.com"
+}
 
 ---
 
