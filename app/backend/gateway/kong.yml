@@ -132,7 +132,9 @@ upstreams:
 
   - name: booking-upstream
     targets:
-      - target: host.docker.internal:8083
+      # - target: host.docker.internal:8083
+      - target: booking-service:8083
+
     healthchecks:
       active:
         type: http
