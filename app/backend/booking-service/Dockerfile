@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o booking-service ./cmd/api
 # ---- Runtime ----
 FROM alpine:3.20 AS runner
 WORKDIR /app
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /app/booking-service .
 
 EXPOSE 8083
