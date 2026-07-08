@@ -1,92 +1,226 @@
+// File: internal/handlers/expert_handler.go
 package handlers
 
 import (
 	"net/http"
+	"strings"
+
 	"profile-service/config"
+	"profile-service/internal/middleware"
 	"profile-service/internal/models"
 	"profile-service/internal/schemas"
+	"profile-service/pkg/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
-func CreateExpertProfile(c *gin.Context) {
-	accountID := c.Param("account_id")
+// saveExpertWithSpecializations lưu tên (Profile.Name) + hồ sơ Expert, và đồng bộ lại danh sách
+// chuyên khoa nếu specIDs khác nil (nil = không gửi trường này lên, giữ nguyên; []string{} = xoá hết).
+func saveExpertWithSpecializations(profileID uuid.UUID, name string, expert *models.ExpertProfile, specIDs []string) error {
+	return config.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.Profile{}).Where("id = ?", profileID).Update("name", name).Error; err != nil {
+			return err
+		}
+		if err := tx.Save(expert).Error; err != nil {
+			return err
+		}
+		if specIDs != nil {
+			var specs []models.Specialization
+			if len(specIDs) > 0 {
+				if err := tx.Where("spec_id IN ?", specIDs).Find(&specs).Error; err != nil {
+					return err
+				}
+			}
+			if err := tx.Model(expert).Association("Specializations").Replace(specs); err != nil {
+				return err
+			}
+			expert.Specializations = specs
+		}
+		return nil
+	})
+}
 
-	var req schemas.CreateExpertRequest
+func keepVerificationStatus(existing *models.ExpertProfile) string {
+	if existing != nil && existing.VerificationStatus != "" {
+		return existing.VerificationStatus
+	}
+	return "UNVERIFIED"
+}
+
+// ListExperts trả về danh sách chuyên gia có phân trang (public - dùng cho màn hình đặt lịch).
+// @Summary      Danh sách chuyên gia
+// @Tags         experts
+// @Produce      json
+// @Param        page      query int    false "Trang" default(1)
+// @Param        page_size query int    false "Số dòng/trang" default(20)
+// @Param        search    query string false "Tìm theo tên"
+// @Success      200 {object} response.Response
+// @Router       /api/v1/profiles/experts [get]
+func ListExperts(c *gin.Context) {
+	pagination := parsePagination(c)
+
+	query := config.DB.Model(&models.Profile{}).Where("role = ?", models.RoleExpert)
+	if search := strings.TrimSpace(c.Query("search")); search != "" {
+		query = query.Where("name ILIKE ?", "%"+search+"%")
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var experts []models.Profile
+	if err := query.Preload("ExpertProfile.Specializations").
+		Order("created_at DESC").
+		Limit(pagination.PageSize).
+		Offset((pagination.Page - 1) * pagination.PageSize).
+		Find(&experts).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "Lỗi truy vấn danh sách chuyên gia", err.Error())
+		return
+	}
+
+	response.Success(c, "Lấy danh sách chuyên gia thành công", schemas.PaginatedResponse{
+		Items:      experts,
+		Page:       pagination.Page,
+		PageSize:   pagination.PageSize,
+		TotalItems: total,
+		TotalPages: totalPages(total, pagination.PageSize),
+	})
+}
+
+// GetExpert trả về chi tiết một chuyên gia theo profile id (public).
+// @Summary      Xem chi tiết chuyên gia
+// @Tags         experts
+// @Produce      json
+// @Param        id path string true "Auth Account ID"
+// @Success      200 {object} response.Response
+// @Failure      404 {object} response.Response
+// @Router       /api/v1/profiles/experts/{id} [get]
+func GetExpert(c *gin.Context) {
+	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RoleExpert, "ExpertProfile.Specializations")
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ chuyên gia", err.Error())
+		return
+	}
+	response.Success(c, "Lấy thông tin thành công", profile)
+}
+
+// UpdateExpert thay thế toàn bộ (PUT) hồ sơ chuyên gia - dành cho Admin.
+// @Summary      [Admin] Cập nhật toàn bộ hồ sơ chuyên gia
+// @Tags         experts
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id      path string                      true "Auth Account ID"
+// @Param        request body schemas.UpsertExpertRequest true "Hồ sơ chuyên gia"
+// @Success      200 {object} response.Response
+// @Failure      400 {object} response.Response
+// @Failure      404 {object} response.Response
+// @Router       /api/v1/profiles/experts/{id} [put]
+func UpdateExpert(c *gin.Context) {
+	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RoleExpert, "ExpertProfile")
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ chuyên gia", err.Error())
+		return
+	}
+	applyExpertUpsert(c, profile)
+}
+
+// PatchExpert cập nhật một phần (PATCH) hồ sơ chuyên gia - dành cho Admin.
+// Chỉ Admin mới có quyền thay đổi verification_status.
+// @Summary      [Admin] Cập nhật một phần hồ sơ chuyên gia
+// @Tags         experts
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id      path string                     true "Auth Account ID"
+// @Param        request body schemas.PatchExpertRequest true "Các trường cần cập nhật"
+// @Success      200 {object} response.Response
+// @Failure      400 {object} response.Response
+// @Failure      403 {object} response.Response
+// @Failure      404 {object} response.Response
+// @Router       /api/v1/profiles/experts/{id} [patch]
+func PatchExpert(c *gin.Context) {
+	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RoleExpert, "ExpertProfile")
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ chuyên gia", err.Error())
+		return
+	}
+	applyExpertPatch(c, profile)
+}
+
+func applyExpertUpsert(c *gin.Context, profile *models.Profile) {
+	var req schemas.UpsertExpertRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ: " + err.Error()})
+		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
 
-	parsedAccountID, errParse := uuid.Parse(accountID)
-	if errParse != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Account ID không hợp lệ"})
-		return
-	}
-
-	// BƯỚC 1: Khởi tạo struct Chuyên gia
-	newExpert := models.Expert{
-		AccountID:            parsedAccountID,
-		FullName:             req.FullName,
+	expert := models.ExpertProfile{
+		ProfileID:            profile.ID,
 		PhoneNumber:          req.PhoneNumber,
 		Email:                req.Email,
 		AvatarURL:            req.AvatarURL,
 		IntroductionVideoURL: req.IntroductionVideoURL,
 		Bio:                  req.Bio,
-		VerificationStatus:   "UNVERIFIED", // Mặc định chờ Admin duyệt
+		VerificationStatus:   keepVerificationStatus(profile.ExpertProfile),
 	}
 
-	// BƯỚC 2: TÌM VÀ GÁN CHUYÊN KHOA (PHÉP THUẬT N-N LÀ Ở ĐÂY)
-	var specializations []models.Specialization
-	// Tìm tất cả các chuyên khoa có ID nằm trong mảng Frontend gửi lên
-	if len(req.SpecializationIDs) > 0 {
-		config.DB.Where("spec_id IN ?", req.SpecializationIDs).Find(&specializations)
-		// Gán mảng vừa tìm được vào struct Expert
-		newExpert.Specializations = specializations
-	}
-
-	// BƯỚC 3: LƯU VÀO DATABASE
-	// GORM sẽ tự động INSERT bảng profile_experts VÀ INSERT luôn bảng trung gian profile_expert_specs
-	if err := config.DB.Create(&newExpert).Error; err != nil {
-		c.JSON(http.StatusConflict, gin.H{"error": "Tài khoản này đã được đăng ký làm Chuyên gia. Mỗi tài khoản chỉ có 1 hồ sơ!"})
+	if err := saveExpertWithSpecializations(profile.ID, req.Name, &expert, req.SpecializationIDs); err != nil {
+		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật hồ sơ", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Tạo hồ sơ Chuyên gia thành công!",
-	})
+	profile.Name = req.Name
+	profile.ExpertProfile = &expert
+	response.Success(c, "Cập nhật hồ sơ thành công", profile)
 }
 
-// 2. LẤY THÔNG TIN CHI TIẾT 1 CHUYÊN GIA
-func GetExpertProfile(c *gin.Context) {
-	accountID := c.Param("account_id")
-	var expert models.Expert
-
-	// Dùng Preload("Specializations") để GORM tự động kéo dữ liệu từ bảng trung gian
-	if err := config.DB.Preload("Specializations").Where("account_id = ?", accountID).First(&expert).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy hồ sơ chuyên gia!"})
+func applyExpertPatch(c *gin.Context, profile *models.Profile) {
+	var req schemas.PatchExpertRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Lấy thông tin thành công",
-		"data":    expert,
-	})
-}
+	expert := profile.ExpertProfile
+	if expert == nil {
+		expert = &models.ExpertProfile{ProfileID: profile.ID, VerificationStatus: "UNVERIFIED"}
+	}
 
-// 3. LẤY DANH SÁCH TẤT CẢ CHUYÊN GIA (Cho màn hình Đặt lịch)
-func GetAllExperts(c *gin.Context) {
-	var experts []models.Expert
+	newName := profile.Name
+	if req.Name != nil {
+		newName = *req.Name
+	}
+	if req.PhoneNumber != nil {
+		expert.PhoneNumber = *req.PhoneNumber
+	}
+	if req.Email != nil {
+		expert.Email = *req.Email
+	}
+	if req.AvatarURL != nil {
+		expert.AvatarURL = *req.AvatarURL
+	}
+	if req.IntroductionVideoURL != nil {
+		expert.IntroductionVideoURL = *req.IntroductionVideoURL
+	}
+	if req.Bio != nil {
+		expert.Bio = *req.Bio
+	}
+	if req.VerificationStatus != nil {
+		if c.GetString(middleware.CtxRole) != string(models.RoleAdmin) {
+			response.Error(c, http.StatusForbidden, "Chỉ Admin mới có quyền thay đổi trạng thái xác minh", "Forbidden")
+			return
+		}
+		expert.VerificationStatus = *req.VerificationStatus
+	}
 
-	// Preload để UI biết mỗi bác sĩ thuộc những chuyên khoa nào
-	if err := config.DB.Preload("Specializations").Find(&experts).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi truy vấn Database!"})
+	if err := saveExpertWithSpecializations(profile.ID, newName, expert, req.SpecializationIDs); err != nil {
+		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật hồ sơ", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Lấy danh sách thành công",
-		"data":    experts,
-	})
+	profile.Name = newName
+	profile.ExpertProfile = expert
+	response.Success(c, "Cập nhật hồ sơ thành công", profile)
 }
