@@ -26,22 +26,27 @@ interface MDXEditorWrapperProps {
 export default function MDXEditorWrapper({ value, onChange, placeholder }: MDXEditorWrapperProps) {
   const ref = useRef<MDXEditorMethods>(null);
 
+  const lastValueRef = useRef(value);
+
   // Sync value from parent if it changes externally
   useEffect(() => {
-    if (ref.current) {
-      const currentVal = ref.current.getMarkdown();
-      if (currentVal !== value) {
-        ref.current.setMarkdown(value);
-      }
+    if (ref.current && value !== lastValueRef.current) {
+      ref.current.setMarkdown(value);
+      lastValueRef.current = value;
     }
   }, [value]);
+
+  const handleEditorChange = (val: string) => {
+    lastValueRef.current = val;
+    onChange(val);
+  };
 
   return (
     <div className="w-full rounded-lg border border-border bg-background overflow-hidden focus-within:border-primary transition-colors">
       <MDXEditor
         ref={ref}
         markdown={value}
-        onChange={onChange}
+        onChange={handleEditorChange}
         placeholder={placeholder}
         contentEditableClassName="prose dark:prose-invert max-w-none min-h-[180px] max-h-[300px] overflow-y-auto p-4 focus:outline-none text-sm text-foreground"
         plugins={[

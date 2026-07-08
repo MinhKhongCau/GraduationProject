@@ -120,7 +120,7 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
   // Welcome / Intro view
   if (!isStarted) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <Card className="p-6 md:p-8 space-y-6">
           <div className="border-b border-border/60 pb-5">
             <span className="inline-flex rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary uppercase mb-3">
