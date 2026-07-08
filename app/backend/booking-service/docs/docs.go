@@ -1208,17 +1208,13 @@ const docTemplate = `{
         "handler.GenerateRequest": {
             "type": "object",
             "required": [
-                "days_to_generate",
-                "expert_id"
+                "days_to_generate"
             ],
             "properties": {
                 "days_to_generate": {
                     "type": "integer",
                     "maximum": 30,
                     "minimum": 1
-                },
-                "expert_id": {
-                    "type": "string"
                 }
             }
         },

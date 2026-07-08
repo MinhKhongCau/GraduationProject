@@ -9,8 +9,7 @@ import (
 )
 
 type GenerateRequest struct {
-	ExpertID       string `json:"expert_id" binding:"required"`
-	DaysToGenerate int    `json:"days_to_generate" binding:"required,min=1,max=30"`
+	DaysToGenerate int `json:"days_to_generate" binding:"required,min=1,max=30"`
 }
 
 // Generate - POST /api/v1/slots/generate
@@ -36,7 +35,11 @@ func (h *Handler) Generate(c *gin.Context) {
 		return
 	}
 
-	callerID := c.GetHeader("X-User-Id")
+	expertID := c.GetHeader("X-User-Id")
+	if expertID == "" {
+		response.Error(c, http.StatusUnauthorized, "Missing expert ID", "Unauthorized")
+		return
+	}
 
 	var req GenerateRequest
 
@@ -46,14 +49,8 @@ func (h *Handler) Generate(c *gin.Context) {
 		return
 	}
 
-	// ---- AUTHORIZATION: Expert can only generate schedules for themselves ----
-	if callerID != req.ExpertID {
-		response.Error(c, http.StatusForbidden, "You cannot generate schedules for another expert", "Forbidden")
-		return
-	}
-
 	// Retrieve inputs from Database
-	avails, err := h.scheduleRepo.GetAvailabilities(req.ExpertID)
+	avails, err := h.scheduleRepo.GetAvailabilities(expertID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve availability config", err.Error())
 		return
@@ -65,14 +62,14 @@ func (h *Handler) Generate(c *gin.Context) {
 		return
 	}
 
-	timeOffs, err := h.timeoffRepo.GetTimeOffs(req.ExpertID, time.Now())
+	timeOffs, err := h.timeoffRepo.GetTimeOffs(expertID, time.Now())
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve time-off configurations", err.Error())
 		return
 	}
 
 	// Generate slots
-	generatedSlots, err := h.usecase.GenerateSlotsForNextDays(req.ExpertID, req.DaysToGenerate, avails, templates, timeOffs)
+	generatedSlots, err := h.usecase.GenerateSlotsForNextDays(expertID, req.DaysToGenerate, avails, templates, timeOffs)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Slot generation algorithm error", err.Error())
 		return
@@ -90,7 +87,7 @@ func (h *Handler) Generate(c *gin.Context) {
 	}
 
 	response.Success(c, "Slots generated successfully!", gin.H{
-		"expert_id":     req.ExpertID,
+		"expert_id":     expertID,
 		"slots_created": len(generatedSlots),
 	})
 }

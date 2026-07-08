@@ -52,11 +52,8 @@ definitions:
         maximum: 30
         minimum: 1
         type: integer
-      expert_id:
-        type: string
     required:
     - days_to_generate
-    - expert_id
     type: object
   handler.UpdateAvailabilityRequest:
     properties:
