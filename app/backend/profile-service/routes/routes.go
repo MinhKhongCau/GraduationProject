@@ -3,36 +3,63 @@ package routes
 
 import (
 	"profile-service/internal/handlers"
+	"profile-service/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 func SetupRoutes(r *gin.Engine) {
+	// ---------- Internal API (service-to-service, KHÔNG đi qua Gateway) ----------
+	// auth-service gọi thẳng vào đây (network nội bộ) ngay sau khi tạo tài khoản mới.
+	internal := r.Group("/internal/api/v1/profiles")
+	{
+		internal.POST("/create", handlers.CreateProfileInternal)
+	}
+
+	// ---------- Public API (đi qua Gateway) ----------
 	api := r.Group("/api/v1/profiles")
 	{
-		// Nhóm API dành cho Patient
-		patients := api.Group("/patients")
+		// --- Self-service: /me ---
+		self := api.Group("/me")
+		self.Use(middleware.RequireAuth())
 		{
-			// Truyền account_id tạm qua URL để test (Sau này sẽ đổi thành quét từ JWT)
-			patients.GET("/:account_id", handlers.GetPatientProfile)
-			patients.POST("/:account_id", handlers.CreatePatientProfile)
-
-			patients.GET("/:account_id/medical-histories", handlers.GetMedicalHistories)
-			patients.POST("/:account_id/medical-histories", handlers.AddMedicalHistory)
+			self.GET("", handlers.GetMe)
+			self.PUT("", handlers.UpdateMe)
+			self.PATCH("", handlers.PatchMe)
+			self.GET("/medical-histories", handlers.ListMyMedicalHistories)
+			self.POST("/medical-histories", handlers.AddMyMedicalHistory)
 		}
 
-		specs := api.Group("/specializations")
-		{
-			specs.GET("/", handlers.GetAllSpecializations)
-			specs.POST("/", handlers.CreateSpecialization)
-		}
+		// --- Duyệt danh sách chuyên gia/chuyên khoa: public ---
+		api.GET("/experts", handlers.ListExperts)
+		api.GET("/experts/:id", handlers.GetExpert)
+		api.GET("/specializations", handlers.GetAllSpecializations)
 
-		experts := api.Group("/experts")
+		// --- Quản trị: chỉ ADMIN ---
+		admin := api.Group("")
+		admin.Use(middleware.RequireAuth(), middleware.RequireRole("ADMIN"))
 		{
-			// Truyền account_id của Bác sĩ trên URL
-			experts.POST("/:account_id", handlers.CreateExpertProfile)
-			experts.GET("/", handlers.GetAllExperts)
-			experts.GET("/:account_id", handlers.GetExpertProfile)
+			// Quản lý chung mọi profile
+			admin.GET("", handlers.ListProfiles)
+			admin.POST("", handlers.CreateProfile)
+			admin.GET("/:id", handlers.GetProfile)
+			admin.PUT("/:id", handlers.UpdateProfile)
+			admin.PATCH("/:id", handlers.PatchProfile)
+			admin.DELETE("/:id", handlers.DeleteProfile)
+
+			// Bệnh nhân
+			admin.GET("/patients", handlers.ListPatients)
+			admin.GET("/patients/:id", handlers.GetPatient)
+			admin.PUT("/patients/:id", handlers.UpdatePatient)
+			admin.PATCH("/patients/:id", handlers.PatchPatient)
+			admin.GET("/patients/:id/medical-histories", handlers.ListPatientMedicalHistories)
+
+			// Chuyên gia (duyệt hồ sơ, chỉnh sửa thay mặt)
+			admin.PUT("/experts/:id", handlers.UpdateExpert)
+			admin.PATCH("/experts/:id", handlers.PatchExpert)
+
+			// Chuyên khoa
+			admin.POST("/specializations", handlers.CreateSpecialization)
 		}
 	}
 }

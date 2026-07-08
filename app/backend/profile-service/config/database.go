@@ -34,10 +34,12 @@ func ConnectDB() {
 
 	// Chạy AutoMigrate để tự động tạo bảng
 	err = db.AutoMigrate(
-		&models.Patient{},
+		&models.Profile{},
+		&models.PatientProfile{},
 		&models.MedicalHistory{},
-		&models.Expert{},
+		&models.ExpertProfile{},
 		&models.Specialization{},
+		&models.AdminProfile{},
 	)
 
 	if err != nil {
@@ -46,4 +48,7 @@ func ConnectDB() {
 
 	log.Println("✅ AutoMigrate hoàn tất: Các bảng đã được tạo!")
 	DB = db
+
+	// Chèn dữ liệu khởi tạo (Admin mặc định + dữ liệu mẫu) nếu chưa tồn tại
+	SeedInitialData(db)
 }

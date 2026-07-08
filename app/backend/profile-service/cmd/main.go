@@ -17,8 +17,8 @@ import (
 
 // @title Profile Service API
 // @version 1.0
-// @description Hồ sơ người dùng (Patient/Expert) - MindCare
-// @BasePath /api/v1/profiles
+// @description Hồ sơ người dùng (Admin/Patient/Expert) - MindCare
+// @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
