@@ -49,12 +49,16 @@ export interface ExpertProfile {
   specializations: Specialization[];
 }
 
-export interface CreateExpertProfileRequest {
+export interface UpdateExpertProfileRequest {
   fullName: string;
   phoneNumber?: string;
-  email: string;
+  email?: string;
   avatarUrl?: string;
   introductionVideoUrl?: string;
   bio?: string;
-  specializationIds: string[];
+  specializationIds?: string[];
+}
+
+export interface UpdateExpertVerificationRequest {
+  verificationStatus: ExpertVerificationStatus;
 }

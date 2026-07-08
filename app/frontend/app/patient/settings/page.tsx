@@ -17,8 +17,8 @@ export default function PatientSettingsPage() {
   const { showSuccess } = useErrorContext();
 
   const { data: profile } = useQuery({
-    queryKey: user ? QUERY_KEYS.patientProfile(user.id) : ["patient", "profile", "anonymous"],
-    queryFn: () => patientApi.getPatientProfile(user!.id),
+    queryKey: QUERY_KEYS.myPatientProfile(),
+    queryFn: () => patientApi.getMyProfile(),
     enabled: !!user,
     retry: 0,
   });
@@ -26,7 +26,7 @@ export default function PatientSettingsPage() {
   const updateProfileMutation = useApiMutation({
     mutationFn: async (values: ProfileFormValues) => {
       await authApi.updateProfile({ fullName: values.fullName, dateOfBirth: values.dateOfBirth });
-      return patientApi.updatePatientProfile(user!.id, {
+      return patientApi.updateMyProfile({
         fullName: values.fullName,
         dateOfBirth: values.dateOfBirth,
         phoneNumber: values.phoneNumber || undefined,
@@ -36,7 +36,7 @@ export default function PatientSettingsPage() {
     },
     onSuccess: () => {
       showSuccess("Profile updated.");
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.patientProfile(user!.id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myPatientProfile() });
     },
   });
 
