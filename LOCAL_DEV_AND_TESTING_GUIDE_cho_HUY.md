@@ -17,7 +17,6 @@ Bác sĩ yêu cầu hệ thống sinh tự động các khung giờ trống cho 
 - **Body (JSON)**:
   ```json
   {
-    "expert_id": "ce7b23b0-6b42-4e71-a482-84a8b0839422",
     "days_to_generate": 14
   }
   ```
