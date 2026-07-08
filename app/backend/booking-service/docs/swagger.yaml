@@ -1,10 +1,880 @@
 basePath: /api/v1
+definitions:
+  handler.CancelRequest:
+    properties:
+      reason:
+        type: string
+    required:
+    - reason
+    type: object
+  handler.CreateAvailabilityRequest:
+    properties:
+      day_of_week:
+        description: 1=Mon...7=Sun
+        maximum: 7
+        minimum: 1
+        type: integer
+      effective_from:
+        description: Unix ms
+        type: integer
+      effective_until:
+        type: integer
+      template_id:
+        type: string
+    required:
+    - day_of_week
+    - effective_from
+    - template_id
+    type: object
+  handler.CreateTemplateRequest:
+    properties:
+      end_time:
+        description: '"HH:MM"'
+        type: string
+      shift_name:
+        type: string
+      slot_duration_minutes:
+        maximum: 180
+        minimum: 10
+        type: integer
+      start_time:
+        description: '"HH:MM"'
+        type: string
+    required:
+    - end_time
+    - shift_name
+    - slot_duration_minutes
+    - start_time
+    type: object
+  handler.GenerateRequest:
+    properties:
+      days_to_generate:
+        maximum: 30
+        minimum: 1
+        type: integer
+    required:
+    - days_to_generate
+    type: object
+  handler.UpdateAvailabilityRequest:
+    properties:
+      day_of_week:
+        type: integer
+      effective_from:
+        type: integer
+      effective_until:
+        type: integer
+      is_enabled:
+        type: boolean
+      template_id:
+        type: string
+    type: object
+  handler.UpdateTemplateRequest:
+    properties:
+      is_active:
+        type: boolean
+    required:
+    - is_active
+    type: object
+  handler.WebhookRequest:
+    properties:
+      appointment_id:
+        type: string
+      status:
+        description: '"SUCCESS" hoặc "FAILED"'
+        type: string
+    required:
+    - appointment_id
+    - status
+    type: object
+  internal_appointment_handler.CreateRequest:
+    properties:
+      expert_id:
+        type: string
+      slot_id:
+        type: string
+    required:
+    - expert_id
+    - slot_id
+    type: object
+  internal_timeoff_handler.CreateRequest:
+    properties:
+      end_datetime:
+        type: integer
+      reason:
+        type: string
+      start_datetime:
+        type: integer
+    required:
+    - end_datetime
+    - reason
+    - start_datetime
+    type: object
 info:
   contact: {}
   description: Hệ thống đặt lịch khám bệnh - MindCare
   title: Booking Service API
   version: "1.0"
-paths: {}
+paths:
+  /booking/appointments:
+    get:
+      description: '[PATIENT] Get a list of all appointments for the current patient'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT] Get patient''s appointments'
+      tags:
+      - Appointments
+    post:
+      consumes:
+      - application/json
+      description: '[PATIENT] Patient confirms booking after successfully locking
+        a slot, state becomes PENDING_PAYMENT'
+      parameters:
+      - description: Thông vị cuộc hẹn
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_appointment_handler.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT] Create a new appointment'
+      tags:
+      - Appointments
+  /booking/appointments/{id}/cancel:
+    patch:
+      consumes:
+      - application/json
+      description: '[PATIENT/EXPERT] Cancel an appointment and free up the slot. Patient
+        can only cancel their own appointments.'
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lý do hủy
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CancelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT/EXPERT] Cancel appointment'
+      tags:
+      - Appointments
+  /booking/appointments/expert:
+    get:
+      description: '[EXPERT] Get a list of appointments for the current expert with
+        optional filters'
+      parameters:
+      - description: From Date (Unix ms)
+        in: query
+        name: from_date
+        type: integer
+      - description: To Date (Unix ms)
+        in: query
+        name: to_date
+        type: integer
+      - description: Status (0=PENDING, 1=CONFIRMED, 2=CANCELLED)
+        in: query
+        name: status
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Get expert''s appointments'
+      tags:
+      - Appointments
+  /booking/availabilities:
+    get:
+      description: '[EXPERT] Retrieve configurations of weekly availability for the
+        logged-in expert'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Get expert availability configurations'
+      tags:
+      - Schedules
+    post:
+      consumes:
+      - application/json
+      description: '[EXPERT] Create weekly availability configuration for an expert
+        based on templates'
+      parameters:
+      - description: Thông tin lịch rảnh
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateAvailabilityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Create expert availability configuration'
+      tags:
+      - Schedules
+  /booking/availabilities/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: '[EXPERT] Update a specific availability configuration'
+      parameters:
+      - description: Availability ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Cập nhật (truyền các field cần thiết)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateAvailabilityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Update expert availability'
+      tags:
+      - Schedules
+  /booking/slots/{id}/lock:
+    post:
+      description: '[PATIENT] Locks an available slot for 15 minutes before payment'
+      parameters:
+      - description: Slot ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT] Lock a slot temporarily'
+      tags:
+      - Slots
+  /booking/slots/expert:
+    get:
+      description: '[EXPERT] Retrieve all slots (AVAILABLE, LOCKED, OCCUPIED) to display
+        on calendar'
+      parameters:
+      - description: From Date (Unix ms)
+        in: query
+        name: from_date
+        type: integer
+      - description: To Date (Unix ms)
+        in: query
+        name: to_date
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Get all slots for expert'
+      tags:
+      - Slots
+  /booking/slots/generate:
+    post:
+      consumes:
+      - application/json
+      description: '[EXPERT] MANUAL TRIGGER: Expert triggers slot generation immediately
+        for next N days. (Note: System Cronjob is the primary source that runs automatically
+        every night).'
+      parameters:
+      - description: Expert ID và số ngày cần sinh
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.GenerateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Auto generate slots for expert'
+      tags:
+      - Slots
+  /booking/templates:
+    post:
+      consumes:
+      - application/json
+      description: '[ADMIN] Create a system-wide shift template (e.g., Morning Shift
+        08:00-12:00)'
+      parameters:
+      - description: Thông tin ca mẫu
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[ADMIN] Create a shift template'
+      tags:
+      - Schedules
+  /booking/templates/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: '[ADMIN] Update shift template (e.g. set is_active=false to deactivate)'
+      parameters:
+      - description: Template ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Thông tin cập nhật
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[ADMIN] Update shift template'
+      tags:
+      - Schedules
+  /booking/time-off:
+    get:
+      description: '[EXPERT] Retrieve all time-off registrations for the current expert'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Get list of time-offs'
+      tags:
+      - TimeOff
+    post:
+      consumes:
+      - application/json
+      description: '[EXPERT] Expert registers time-off period, returns 409 conflict
+        if there are overlapping appointments'
+      parameters:
+      - description: Thông tin thời gian nghỉ phép
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_timeoff_handler.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Register expert time-off'
+      tags:
+      - TimeOff
+  /booking/time-off/{id}:
+    delete:
+      description: '[EXPERT] Cancel a time-off registration. Note: cancelled appointments
+        will NOT be automatically restored.'
+      parameters:
+      - description: TimeOff ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Delete time-off'
+      tags:
+      - TimeOff
+  /booking/time-off/confirm:
+    post:
+      consumes:
+      - application/json
+      description: '[EXPERT] Force saves the time-off and automatically cancels all
+        overlapping appointments'
+      parameters:
+      - description: Thông tin thời gian nghỉ phép
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_timeoff_handler.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Confirm and force register time-off'
+      tags:
+      - TimeOff
+  /public/booking/appointments/webhook:
+    post:
+      consumes:
+      - application/json
+      description: '[SYSTEM/WEBHOOK] Payment gateway calls this endpoint to notify
+        status. SUCCESS -> CONFIRMED, FAILED -> CANCELLED'
+      parameters:
+      - description: Kết quả thanh toán
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.WebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: '[SYSTEM/WEBHOOK] Receive payment webhook'
+      tags:
+      - Appointments
+  /public/booking/slots/available-dates:
+    get:
+      description: '[PUBLIC] Returns an array of dates (YYYY-MM-DD) that have available
+        slots within next 1 month'
+      parameters:
+      - description: ID của chuyên gia
+        in: query
+        name: expert_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: '[PUBLIC] Get dates with available slots'
+      tags:
+      - Slots
+  /public/booking/slots/available-times:
+    get:
+      description: '[PUBLIC] Returns an array of timeslots that are AVAILABLE for
+        a specific expert on a specific date'
+      parameters:
+      - description: ID của chuyên gia
+        in: query
+        name: expert_id
+        required: true
+        type: string
+      - description: Ngày cần xem lịch (YYYY-MM-DD)
+        in: query
+        name: date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: '[PUBLIC] Get available timeslots for a date'
+      tags:
+      - Slots
+  /public/booking/templates:
+    get:
+      description: '[PUBLIC] Retrieve all system-wide shift templates'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: '[PUBLIC] Get all shift templates'
+      tags:
+      - Schedules
 securityDefinitions:
   BearerAuth:
     in: header

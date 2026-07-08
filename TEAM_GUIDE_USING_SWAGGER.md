@@ -4,30 +4,47 @@ Tài liệu này hướng dẫn các thành viên trong team cách truy cập t�
 
 ## 1. Truy cập Swagger UI
 
+Link test backend:
+https://api.qmcloud.io.vn/auth/swagger-ui/index.html
+
 Hệ thống cung cấp Swagger UI để tra cứu và test API trực tiếp trên trình duyệt.
 
-- **Khi chạy qua API Gateway (Khuyên dùng)**: 
+- **Khi chạy qua API Gateway (Khuyên dùng)**:
   👉 [http://localhost:8000/auth/swagger-ui/index.html](http://localhost:8000/auth/swagger-ui/index.html)
-  *(Đảm bảo cả API Gateway và Auth Service đều đang chạy)*
+  _(Đảm bảo cả API Gateway và Auth Service đều đang chạy)_
 
 - **Khi chạy Local (Chạy trực tiếp Auth Service)**:
   👉 [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
 
-
-
 ## 2. Tài khoản Đăng nhập Test (Mặc định)
 
-Khi ứng dụng khởi động lần đầu, Database sẽ tự động sinh ra 3 tài khoản test đại diện cho 3 quyền (Role) khác nhau. 
+Khi ứng dụng khởi động lần đầu, Database sẽ tự động sinh ra 3 tài khoản test đại diện cho 3 quyền (Role) khác nhau.
 
 **Quy tắc chung: MẬT KHẨU GIỐNG HỆT TÊN ĐĂNG NHẬP (Tài khoản = Mật khẩu)**
 
 Dưới đây là danh sách tài khoản:
 
-| Vai trò (Role) | Tài khoản đăng nhập (Email) | Mật khẩu (Password) |
-| :--- | :--- | :--- |
-| **Quản trị viên** (ADMIN) | `admin@mindcare.com` | `admin@mindcare.com` |
+| Vai trò (Role)            | Tài khoản đăng nhập (Email) | Mật khẩu (Password)  |
+| :------------------------ | :-------------------------- | :------------------- |
+| **Quản trị viên** (ADMIN) | `admin@mindcare.com`        | `admin@mindcare.com` |
+
+{
+"email": "admin@mindcare.com",
+"password": "admin@mindcare.com"
+}
+
 | **Chuyên gia/Bác sĩ** (EXPERT) | `expert@mindcare.com` | `expert@mindcare.com` |
+{
+"email": "expert@mindcare.com",
+"password": "expert@mindcare.com"
+}
+
 | **Bệnh nhân/Khách hàng** (PATIENT) | `patient@mindcare.com` | `patient@mindcare.com` |
+
+{
+"email": "patient@mindcare.com",
+"password": "patient@mindcare.com"
+}
 
 ---
 
