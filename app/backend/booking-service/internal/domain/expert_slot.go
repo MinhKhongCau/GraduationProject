@@ -29,10 +29,13 @@ type ExpertSlot struct {
 	Status      SlotStatus `json:"status"     gorm:"column:status;type:smallint;default:0"`
 	StatusLabel string     `json:"status_label" gorm:"-"` // Tự động điền bởi AfterFind hook, không lưu DB
 	Price       float64    `json:"price"      gorm:"column:price;type:decimal(12,2)"`
-	IsLocked    bool       `json:"is_locked"  gorm:"column:is_locked"`
 
 	LockedExpiresAt *int64  `json:"locked_expires_at" gorm:"column:locked_expires_at"` // Unix ms, nullable
 	LockedBy        *string `json:"locked_by"         gorm:"column:locked_by;type:uuid"` // PatientID, nullable
+
+	AvailabilityID *string `json:"availability_id"   gorm:"column:availability_id;type:uuid"` // UUID, nullable
+	CreatedAt      int64   `json:"created_at"        gorm:"column:created_at"`                // Unix ms
+	UpdatedAt      int64   `json:"updated_at"        gorm:"column:updated_at"`                // Unix ms
 }
 
 func (ExpertSlot) TableName() string { return "Booking_Expert_Slots" }

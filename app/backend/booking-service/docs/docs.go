@@ -14,7 +14,1292 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {},
+    "paths": {
+        "/booking/appointments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[PATIENT] Get a list of all appointments for the current patient",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "[PATIENT] Get patient's appointments",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[PATIENT] Patient confirms booking after successfully locking a slot, state becomes PENDING_PAYMENT",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "[PATIENT] Create a new appointment",
+                "parameters": [
+                    {
+                        "description": "Thông vị cuộc hẹn",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_appointment_handler.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/appointments/expert": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Get a list of appointments for the current expert with optional filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "[EXPERT] Get expert's appointments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "From Date (Unix ms)",
+                        "name": "from_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "To Date (Unix ms)",
+                        "name": "to_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Status (0=PENDING, 1=CONFIRMED, 2=CANCELLED)",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/appointments/{id}/cancel": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[PATIENT/EXPERT] Cancel an appointment and free up the slot. Patient can only cancel their own appointments.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "[PATIENT/EXPERT] Cancel appointment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lý do hủy",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CancelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/availabilities": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Retrieve configurations of weekly availability for the logged-in expert",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Schedules"
+                ],
+                "summary": "[EXPERT] Get expert availability configurations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Create weekly availability configuration for an expert based on templates",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Schedules"
+                ],
+                "summary": "[EXPERT] Create expert availability configuration",
+                "parameters": [
+                    {
+                        "description": "Thông tin lịch rảnh",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateAvailabilityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/availabilities/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Update a specific availability configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Schedules"
+                ],
+                "summary": "[EXPERT] Update expert availability",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Availability ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Cập nhật (truyền các field cần thiết)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateAvailabilityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/slots/expert": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Retrieve all slots (AVAILABLE, LOCKED, OCCUPIED) to display on calendar",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "[EXPERT] Get all slots for expert",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "From Date (Unix ms)",
+                        "name": "from_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "To Date (Unix ms)",
+                        "name": "to_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/slots/generate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] MANUAL TRIGGER: Expert triggers slot generation immediately for next N days. (Note: System Cronjob is the primary source that runs automatically every night).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "[EXPERT] Auto generate slots for expert",
+                "parameters": [
+                    {
+                        "description": "Expert ID và số ngày cần sinh",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.GenerateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/slots/{id}/lock": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[PATIENT] Locks an available slot for 15 minutes before payment",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "[PATIENT] Lock a slot temporarily",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Slot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/templates": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[ADMIN] Create a system-wide shift template (e.g., Morning Shift 08:00-12:00)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Schedules"
+                ],
+                "summary": "[ADMIN] Create a shift template",
+                "parameters": [
+                    {
+                        "description": "Thông tin ca mẫu",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/templates/{id}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[ADMIN] Update shift template (e.g. set is_active=false to deactivate)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Schedules"
+                ],
+                "summary": "[ADMIN] Update shift template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Template ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin cập nhật",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/time-off": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Retrieve all time-off registrations for the current expert",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TimeOff"
+                ],
+                "summary": "[EXPERT] Get list of time-offs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Expert registers time-off period, returns 409 conflict if there are overlapping appointments",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TimeOff"
+                ],
+                "summary": "[EXPERT] Register expert time-off",
+                "parameters": [
+                    {
+                        "description": "Thông tin thời gian nghỉ phép",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_timeoff_handler.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/time-off/confirm": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Force saves the time-off and automatically cancels all overlapping appointments",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TimeOff"
+                ],
+                "summary": "[EXPERT] Confirm and force register time-off",
+                "parameters": [
+                    {
+                        "description": "Thông tin thời gian nghỉ phép",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_timeoff_handler.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/time-off/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "[EXPERT] Cancel a time-off registration. Note: cancelled appointments will NOT be automatically restored.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "TimeOff"
+                ],
+                "summary": "[EXPERT] Delete time-off",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "TimeOff ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/booking/appointments/webhook": {
+            "post": {
+                "description": "[SYSTEM/WEBHOOK] Payment gateway calls this endpoint to notify status. SUCCESS -\u003e CONFIRMED, FAILED -\u003e CANCELLED",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "[SYSTEM/WEBHOOK] Receive payment webhook",
+                "parameters": [
+                    {
+                        "description": "Kết quả thanh toán",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.WebhookRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/booking/slots/available-dates": {
+            "get": {
+                "description": "[PUBLIC] Returns an array of dates (YYYY-MM-DD) that have available slots within next 1 month",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "[PUBLIC] Get dates with available slots",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID của chuyên gia",
+                        "name": "expert_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/booking/slots/available-times": {
+            "get": {
+                "description": "[PUBLIC] Returns an array of timeslots that are AVAILABLE for a specific expert on a specific date",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Slots"
+                ],
+                "summary": "[PUBLIC] Get available timeslots for a date",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID của chuyên gia",
+                        "name": "expert_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Ngày cần xem lịch (YYYY-MM-DD)",
+                        "name": "date",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/public/booking/templates": {
+            "get": {
+                "description": "[PUBLIC] Retrieve all system-wide shift templates",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Schedules"
+                ],
+                "summary": "[PUBLIC] Get all shift templates",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "handler.CancelRequest": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.CreateAvailabilityRequest": {
+            "type": "object",
+            "required": [
+                "day_of_week",
+                "effective_from",
+                "template_id"
+            ],
+            "properties": {
+                "day_of_week": {
+                    "description": "1=Mon...7=Sun",
+                    "type": "integer",
+                    "maximum": 7,
+                    "minimum": 1
+                },
+                "effective_from": {
+                    "description": "Unix ms",
+                    "type": "integer"
+                },
+                "effective_until": {
+                    "type": "integer"
+                },
+                "template_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.CreateTemplateRequest": {
+            "type": "object",
+            "required": [
+                "end_time",
+                "shift_name",
+                "slot_duration_minutes",
+                "start_time"
+            ],
+            "properties": {
+                "end_time": {
+                    "description": "\"HH:MM\"",
+                    "type": "string"
+                },
+                "shift_name": {
+                    "type": "string"
+                },
+                "slot_duration_minutes": {
+                    "type": "integer",
+                    "maximum": 180,
+                    "minimum": 10
+                },
+                "start_time": {
+                    "description": "\"HH:MM\"",
+                    "type": "string"
+                }
+            }
+        },
+        "handler.GenerateRequest": {
+            "type": "object",
+            "required": [
+                "days_to_generate"
+            ],
+            "properties": {
+                "days_to_generate": {
+                    "type": "integer",
+                    "maximum": 30,
+                    "minimum": 1
+                }
+            }
+        },
+        "handler.UpdateAvailabilityRequest": {
+            "type": "object",
+            "properties": {
+                "day_of_week": {
+                    "type": "integer"
+                },
+                "effective_from": {
+                    "type": "integer"
+                },
+                "effective_until": {
+                    "type": "integer"
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "template_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.UpdateTemplateRequest": {
+            "type": "object",
+            "required": [
+                "is_active"
+            ],
+            "properties": {
+                "is_active": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handler.WebhookRequest": {
+            "type": "object",
+            "required": [
+                "appointment_id",
+                "status"
+            ],
+            "properties": {
+                "appointment_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"SUCCESS\" hoặc \"FAILED\"",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_appointment_handler.CreateRequest": {
+            "type": "object",
+            "required": [
+                "expert_id",
+                "slot_id"
+            ],
+            "properties": {
+                "expert_id": {
+                    "type": "string"
+                },
+                "slot_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_timeoff_handler.CreateRequest": {
+            "type": "object",
+            "required": [
+                "end_datetime",
+                "reason",
+                "start_datetime"
+            ],
+            "properties": {
+                "end_datetime": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "start_datetime": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
     "securityDefinitions": {
         "BearerAuth": {
             "type": "apiKey",
