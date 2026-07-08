@@ -30,6 +30,19 @@ func exitWithError(kong *pdk.PDK, status int, friendlyMsg string, errDetail stri
 	kong.Response.Exit(status, respBytes, map[string][]string{"Content-Type": {"application/json"}})
 }
 
+// signingKey giải mã base64 chuỗi jwt_secret trước khi dùng làm khoá HMAC, khớp với
+// auth-service (JwtUtils.java: Decoders.BASE64.decode(secretKey)). Nếu dùng thẳng
+// các byte ASCII của chuỗi cấu hình (như code cũ), chữ ký sẽ không bao giờ khớp vì
+// Java ký bằng key đã decode còn Go verify bằng key chưa decode.
+func signingKey(secret string) ([]byte, error) {
+	return base64.StdEncoding.DecodeString(secret)
+}
+
+// Access chỉ giải mã & gắn header định danh KHI request có kèm Authorization.
+// Không có Authorization -> cho qua ẩn danh (route công khai như GET /experts tự quyết
+// định không cần định danh); có Authorization nhưng sai định dạng/hết hạn/sai chữ ký ->
+// chặn 401. Các route bắt buộc đăng nhập tự kiểm tra sự tồn tại của X-User-Id ở tầng
+// service (xem profile-service/internal/middleware.RequireAuth).
 func (conf *Config) Access(kong *pdk.PDK) {
 	// 1. Get Authorization Header
 	authHeader, err := kong.Request.GetHeader("Authorization")
@@ -68,7 +81,6 @@ func (conf *Config) Access(kong *pdk.PDK) {
 		secretBytes = []byte(jwtSecret)
 	}
 
-	// 3. Verify JWT Token
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		// Ensure signing method is HMAC
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
