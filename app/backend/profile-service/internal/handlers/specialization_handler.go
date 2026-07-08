@@ -1,19 +1,31 @@
+// File: internal/handlers/specialization_handler.go
 package handlers
 
 import (
 	"net/http"
+
 	"profile-service/config"
 	"profile-service/internal/models"
 	"profile-service/internal/schemas"
+	"profile-service/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// 1. TẠO CHUYÊN KHOA MỚI (Dùng cho Admin)
+// CreateSpecialization tạo mới một chuyên khoa (dành cho Admin).
+// @Summary      [Admin] Tạo chuyên khoa mới
+// @Tags         specializations
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request body schemas.CreateSpecializationRequest true "Chuyên khoa"
+// @Success      201 {object} response.Response
+// @Failure      400 {object} response.Response
+// @Router       /api/v1/profiles/specializations [post]
 func CreateSpecialization(c *gin.Context) {
 	var req schemas.CreateSpecializationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ: " + err.Error()})
+		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
 
@@ -25,17 +37,22 @@ func CreateSpecialization(c *gin.Context) {
 	}
 
 	if err := config.DB.Create(&newSpec).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi lưu Database!"})
+		response.Error(c, http.StatusInternalServerError, "Lỗi lưu Database", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Tạo chuyên khoa thành công", "data": newSpec})
+	response.Created(c, "Tạo chuyên khoa thành công", newSpec)
 }
 
-// 2. LẤY DANH SÁCH CHUYÊN KHOA (Dùng cho UI để Bác sĩ/Bệnh nhân chọn)
+// GetAllSpecializations trả về danh sách chuyên khoa đang hoạt động (public).
+// @Summary      Danh sách chuyên khoa
+// @Tags         specializations
+// @Produce      json
+// @Success      200 {object} response.Response
+// @Router       /api/v1/profiles/specializations [get]
 func GetAllSpecializations(c *gin.Context) {
 	var specs []models.Specialization
 	config.DB.Where("is_active = ?", true).Find(&specs)
 
-	c.JSON(http.StatusOK, gin.H{"message": "Thành công", "data": specs})
+	response.Success(c, "Lấy danh sách chuyên khoa thành công", specs)
 }

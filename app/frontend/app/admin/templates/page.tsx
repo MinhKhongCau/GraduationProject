@@ -1,37 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import { Plus, Edit2, Trash2, ShieldAlert } from "lucide-react";
-import { Card, Button, Spinner, Modal } from "@/components/ui";
+import { Card, Button, Spinner } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { assessmentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
 import { useErrorContext } from "@/context/ErrorContext";
 import type { AssessmentTemplate } from "@/types";
-
-const MDXEditor = dynamic(() => import("@/components/ui/MDXEditor"), {
-  ssr: false,
-});
+import { TemplateModal } from "./component/TemplateModal";
 
 export default function AdminTemplatesPage() {
   const { showSuccess, showError } = useErrorContext();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<AssessmentTemplate | null>(null);
-
-  // Form states
-  const [code, setCode] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [instruction, setInstruction] = useState("");
-  const [certification, setCertification] = useState("");
-
-  const countWords = (text: string) => {
-    return text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
-  };
-
-  const isWordCountInvalid = countWords(instruction) > 3000 || countWords(certification) > 3000;
 
   const { data: templates = [], isLoading, refetch } = useApiQuery({
     queryKey: QUERY_KEYS.assessmentTemplates(),
@@ -44,7 +27,6 @@ export default function AdminTemplatesPage() {
     onSuccess: () => {
       showSuccess("Tạo bài test thành công!");
       setIsCreateOpen(false);
-      resetForm();
       refetch();
     },
     onError: (err: any) => {
@@ -59,7 +41,6 @@ export default function AdminTemplatesPage() {
       showSuccess("Cập nhật bài test thành công!");
       setIsEditOpen(false);
       setSelectedTemplate(null);
-      resetForm();
       refetch();
     },
     onError: (err: any) => {
@@ -78,41 +59,36 @@ export default function AdminTemplatesPage() {
     },
   });
 
-  function resetForm() {
-    setCode("");
-    setTitle("");
-    setDescription("");
-    setInstruction("");
-    setCertification("");
-  }
-
   function handleOpenCreate() {
-    resetForm();
     setIsCreateOpen(true);
   }
 
   function handleOpenEdit(template: AssessmentTemplate) {
     setSelectedTemplate(template);
-    setCode(template.code);
-    setTitle(template.title);
-    setDescription(template.description || "");
-    setInstruction(template.instruction || "");
-    setCertification(template.certification || "");
     setIsEditOpen(true);
   }
 
-  function handleCreateSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!code.trim() || !title.trim() || isWordCountInvalid) return;
-    createMutation.mutate({ code, title, description, instruction, certification });
+  function handleCreateSubmit(values: {
+    code: string;
+    title: string;
+    description: string;
+    instruction: string;
+    certification: string;
+  }) {
+    createMutation.mutate(values);
   }
 
-  function handleEditSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedTemplate || !code.trim() || !title.trim() || isWordCountInvalid) return;
+  function handleEditSubmit(values: {
+    code: string;
+    title: string;
+    description: string;
+    instruction: string;
+    certification: string;
+  }) {
+    if (!selectedTemplate) return;
     updateMutation.mutate({
       slug: selectedTemplate.slug,
-      payload: { code, title, description, instruction, certification },
+      payload: values,
     });
   }
 
@@ -166,31 +142,31 @@ export default function AdminTemplatesPage() {
                     <td className="max-w-xs truncate px-6 py-4 text-muted-foreground">
                       {template.description || "—"}
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-muted-foreground">
+                    <td className="px-6 py-4 text-muted-foreground font-mono text-xs">
                       {template.slug}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex rounded-full bg-success-soft px-2 py-1 text-xs font-semibold text-success">
-                        Active
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2 py-1 text-xs font-medium text-success">
+                        Hoạt động
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleOpenEdit(template)}
-                          className="flex items-center gap-1 px-2.5 py-1 text-xs"
+                          className="flex items-center gap-1 text-primary hover:bg-primary-soft/50"
                         >
-                          <Edit2 className="h-3 w-3" /> Sửa
+                          <Edit2 className="h-3.5 w-3.5" /> Sửa
                         </Button>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(template.slug)}
-                          className="flex items-center gap-1 border-danger/20 px-2.5 py-1 text-xs text-danger hover:bg-danger-soft"
+                          className="flex items-center gap-1 text-danger hover:bg-danger-soft/50"
                         >
-                          <Trash2 className="h-3 w-3" /> Xóa
+                          <Trash2 className="h-3.5 w-3.5" /> Xóa
                         </Button>
                       </div>
                     </td>
@@ -210,145 +186,35 @@ export default function AdminTemplatesPage() {
       )}
 
       {/* Create Modal */}
-      <Modal open={isCreateOpen} onOpenChange={setIsCreateOpen} title="Tạo bài test mới" size="3xl">
-        <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Mã Code (e.g. PHQ_9)</label>
-            <input
-              type="text"
-              required
-              placeholder="Nhập mã code viết hoa..."
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Tên bài test</label>
-            <input
-              type="text"
-              required
-              placeholder="Nhập tên tiêu đề bài test..."
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Mô tả chi tiết</label>
-            <textarea
-              rows={3}
-              placeholder="Mô tả công dụng và hướng dẫn bài test..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-medium text-foreground">Hướng dẫn (Instruction - Markdown)</label>
-              <span className={`text-xs ${countWords(instruction) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
-                {countWords(instruction)}/3000 từ
-              </span>
-            </div>
-            <MDXEditor
-              value={instruction}
-              onChange={setInstruction}
-              placeholder="Hướng dẫn thực hiện bài test..."
-            />
-          </div>
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-medium text-foreground">Chứng nhận (Certification - Markdown)</label>
-              <span className={`text-xs ${countWords(certification) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
-                {countWords(certification)}/3000 từ
-              </span>
-            </div>
-            <MDXEditor
-              value={certification}
-              onChange={setCertification}
-              placeholder="Thông tin chứng nhận chuyên môn..."
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>
-              Hủy
-            </Button>
-            <Button type="submit" disabled={createMutation.isPending || isWordCountInvalid}>
-              {createMutation.isPending ? "Đang lưu..." : "Tạo mới"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <TemplateModal
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        title="Tạo bài test mới"
+        submitLabel="Tạo mới"
+        isPending={createMutation.isPending}
+        onSubmit={handleCreateSubmit}
+      />
 
       {/* Edit Modal */}
-      <Modal open={isEditOpen} onOpenChange={setIsEditOpen} title="Chỉnh sửa bài test" size="3xl">
-        <form onSubmit={handleEditSubmit} className="space-y-4 pt-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Mã Code</label>
-            <input
-              type="text"
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Tên bài test</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Mô tả</label>
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
-          </div>
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-medium text-foreground">Hướng dẫn (Instruction - Markdown)</label>
-              <span className={`text-xs ${countWords(instruction) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
-                {countWords(instruction)}/3000 từ
-              </span>
-            </div>
-            <MDXEditor
-              value={instruction}
-              onChange={setInstruction}
-              placeholder="Hướng dẫn thực hiện bài test..."
-            />
-          </div>
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-sm font-medium text-foreground">Chứng nhận (Certification - Markdown)</label>
-              <span className={`text-xs ${countWords(certification) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
-                {countWords(certification)}/3000 từ
-              </span>
-            </div>
-            <MDXEditor
-              value={certification}
-              onChange={setCertification}
-              placeholder="Thông tin chứng nhận chuyên môn..."
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
-              Hủy
-            </Button>
-            <Button type="submit" disabled={updateMutation.isPending || isWordCountInvalid}>
-              {updateMutation.isPending ? "Đang lưu..." : "Cập nhật"}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <TemplateModal
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        title="Chỉnh sửa bài test"
+        submitLabel="Cập nhật"
+        isPending={updateMutation.isPending}
+        initialValues={
+          selectedTemplate
+            ? {
+                code: selectedTemplate.code,
+                title: selectedTemplate.title,
+                description: selectedTemplate.description || "",
+                instruction: selectedTemplate.instruction || "",
+                certification: selectedTemplate.certification || "",
+              }
+            : undefined
+        }
+        onSubmit={handleEditSubmit}
+      />
     </div>
   );
 }
