@@ -1,10 +1,797 @@
-basePath: /api/v1/profiles
+basePath: /
+definitions:
+  profile-service_internal_schemas.CreateMedicalHistoryRequest:
+    properties:
+      condition_name:
+        type: string
+      description:
+        type: string
+      diagnosed_at:
+        description: 'Định dạng: YYYY-MM-DD'
+        type: string
+      is_chronic:
+        type: boolean
+    required:
+    - condition_name
+    - diagnosed_at
+    type: object
+  profile-service_internal_schemas.CreateProfileRequest:
+    properties:
+      auth_id:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        enum:
+        - ADMIN
+        - EXPERT
+        - PATIENT
+        type: string
+    required:
+    - auth_id
+    - name
+    - role
+    type: object
+  profile-service_internal_schemas.CreateSpecializationRequest:
+    properties:
+      description:
+        type: string
+      image_url:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  profile-service_internal_schemas.PatchExpertRequest:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      email:
+        type: string
+      introduction_video_url:
+        type: string
+      name:
+        type: string
+      phone_number:
+        type: string
+      specialization_ids:
+        items:
+          type: string
+        type: array
+      verification_status:
+        enum:
+        - UNVERIFIED
+        - PENDING
+        - VERIFIED
+        - REJECTED
+        type: string
+    type: object
+  profile-service_internal_schemas.PatchPatientRequest:
+    properties:
+      address:
+        type: string
+      avatar_url:
+        type: string
+      date_of_birth:
+        type: string
+      email:
+        type: string
+      gender:
+        type: string
+      name:
+        type: string
+      phone_number:
+        type: string
+    type: object
+  profile-service_internal_schemas.PatchProfileRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  profile-service_internal_schemas.UpdateProfileRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  profile-service_internal_schemas.UpsertExpertRequest:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      email:
+        type: string
+      introduction_video_url:
+        type: string
+      name:
+        type: string
+      phone_number:
+        type: string
+      specialization_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - name
+    type: object
+  profile-service_internal_schemas.UpsertPatientRequest:
+    properties:
+      address:
+        type: string
+      avatar_url:
+        type: string
+      date_of_birth:
+        description: 'Định dạng: YYYY-MM-DD'
+        type: string
+      email:
+        type: string
+      gender:
+        type: string
+      name:
+        type: string
+      phone_number:
+        type: string
+    required:
+    - name
+    type: object
+  profile-service_pkg_response.Response:
+    properties:
+      data: {}
+      error:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
 info:
   contact: {}
-  description: Hồ sơ người dùng (Patient/Expert) - MindCare
+  description: Hồ sơ người dùng (Admin/Patient/Expert) - MindCare
   title: Profile Service API
   version: "1.0"
-paths: {}
+paths:
+  /api/v1/profiles:
+    get:
+      parameters:
+      - default: 1
+        description: Trang
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Số dòng/trang
+        in: query
+        name: page_size
+        type: integer
+      - description: Lọc theo vai trò (ADMIN, EXPERT, PATIENT)
+        in: query
+        name: role
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Danh sách toàn bộ profile'
+      tags:
+      - profiles
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Thông tin profile
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.CreateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Tạo mới một profile'
+      tags:
+      - profiles
+  /api/v1/profiles/{id}:
+    delete:
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Xoá (mềm) một profile'
+      tags:
+      - profiles
+    get:
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Xem chi tiết 1 profile'
+      tags:
+      - profiles
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Trường cần cập nhật
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.PatchProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật một phần thông tin profile'
+      tags:
+      - profiles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tên mới
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật tên profile'
+      tags:
+      - profiles
+  /api/v1/profiles/experts:
+    get:
+      parameters:
+      - default: 1
+        description: Trang
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Số dòng/trang
+        in: query
+        name: page_size
+        type: integer
+      - description: Tìm theo tên
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      summary: Danh sách chuyên gia
+      tags:
+      - experts
+  /api/v1/profiles/experts/{id}:
+    get:
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      summary: Xem chi tiết chuyên gia
+      tags:
+      - experts
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Các trường cần cập nhật
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.PatchExpertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật một phần hồ sơ chuyên gia'
+      tags:
+      - experts
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Hồ sơ chuyên gia
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.UpsertExpertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật toàn bộ hồ sơ chuyên gia'
+      tags:
+      - experts
+  /api/v1/profiles/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Xem hồ sơ của chính mình
+      tags:
+      - profiles
+    patch:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật một phần hồ sơ của chính mình
+      tags:
+      - profiles
+    put:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Cập nhật toàn bộ hồ sơ của chính mình
+      tags:
+      - profiles
+  /api/v1/profiles/me/medical-histories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Xem tiền sử bệnh của chính mình
+      tags:
+      - patients
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Tiền sử bệnh
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.CreateMedicalHistoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: Thêm tiền sử bệnh cho chính mình
+      tags:
+      - patients
+  /api/v1/profiles/patients:
+    get:
+      parameters:
+      - default: 1
+        description: Trang
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Số dòng/trang
+        in: query
+        name: page_size
+        type: integer
+      - description: Tìm theo tên
+        in: query
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Danh sách bệnh nhân'
+      tags:
+      - patients
+  /api/v1/profiles/patients/{id}:
+    get:
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Xem chi tiết bệnh nhân'
+      tags:
+      - patients
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Các trường cần cập nhật
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.PatchPatientRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật một phần hồ sơ bệnh nhân'
+      tags:
+      - patients
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Hồ sơ bệnh nhân
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.UpsertPatientRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật toàn bộ hồ sơ bệnh nhân'
+      tags:
+      - patients
+  /api/v1/profiles/patients/{id}/medical-histories:
+    get:
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Xem tiền sử bệnh của một bệnh nhân'
+      tags:
+      - patients
+  /api/v1/profiles/specializations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      summary: Danh sách chuyên khoa
+      tags:
+      - specializations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Chuyên khoa
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.CreateSpecializationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Tạo chuyên khoa mới'
+      tags:
+      - specializations
+  /internal/api/v1/profiles/create:
+    post:
+      consumes:
+      - application/json
+      description: auth-service gọi endpoint này (qua mạng nội bộ, không qua Gateway)
+        ngay sau khi tạo tài khoản.
+      parameters:
+      - description: Thông tin tài khoản mới
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_schemas.CreateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/profile-service_pkg_response.Response'
+      summary: '[Internal] Tạo profile khi có tài khoản mới'
+      tags:
+      - internal
 securityDefinitions:
   BearerAuth:
     in: header

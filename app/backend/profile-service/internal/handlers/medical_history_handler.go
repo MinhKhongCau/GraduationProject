@@ -1,73 +1,111 @@
+// File: internal/handlers/medical_history_handler.go
 package handlers
 
 import (
 	"net/http"
+
 	"profile-service/config"
+	"profile-service/internal/middleware"
 	"profile-service/internal/models"
 	"profile-service/internal/schemas"
-	"time"
+	"profile-service/pkg/response"
 
 	"github.com/gin-gonic/gin"
 )
 
-// 1. LẤY DANH SÁCH TIỀN SỬ BỆNH
-func GetMedicalHistories(c *gin.Context) {
-	accountID := c.Param("account_id")
-
-	// Bước 1: Tìm ID của Bệnh nhân thông qua AccountID
-	var patient models.Patient
-	if err := config.DB.Where("account_id = ?", accountID).First(&patient).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Không tìm thấy hồ sơ bệnh nhân!"})
+// ListMyMedicalHistories trả về tiền sử bệnh của chính bệnh nhân đang đăng nhập.
+// @Summary      Xem tiền sử bệnh của chính mình
+// @Tags         patients
+// @Security     BearerAuth
+// @Produce      json
+// @Success      200 {object} response.Response
+// @Failure      401 {object} response.Response
+// @Failure      404 {object} response.Response
+// @Router       /api/v1/profiles/me/medical-histories [get]
+func ListMyMedicalHistories(c *gin.Context) {
+	profile, err := findProfileByAuthID(c.GetString(middleware.CtxAuthID))
+	if err != nil || profile.Role != models.RolePatient {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ bệnh nhân của bạn", "not a patient profile")
 		return
 	}
 
-	// Bước 2: Truy vấn danh sách Tiền sử bệnh dựa vào PatientID
 	var histories []models.MedicalHistory
-	// Chỉ lấy những bệnh án đang active
-	config.DB.Where("patient_id = ? AND is_active = ?", patient.PatientID, true).Find(&histories)
+	config.DB.Where("patient_profile_id = ? AND is_active = ?", profile.ID, true).
+		Order("diagnosed_at DESC").
+		Find(&histories)
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Lấy danh sách tiền sử bệnh thành công",
-		"data":    histories,
-	})
+	response.Success(c, "Lấy danh sách tiền sử bệnh thành công", histories)
 }
 
-// 2. THÊM MỚI TIỀN SỬ BỆNH
-func AddMedicalHistory(c *gin.Context) {
-	accountID := c.Param("account_id")
+// AddMyMedicalHistory thêm mới một tiền sử bệnh cho chính bệnh nhân đang đăng nhập.
+// @Summary      Thêm tiền sử bệnh cho chính mình
+// @Tags         patients
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request body schemas.CreateMedicalHistoryRequest true "Tiền sử bệnh"
+// @Success      201 {object} response.Response
+// @Failure      400 {object} response.Response
+// @Failure      404 {object} response.Response
+// @Router       /api/v1/profiles/me/medical-histories [post]
+func AddMyMedicalHistory(c *gin.Context) {
+	profile, err := findProfileByAuthID(c.GetString(middleware.CtxAuthID))
+	if err != nil || profile.Role != models.RolePatient {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ bệnh nhân của bạn", "not a patient profile")
+		return
+	}
 
 	var req schemas.CreateMedicalHistoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Dữ liệu không hợp lệ: " + err.Error()})
+		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
 
-	// Tìm Bệnh nhân (Giống hệt ở trên)
-	var patient models.Patient
-	if err := config.DB.Where("account_id = ?", accountID).First(&patient).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Bạn cần tạo Hồ sơ cá nhân trước khi thêm Tiền sử bệnh!"})
+	diagnosedAt, err := parseOptionalDate(req.DiagnosedAt)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Định dạng ngày chẩn đoán không hợp lệ (YYYY-MM-DD)", err.Error())
 		return
 	}
 
-	diagnosedDate, _ := time.Parse("2006-01-02", req.DiagnosedAt)
-
-	// Tạo bản ghi mới
-	newHistory := models.MedicalHistory{
-		PatientID:     patient.PatientID, // Dùng ID nội bộ vừa tìm được
-		ConditionName: req.ConditionName,
-		Description:   req.Description,
-		DiagnosedAt:   diagnosedDate,
-		IsChronic:     req.IsChronic,
-		IsActive:      true,
+	history := models.MedicalHistory{
+		PatientProfileID: profile.ID,
+		ConditionName:    req.ConditionName,
+		Description:      req.Description,
+		IsChronic:        req.IsChronic,
+		IsActive:         true,
+	}
+	if diagnosedAt != nil {
+		history.DiagnosedAt = *diagnosedAt
 	}
 
-	if err := config.DB.Create(&newHistory).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Lỗi lưu dữ liệu: " + err.Error()})
+	if err := config.DB.Create(&history).Error; err != nil {
+		response.Error(c, http.StatusInternalServerError, "Lỗi lưu dữ liệu", err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "Thêm tiền sử bệnh thành công!",
-		"data":    newHistory,
-	})
+	response.Created(c, "Thêm tiền sử bệnh thành công", history)
+}
+
+// ListPatientMedicalHistories trả về tiền sử bệnh của 1 bệnh nhân bất kỳ (chỉ xem - dành cho Admin).
+// @Summary      [Admin] Xem tiền sử bệnh của một bệnh nhân
+// @Tags         patients
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id path string true "Auth Account ID"
+// @Success      200 {object} response.Response
+// @Failure      404 {object} response.Response
+// @Router       /api/v1/profiles/patients/{id}/medical-histories [get]
+func ListPatientMedicalHistories(c *gin.Context) {
+	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RolePatient, "")
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ bệnh nhân", err.Error())
+		return
+	}
+
+	var histories []models.MedicalHistory
+	config.DB.Where("patient_profile_id = ? AND is_active = ?", profile.ID, true).
+		Order("diagnosed_at DESC").
+		Find(&histories)
+
+	response.Success(c, "Lấy danh sách tiền sử bệnh thành công", histories)
 }
