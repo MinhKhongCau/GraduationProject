@@ -61,3 +61,30 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Fix MDXEditor text visibility and theme compatibility */
+.mdxeditor {
+  color: var(--color-foreground) !important;
+  background-color: var(--color-background) !important;
+}
+
+.mdxeditor [contenteditable="true"] {
+  color: var(--color-foreground) !important;
+  caret-color: var(--color-foreground) !important;
+}
+
+.mdxeditor [contenteditable="true"] p,
+.mdxeditor [contenteditable="true"] h1,
+.mdxeditor [contenteditable="true"] h2,
+.mdxeditor [contenteditable="true"] h3,
+.mdxeditor [contenteditable="true"] li,
+.mdxeditor [contenteditable="true"] ul,
+.mdxeditor [contenteditable="true"] ol,
+.mdxeditor [contenteditable="true"] blockquote {
+  color: var(--color-foreground) !important;
+}
+
+.mdxeditor [data-placeholder]::before {
+  color: var(--color-muted-foreground) !important;
+  opacity: 0.6;
+}
