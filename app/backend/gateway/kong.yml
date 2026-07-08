@@ -26,6 +26,10 @@ services:
         paths:
           - /api/v1/profiles
         strip_path: false
+        plugins:
+          - name: mindcare-auth
+            config:
+              jwt_secret: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
       - name: profile-docs-routes
         paths:
           - /profile
@@ -70,6 +74,10 @@ services:
         paths:
           - /api/v1/assessments
         strip_path: false
+        plugins:
+          - name: mindcare-auth
+            config:
+              jwt_secret: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
       - name: assessment-docs-routes
         paths:
           - /assessment
@@ -183,9 +191,11 @@ plugins:
         - Content-Type
         - X-User-Id
         - X-User-Role
+        - X-User-Email
       exposed_headers:
         - X-User-Id
         - X-User-Role
+        - X-User-Email
       credentials: true
       max_age: 3600
 
