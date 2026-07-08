@@ -4,11 +4,13 @@ export interface ApiErrorResponse {
   details?: unknown;
 }
 
+/** Matches profile-service's schemas.PaginatedResponse (Go services use this shape). */
 export interface PaginatedResponse<T> {
   items: T[];
-  total: number;
   page: number;
   pageSize: number;
+  totalItems: number;
+  totalPages: number;
 }
 
 export interface MessageResponse {

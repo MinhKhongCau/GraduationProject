@@ -4,3 +4,4 @@ export * from "./Spinner";
 export * from "./Modal";
 export * from "./Toast";
 export * from "./ComingSoon";
+export * from "./Pagination";
