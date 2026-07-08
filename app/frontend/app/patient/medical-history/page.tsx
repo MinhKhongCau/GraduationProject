@@ -25,24 +25,24 @@ export default function MedicalHistoryPage() {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: user ? QUERY_KEYS.patientProfile(user.id) : ["patient", "profile", "anonymous"],
-    queryFn: () => patientApi.getPatientProfile(user!.id),
+    queryKey: QUERY_KEYS.myPatientProfile(),
+    queryFn: () => patientApi.getMyProfile(),
     enabled: !!user,
     retry: 0,
   });
 
   const { data: histories = [] } = useApiQuery({
-    queryKey: user ? QUERY_KEYS.medicalHistories(user.id) : ["patient", "medical-histories", "anonymous"],
-    queryFn: () => patientApi.getMedicalHistories(user!.id),
+    queryKey: QUERY_KEYS.myMedicalHistories(),
+    queryFn: () => patientApi.getMedicalHistories(),
     enabled: !!profile,
   });
 
   const addHistoryMutation = useApiMutation({
-    mutationFn: (payload: CreateMedicalHistoryRequest) => patientApi.addMedicalHistory(user!.id, payload),
+    mutationFn: (payload: CreateMedicalHistoryRequest) => patientApi.addMedicalHistory(payload),
     onSuccess: () => {
       showSuccess("Medical history entry added.");
       setAddOpen(false);
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.medicalHistories(user!.id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myMedicalHistories() });
     },
   });
 

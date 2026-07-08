@@ -15,11 +15,14 @@ export const AUTH_ENDPOINTS = {
 };
 
 export const PROFILE_ENDPOINTS = {
+  ME: "/profiles/me",
+  ME_MEDICAL_HISTORIES: "/profiles/me/medical-histories",
+  PATIENTS: "/profiles/patients",
   PATIENT: (accountId: string) => `/profiles/patients/${accountId}`,
   PATIENT_MEDICAL_HISTORIES: (accountId: string) =>
     `/profiles/patients/${accountId}/medical-histories`,
-  SPECIALIZATIONS: "/profiles/specializations/",
-  EXPERTS: "/profiles/experts/",
+  SPECIALIZATIONS: "/profiles/specializations",
+  EXPERTS: "/profiles/experts",
   EXPERT: (accountId: string) => `/profiles/experts/${accountId}`,
 };
 
@@ -82,8 +85,11 @@ export const LOCALE_COOKIE = "mc_locale";
 
 export const QUERY_KEYS = {
   me: () => ["auth", "me"] as const,
+  myPatientProfile: () => ["patient", "profile", "me"] as const,
+  myMedicalHistories: () => ["patient", "medical-histories", "me"] as const,
+  patients: (params?: Record<string, unknown>) => ["patients", params ?? {}] as const,
   patientProfile: (accountId: string) => ["patient", "profile", accountId] as const,
-  medicalHistories: (accountId: string) => ["patient", "medical-histories", accountId] as const,
+  patientMedicalHistories: (accountId: string) => ["patient", "medical-histories", accountId] as const,
   specializations: () => ["specializations"] as const,
   experts: (filters?: Record<string, unknown>) => ["experts", filters ?? {}] as const,
   expertProfile: (accountId: string) => ["expert", "profile", accountId] as const,
