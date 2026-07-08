@@ -21,10 +21,13 @@ type Appointment struct {
 	PatientID          string            `json:"patient_id"          gorm:"column:patient_id;type:uuid;not null"`
 	ExpertID           string            `json:"expert_id"           gorm:"column:expert_id;type:uuid;not null"`
 	CancellationReason string            `json:"cancellation_reason" gorm:"column:cancellation_reason"`
+	CancelledBy        *string           `json:"cancelled_by"        gorm:"column:cancelled_by;type:varchar(50)"` // SYSTEM / PATIENT / EXPERT
 	Status             AppointmentStatus `json:"status"              gorm:"column:status;type:smallint;default:0"`
 	StatusLabel        string            `json:"status_label"        gorm:"-"` // Tự động điền bởi AfterFind hook
 	MeetingLink        string            `json:"meeting_link"        gorm:"column:meeting_link"`
 	CreatedAt          int64             `json:"created_at"          gorm:"column:created_at"` // Unix ms
+	UpdatedAt          int64             `json:"updated_at"          gorm:"column:updated_at"` // Unix ms
+	ConfirmedAt        *int64            `json:"confirmed_at"        gorm:"column:confirmed_at"` // Unix ms, nullable
 }
 
 func (Appointment) TableName() string { return "Booking_Appointments" }

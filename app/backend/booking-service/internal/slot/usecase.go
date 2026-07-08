@@ -1,4 +1,4 @@
-package usecase
+package slot
 
 import (
 	"booking-service/internal/domain"
@@ -9,9 +9,57 @@ import (
 	"github.com/google/uuid"
 )
 
+// Usecase defines the slot generation logic
+type Usecase interface {
+	GenerateSlotsForNextDays(
+		expertID string,
+		daysToGenerate int,
+		availabilities []domain.Availability,
+		timeTemplates []domain.TimeTemplate,
+		timeOffs []domain.ExpertTimeOff,
+	) ([]domain.ExpertSlot, error)
+	LockSlot(slotID, patientID string) error
+	GetDates(expertID string, startDate, endDate time.Time) ([]string, error)
+	GetTimes(expertID string, date string) ([]SlotTimeResult, error)
+}
+
+type slotUsecase struct {
+	repo            Repository
+	appointmentRepo appointmentRepository // We'll need to define this or import appointment.Repository
+}
+
+type appointmentRepository interface {
+	LockSlot(slotID, patientID string) error
+}
+
+func NewUsecase(repo Repository, appointmentRepo appointmentRepository) Usecase {
+	return &slotUsecase{
+		repo:            repo,
+		appointmentRepo: appointmentRepo,
+	}
+}
+
 // nowMs trả về Unix timestamp hiện tại theo milliseconds (13 chữ số)
 func nowMs() int64 {
 	return time.Now().UnixMilli()
+}
+
+func (u *slotUsecase) LockSlot(slotID, patientID string) error {
+	// Call appointmentRepo's LockSlot which has the atomic query
+	err := u.appointmentRepo.LockSlot(slotID, patientID)
+	if err != nil {
+		// Map to sentinel error
+		return ErrSlotAlreadyLocked // assuming it failed due to conflict
+	}
+	return nil
+}
+
+func (u *slotUsecase) GetDates(expertID string, startDate, endDate time.Time) ([]string, error) {
+	return u.repo.GetAvailableDates(expertID, startDate, endDate)
+}
+
+func (u *slotUsecase) GetTimes(expertID string, date string) ([]SlotTimeResult, error) {
+	return u.repo.GetAvailableTimes(date, expertID)
 }
 
 // =====================================================================
@@ -19,7 +67,7 @@ func nowMs() int64 {
 // Đọc chuỗi "HH:MM" từ TimeTemplate, kết hợp ngày mục tiêu để tạo
 // ra StartTime/EndTime dưới dạng Unix timestamp 13 số (milliseconds).
 // =====================================================================
-func SliceShiftIntoSlots(expertID string, targetDate time.Time, tplStartStr, tplEndStr string, durationMinutes int) ([]domain.ExpertSlot, error) {
+func (u *slotUsecase) SliceShiftIntoSlots(expertID string, availabilityID string, targetDate time.Time, tplStartStr, tplEndStr string, durationMinutes int) ([]domain.ExpertSlot, error) {
 	var slots []domain.ExpertSlot
 
 	// 1. Lấy Ngày-Tháng-Năm từ targetDate (ví dụ: 2026-07-05)
@@ -41,6 +89,7 @@ func SliceShiftIntoSlots(expertID string, targetDate time.Time, tplStartStr, tpl
 	shiftEnd := time.Date(year, month, day, endHour, endMin, 0, 0, loc)
 
 	currentTime := shiftStart
+	nowMs := time.Now().UnixMilli()
 
 	for currentTime.Before(shiftEnd) {
 		slotEndTime := currentTime.Add(time.Duration(durationMinutes) * time.Minute)
@@ -52,13 +101,15 @@ func SliceShiftIntoSlots(expertID string, targetDate time.Time, tplStartStr, tpl
 		dateOnly := time.Date(year, month, day, 0, 0, 0, 0, loc)
 
 		slot := domain.ExpertSlot{
-			SlotID:    uuid.New().String(),
-			ExpertID:  expertID,
-			DateSlot:  dateOnly,
-			StartTime: currentTime.UnixMilli(),   // Unix timestamp 13 số (ms)
-			EndTime:   slotEndTime.UnixMilli(),   // Unix timestamp 13 số (ms)
-			Status:    domain.SlotStatusAvailable,
-			IsLocked:  false,
+			SlotID:         uuid.New().String(),
+			ExpertID:       expertID,
+			AvailabilityID: &availabilityID,
+			DateSlot:       dateOnly,
+			StartTime:      currentTime.UnixMilli(), // Unix timestamp 13 số (ms)
+			EndTime:        slotEndTime.UnixMilli(), // Unix timestamp 13 số (ms)
+			Status:         domain.SlotStatusAvailable,
+			CreatedAt:      nowMs,
+			UpdatedAt:      nowMs,
 		}
 
 		slots = append(slots, slot)
@@ -71,7 +122,7 @@ func SliceShiftIntoSlots(expertID string, targetDate time.Time, tplStartStr, tpl
 // =====================================================================
 // HÀM 2: GOROUTINES SINH LỊCH SONG SONG CHO NHIỀU NGÀY
 // =====================================================================
-func GenerateSlotsForNextDays(
+func (u *slotUsecase) GenerateSlotsForNextDays(
 	expertID string,
 	daysToGenerate int,
 	availabilities []domain.Availability,
@@ -105,7 +156,7 @@ func GenerateSlotsForNextDays(
 					if template != nil && template.IsActive {
 
 						// Cắt lịch (đọc chuỗi "HH:MM" từ template)
-						slots, err := SliceShiftIntoSlots(expertID, date, template.StartTime, template.EndTime, 60)
+						slots, err := u.SliceShiftIntoSlots(expertID, avail.AvailabilityID, date, template.StartTime, template.EndTime, template.SlotDurationMinutes)
 
 						if err == nil {
 							mu.Lock()

@@ -7,6 +7,7 @@ type ExpertTimeOff struct {
 	StartDatetime int64  `json:"start_datetime" gorm:"column:start_datetime"` // Unix timestamp 13 số (ms)
 	EndDatetime   int64  `json:"end_datetime" gorm:"column:end_datetime"`     // Unix timestamp 13 số (ms)
 	Reason        string `json:"reason" gorm:"column:reason"`
+	ProcessedAt   *int64 `json:"processed_at" gorm:"column:processed_at"`     // Unix ms, nullable
 }
 
 func (ExpertTimeOff) TableName() string { return "Booking_Expert_Time_Off" }

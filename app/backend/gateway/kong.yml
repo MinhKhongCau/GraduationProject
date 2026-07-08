@@ -48,18 +48,16 @@ services:
     routes:
       - name: booking-public-routes
         paths:
-          - /api/v1/slots/available-dates
-          - /api/v1/slots/available-times
+          - /api/v1/public/booking
         strip_path: false
       - name: booking-private-routes
         paths:
-          - /api/v1/appointments
-          - /api/v1/slots/generate
+          - /api/v1/booking
         strip_path: false
         plugins:
           - name: mindcare-auth
             config:
-              jwt_secret: "${JWT_SECRET_KEY}"
+              jwt_secret: "${{JWT_SECRET_KEY}}"
       - name: booking-docs-routes
         paths:
           - /booking
@@ -134,7 +132,7 @@ upstreams:
 
   - name: booking-upstream
     targets:
-      - target: booking-service:8083
+      - target: host.docker.internal:8083
     healthchecks:
       active:
         type: http
