@@ -1,31 +1,37 @@
 "use client";
 
-import { useState } from "react";
 import { Check, Clock } from "lucide-react";
 import { Button, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { bookingApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
-import type { ExpertSlot } from "@/types";
+import type { AvailableTimeSlot } from "@/types";
 
 export interface SlotStepProps {
   expertId: string;
-  selectedSlot: ExpertSlot | null;
-  onSelectSlot: (slot: ExpertSlot) => void;
+  selectedDate: string | null;
+  onSelectDate: (date: string) => void;
+  selectedSlot: AvailableTimeSlot | null;
+  onSelectSlot: (slot: AvailableTimeSlot) => void;
   onBack: () => void;
   onNext: () => void;
 }
 
-export function SlotStep({ expertId, selectedSlot, onSelectSlot, onBack, onNext }: SlotStepProps) {
-  const now = new Date();
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
+export function SlotStep({
+  expertId,
+  selectedDate,
+  onSelectDate,
+  selectedSlot,
+  onSelectSlot,
+  onBack,
+  onNext,
+}: SlotStepProps) {
   const { data: availableDates = [], isLoading: isLoadingDates } = useApiQuery({
-    queryKey: QUERY_KEYS.availableDates(expertId, now.getMonth() + 1, now.getFullYear()),
-    queryFn: () => bookingApi.getAvailableDates(expertId, now.getMonth() + 1, now.getFullYear()),
+    queryKey: QUERY_KEYS.availableDates(expertId),
+    queryFn: () => bookingApi.getAvailableDates(expertId),
   });
 
-  const { data: timesResponse, isLoading: isLoadingTimes } = useApiQuery({
+  const { data: availableTimes = [], isLoading: isLoadingTimes } = useApiQuery({
     queryKey: QUERY_KEYS.availableTimes(expertId, selectedDate ?? ""),
     queryFn: () => bookingApi.getAvailableTimes(expertId, selectedDate!),
     enabled: !!selectedDate,
@@ -47,7 +53,7 @@ export function SlotStep({ expertId, selectedSlot, onSelectSlot, onBack, onNext 
               <button
                 key={date}
                 type="button"
-                onClick={() => setSelectedDate(date)}
+                onClick={() => onSelectDate(date)}
                 className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
                   selectedDate === date
                     ? "border-primary bg-primary text-white"
@@ -66,11 +72,11 @@ export function SlotStep({ expertId, selectedSlot, onSelectSlot, onBack, onNext 
           <p className="mb-3 text-sm font-semibold text-foreground">Available times</p>
           {isLoadingTimes ? (
             <Spinner className="h-5 w-5" />
-          ) : (timesResponse?.timeSlots.length ?? 0) === 0 ? (
+          ) : availableTimes.length === 0 ? (
             <p className="text-sm text-muted-foreground">No open slots on this date.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {timesResponse!.timeSlots.map((slot) => (
+              {availableTimes.map((slot) => (
                 <button
                   key={slot.slotId}
                   type="button"
@@ -82,7 +88,7 @@ export function SlotStep({ expertId, selectedSlot, onSelectSlot, onBack, onNext 
                   }`}
                 >
                   <Clock className="h-3.5 w-3.5" />
-                  {slot.startTime}
+                  {new Date(slot.startTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                 </button>
               ))}
             </div>
