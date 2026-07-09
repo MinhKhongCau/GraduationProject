@@ -87,6 +87,7 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_AUTH_SERVICE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
 
   # 6. GO SERVICES (Profile, Payment, Booking)
   profile-service:
@@ -109,6 +110,7 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_PROFILE_SERVICE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
 
   payment-service:
     image: ${DOCKERHUB_USERNAME}/payment-service-dev:latest
@@ -130,6 +132,7 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_PAYMENT_SERVICE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
 
   booking-service:
     image: ${DOCKERHUB_USERNAME}/booking-service-dev:latest
@@ -151,6 +154,7 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_BOOKING_SERVICE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:
@@ -174,6 +178,8 @@ services:
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_ASSESSMENT_SERVICE}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+
 
   # 8. API GATEWAY (Kong)
   api-gateway:
@@ -184,6 +190,7 @@ services:
       - KONG_DATABASE=off
       - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
       - KONG_PROXY_LISTEN=0.0.0.0:8000
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
     ports:
       - "${PORT_API_GATEWAY}:8000"
     depends_on:
