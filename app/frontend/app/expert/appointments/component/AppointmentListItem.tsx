@@ -1,13 +1,17 @@
 import { CalendarClock } from "lucide-react";
 import { Card } from "@/components/ui";
-import type { Appointment } from "@/types";
+import type { Appointment, AppointmentStatus } from "@/types";
 
-const STATUS_STYLES: Record<Appointment["status"], string> = {
-  PENDING: "bg-warning-soft text-warning",
-  LOCKED: "bg-warning-soft text-warning",
+const STATUS_STYLES: Record<AppointmentStatus, string> = {
+  PENDING_PAYMENT: "bg-warning-soft text-warning",
   CONFIRMED: "bg-success-soft text-success",
-  CANCELED: "bg-danger-soft text-danger",
-  COMPLETED: "bg-surface text-muted-foreground",
+  CANCELLED: "bg-danger-soft text-danger",
+};
+
+const STATUS_TEXT: Record<AppointmentStatus, string> = {
+  PENDING_PAYMENT: "Pending payment",
+  CONFIRMED: "Confirmed",
+  CANCELLED: "Cancelled",
 };
 
 export function AppointmentListItem({ appointment }: { appointment: Appointment }) {
@@ -18,14 +22,16 @@ export function AppointmentListItem({ appointment }: { appointment: Appointment 
           <CalendarClock className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm font-bold text-foreground">{appointment.topic || "Consultation"}</p>
+          <p className="text-sm font-bold text-foreground">Consultation</p>
           <p className="text-xs text-muted-foreground">
             Booked {new Date(appointment.createdAt).toLocaleString("en-GB")}
           </p>
         </div>
       </div>
-      <span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${STATUS_STYLES[appointment.status]}`}>
-        {appointment.status}
+      <span
+        className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${STATUS_STYLES[appointment.statusLabel]}`}
+      >
+        {STATUS_TEXT[appointment.statusLabel]}
       </span>
     </Card>
   );

@@ -1,22 +1,27 @@
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Video } from "lucide-react";
 import { Card, Button } from "@/components/ui";
-import type { Appointment } from "@/types";
+import type { AppointmentStatus } from "@/types";
+import type { AppointmentWithExpert } from "@/hooks";
 
-const STATUS_STYLES: Record<Appointment["status"], string> = {
-  PENDING: "bg-warning-soft text-warning",
-  LOCKED: "bg-warning-soft text-warning",
+const STATUS_STYLES: Record<AppointmentStatus, string> = {
+  PENDING_PAYMENT: "bg-warning-soft text-warning",
   CONFIRMED: "bg-success-soft text-success",
-  CANCELED: "bg-danger-soft text-danger",
-  COMPLETED: "bg-surface text-muted-foreground",
+  CANCELLED: "bg-danger-soft text-danger",
+};
+
+const STATUS_TEXT: Record<AppointmentStatus, string> = {
+  PENDING_PAYMENT: "Pending payment",
+  CONFIRMED: "Confirmed",
+  CANCELLED: "Cancelled",
 };
 
 export interface BookingListItemProps {
-  appointment: Appointment;
-  onCancel: (appointment: Appointment) => void;
+  appointment: AppointmentWithExpert;
+  onCancel: (appointment: AppointmentWithExpert) => void;
 }
 
 export function BookingListItem({ appointment, onCancel }: BookingListItemProps) {
-  const canCancel = appointment.status === "CONFIRMED" || appointment.status === "PENDING";
+  const canCancel = appointment.statusLabel === "CONFIRMED" || appointment.statusLabel === "PENDING_PAYMENT";
 
   return (
     <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -26,16 +31,31 @@ export function BookingListItem({ appointment, onCancel }: BookingListItemProps)
         </div>
         <div>
           <p className="text-sm font-bold text-foreground">{appointment.expertName ?? "Expert"}</p>
-          <p className="text-xs text-muted-foreground">{appointment.topic}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Booked {new Date(appointment.createdAt).toLocaleString("en-GB")}
           </p>
+          {appointment.statusLabel === "CANCELLED" && appointment.cancellationReason && (
+            <p className="mt-1 text-xs text-muted-foreground">Reason: {appointment.cancellationReason}</p>
+          )}
+          {appointment.statusLabel === "CONFIRMED" && appointment.meetingLink && (
+            <a
+              href={appointment.meetingLink}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+            >
+              <Video className="h-3 w-3" />
+              Join meeting
+            </a>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <span className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${STATUS_STYLES[appointment.status]}`}>
-          {appointment.status}
+        <span
+          className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase ${STATUS_STYLES[appointment.statusLabel]}`}
+        >
+          {STATUS_TEXT[appointment.statusLabel]}
         </span>
         {canCancel && (
           <Button size="sm" variant="outline" onClick={() => onCancel(appointment)}>

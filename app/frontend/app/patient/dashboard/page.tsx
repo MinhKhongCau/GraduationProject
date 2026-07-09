@@ -4,18 +4,15 @@ import { UpcomingAppointmentCard } from "./component/UpcomingAppointmentCard";
 import { WalletSnapshotCard } from "./component/WalletSnapshotCard";
 import { QuickLinksGrid } from "./component/QuickLinksGrid";
 import { Spinner } from "@/components/ui";
-import { useApiQuery } from "@/hooks";
-import { bookingApi, paymentApi } from "@/api";
+import { useApiQuery, useMyBookings } from "@/hooks";
+import { paymentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
 
 export default function PatientDashboardPage() {
   const { user } = useAuthContext();
 
-  const { data: appointments, isLoading: isLoadingAppointments } = useApiQuery({
-    queryKey: QUERY_KEYS.bookingHistory(),
-    queryFn: () => bookingApi.getBookingHistory(),
-  });
+  // const { data: appointments, isLoading: isLoadingAppointments } = useMyBookings();
 
   const { data: wallet } = useApiQuery({
     queryKey: user ? QUERY_KEYS.wallet(user.id) : ["wallet", "anonymous"],
@@ -23,7 +20,7 @@ export default function PatientDashboardPage() {
     enabled: !!user,
   });
 
-  const nextAppointment = appointments?.find((appointment) => appointment.status === "CONFIRMED") ?? null;
+  // const nextAppointment = appointments?.find((appointment) => appointment.statusLabel === "CONFIRMED") ?? null;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -31,14 +28,14 @@ export default function PatientDashboardPage() {
         Welcome back{user ? `, ${user.fullName}` : ""}
       </h1>
 
-      {isLoadingAppointments ? (
+      {/* {isLoadingAppointments ? (
         <Spinner className="h-6 w-6" />
       ) : (
         <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <UpcomingAppointmentCard appointment={nextAppointment} />
           <WalletSnapshotCard balance={wallet?.balance} />
         </div>
-      )}
+      )} */}
 
       <QuickLinksGrid />
     </div>

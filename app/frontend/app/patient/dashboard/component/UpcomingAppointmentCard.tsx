@@ -2,9 +2,9 @@ import Link from "next/link";
 import { CalendarClock, ArrowRight } from "lucide-react";
 import { Card, Button } from "@/components/ui";
 import { ROUTES } from "@/constants";
-import type { Appointment } from "@/types";
+import type { AppointmentWithExpert } from "@/hooks";
 
-export function UpcomingAppointmentCard({ appointment }: { appointment: Appointment | null }) {
+export function UpcomingAppointmentCard({ appointment }: { appointment: AppointmentWithExpert | null }) {
   if (!appointment) {
     return (
       <Card className="flex flex-col items-start gap-3 p-6">
@@ -23,8 +23,10 @@ export function UpcomingAppointmentCard({ appointment }: { appointment: Appointm
   return (
     <Card className="p-6">
       <p className="mb-1 text-xs font-bold uppercase tracking-wider text-primary">Upcoming appointment</p>
-      <h3 className="mb-1 text-lg font-bold text-foreground">{appointment.expertName}</h3>
-      <p className="mb-4 text-sm text-muted-foreground">{appointment.topic}</p>
+      <h3 className="mb-1 text-lg font-bold text-foreground">{appointment.expertName ?? "Expert"}</h3>
+      <p className="mb-4 text-sm text-muted-foreground">
+        {new Date(appointment.createdAt).toLocaleString("en-GB")}
+      </p>
       <Link href={ROUTES.PATIENT.MY_BOOKINGS} className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
         View my bookings <ArrowRight className="h-3.5 w-3.5" />
       </Link>

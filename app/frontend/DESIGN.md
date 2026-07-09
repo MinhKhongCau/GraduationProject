@@ -14,7 +14,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · TanStack
 
 Roles are `PATIENT` / `EXPERT` / `ADMIN` — this is `auth-service`'s actual `Account.role` enum. Note that `document/API-document.md` and the root Vietnamese `README.md` say `CLIENT` instead of `PATIENT`; the running code is the source of truth here, not those docs.
 
-No API gateway exists yet, so the frontend calls each microservice directly on its own port (see `.env.local.example`). Not every documented endpoint is implemented backend-side yet:
+All services sit behind a Kong API gateway at a single base URL (`REACT_APP_API_URL` / `https://api.qmcloud.io.vn/api/v1`), not on individual ports — `api/http/instances.ts` points every client at that one `baseURL`. Not every documented endpoint is implemented backend-side yet:
 
 | Area | Status |
 |---|---|
@@ -22,8 +22,8 @@ No API gateway exists yet, so the frontend calls each microservice directly on i
 | auth-service: Google OAuth (`POST /auth/google`), forgot/reset password | Documented only — not implemented. The frontend calls them anyway (behind `NEXT_PUBLIC_ENABLE_GOOGLE_AUTH` for Google) and handles the failure gracefully. |
 | profile-service: patient/expert profiles, medical histories, specializations | **Implemented** |
 | payment-service: wallet init/get/top-up/pay/withdraw/process-withdrawal | **Implemented**. No VNPay/MoMo gateway integration exists — it's an internal ledger only. No transaction-history listing endpoint. |
-| booking-service: `GET /slots/available-dates`, `GET /slots/available-times`, `POST /slots/generate` | **Implemented** |
-| booking-service: appointment create/lock, booking history, weekly-schedule POST, leave-requests | Documented only — domain models exist, no HTTP handlers. |
+| booking-service: available-dates/times, slot lock, appointment create/list/cancel (patient + expert) | **Implemented**. Patient's own bookings and an expert's own appointments each have a real endpoint; there's no admin-wide "all appointments" listing. No queue-number concept — that was a mock-only idea, dropped once the real API was wired in. `Appointment` has no `expertName`/`topic` (no join to profile-service), so pages resolve expert names client-side via `expertApi.getExpertProfile`. |
+| booking-service: weekly-schedule POST, leave-requests | Documented only for that exact shape — the real service models this differently, as shift `templates` + per-expert `availabilities` + `time-off` (see its swagger). `expert/schedule` still targets the old shape and stays mocked. |
 | clinical records (any service) | Not implemented at all. |
 | chat / messaging (any service) | Not implemented at all (planned as a separate Node/Socket.io service, not present in `app/backend`). |
 
@@ -104,9 +104,9 @@ Dictionaries are split by domain (`locales/{en,vi}/{common,auth,patient,expert,a
 
 ## `/data` mock-fallback convention
 
-Each file under `/data` backs exactly the endpoints the "ground truth" table above marks as not implemented — `booking-history.ts` (appointment create/cancel/history, with an in-memory `getNextQueueNumber` matching the legacy PHP app's queue-number-per-session idea, minus its race condition since it's single-threaded JS), `clinical-records.ts`, `schedule.ts` (expert weekly availability), `transactions.ts` (wallet history), `messages.ts` (chat UI), `notifications.ts` (unused this pass, kept for the future `/notifications` page). `experts.ts` is the one exception — it seeds the public landing page's "Featured Experts" section with curated sample data by design, not because the real endpoint is missing (`GET /profiles/experts/` is real and is what `find-experts` actually calls).
+Each file under `/data` backs exactly the endpoints the "ground truth" table above marks as not implemented — `clinical-records.ts`, `schedule.ts` (expert weekly availability), `transactions.ts` (wallet history), `messages.ts` (chat UI), `notifications.ts` (unused this pass, kept for the future `/notifications` page). `experts.ts` is the one exception — it seeds the public landing page's "Featured Experts" section with curated sample data by design, not because the real endpoint is missing (`GET /profiles/experts/` is real and is what `find-experts` actually calls). `booking-history.ts` used to back appointment create/cancel/history (with a legacy-PHP-inspired mock queue number) — deleted once `api/booking.ts` was pointed at the real booking-service endpoints; there is no queue-number equivalent server-side.
 
-Mutations against these mocks (book an appointment, cancel a booking, save a weekly schedule) only persist for the current browser session/module lifetime — a full page reload resets them. This is intentional and documented at each call site; don't mistake it for a bug.
+Mutations against the remaining mocks (save a weekly schedule) only persist for the current browser session/module lifetime — a full page reload resets them. This is intentional and documented at each call site; don't mistake it for a bug.
 
 ## Known bugs deliberately not carried over from the legacy PHP app
 

@@ -10,7 +10,7 @@ import { SuccessStep } from "./component/SuccessStep";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { bookingApi, expertApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
-import type { ExpertProfile, ExpertSlot, Appointment } from "@/types";
+import type { ExpertProfile, AvailableTimeSlot } from "@/types";
 
 type WizardStep = "topic" | "expert" | "slot" | "review" | "success";
 
@@ -21,9 +21,8 @@ export default function BookAppointmentPage() {
   const [step, setStep] = useState<WizardStep>("topic");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [selectedExpert, setSelectedExpert] = useState<ExpertProfile | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<ExpertSlot | null>(null);
-  const [completedAppointment, setCompletedAppointment] = useState<Appointment | null>(null);
-  const [confirmedQueueNumber, setConfirmedQueueNumber] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<AvailableTimeSlot | null>(null);
 
   useApiQuery({
     queryKey: QUERY_KEYS.expertProfile(preselectedExpertId ?? ""),
@@ -35,23 +34,13 @@ export default function BookAppointmentPage() {
   const confirmMutation = useApiMutation({
     mutationFn: async () => {
       if (!selectedExpert || !selectedSlot) throw new Error("Missing expert or slot selection");
-      // Capture the queue number before insertion — getBookingQueueNumber
-      // counts existing bookings for this slot, so calling it again after
-      // confirmBookingMock adds this one would be off by one.
-      const queueNumber = bookingApi.getBookingQueueNumber(selectedSlot.slotId);
-      const appointment = bookingApi.confirmBookingMock({
+      await bookingApi.lockSlot(selectedSlot.slotId);
+      return bookingApi.createAppointment({
         slotId: selectedSlot.slotId,
         expertId: selectedExpert.accountId,
-        expertName: selectedExpert.fullName,
-        topic: selectedTopics.join(", "),
       });
-      return { appointment, queueNumber };
     },
-    onSuccess: ({ appointment, queueNumber }) => {
-      setCompletedAppointment(appointment);
-      setConfirmedQueueNumber(queueNumber);
-      setStep("success");
-    },
+    onSuccess: () => setStep("success"),
   });
 
   function toggleTopic(topicId: string) {
@@ -62,6 +51,11 @@ export default function BookAppointmentPage() {
 
   function goToExpertOrSlot() {
     setStep(selectedExpert ? "slot" : "expert");
+  }
+
+  function selectDate(date: string) {
+    setSelectedDate(date);
+    setSelectedSlot(null);
   }
 
   return (
@@ -80,25 +74,26 @@ export default function BookAppointmentPage() {
       {step === "slot" && selectedExpert && (
         <SlotStep
           expertId={selectedExpert.accountId}
+          selectedDate={selectedDate}
+          onSelectDate={selectDate}
           selectedSlot={selectedSlot}
           onSelectSlot={setSelectedSlot}
           onBack={() => setStep(preselectedExpertId ? "topic" : "expert")}
           onNext={() => setStep("review")}
         />
       )}
-      {step === "review" && selectedExpert && selectedSlot && (
+      {step === "review" && selectedExpert && selectedSlot && selectedDate && (
         <ReviewStep
           expert={selectedExpert}
           slot={selectedSlot}
+          date={selectedDate}
           topics={selectedTopics}
           onBack={() => setStep("slot")}
           onConfirm={() => confirmMutation.mutate()}
           isSubmitting={confirmMutation.isPending}
         />
       )}
-      {step === "success" && completedAppointment && confirmedQueueNumber !== null && (
-        <SuccessStep queueNumber={confirmedQueueNumber} />
-      )}
+      {step === "success" && <SuccessStep />}
     </div>
   );
 }
