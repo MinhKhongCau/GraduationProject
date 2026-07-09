@@ -27,14 +27,14 @@ export const PROFILE_ENDPOINTS = {
 };
 
 export const BOOKING_ENDPOINTS = {
-  GENERATE_SLOTS: "/slots/generate",
-  AVAILABLE_DATES: "/slots/available-dates",
-  AVAILABLE_TIMES: "/slots/available-times",
-  /** Documented only — booking-service has no handler yet, uses /data fallback. */
-  LOCK: "/bookings/lock",
-  /** Documented only — booking-service has no handler yet, uses /data fallback. */
-  HISTORY: "/bookings/history",
-  /** Documented only — booking-service has no handler yet, uses /data fallback. */
+  AVAILABLE_DATES: "/public/booking/slots/available-dates",
+  AVAILABLE_TIMES: "/public/booking/slots/available-times",
+  LOCK_SLOT: (slotId: string) => `/booking/slots/${slotId}/lock`,
+  GENERATE_SLOTS: "/booking/slots/generate",
+  APPOINTMENTS: "/booking/appointments",
+  EXPERT_APPOINTMENTS: "/booking/appointments/expert",
+  CANCEL_APPOINTMENT: (appointmentId: string) => `/booking/appointments/${appointmentId}/cancel`,
+  /** Documented only — booking-service models this as templates + availabilities instead, uses /data fallback. */
   WEEKLY_SCHEDULE: "/experts/me/schedule",
   /** Documented only — booking-service has no handler yet, uses /data fallback. */
   LEAVE_REQUESTS: "/experts/leave-requests",
@@ -93,11 +93,12 @@ export const QUERY_KEYS = {
   specializations: () => ["specializations"] as const,
   experts: (filters?: Record<string, unknown>) => ["experts", filters ?? {}] as const,
   expertProfile: (accountId: string) => ["expert", "profile", accountId] as const,
-  availableDates: (expertId: string, month: number, year: number) =>
-    ["booking", "available-dates", expertId, month, year] as const,
+  availableDates: (expertId: string) => ["booking", "available-dates", expertId] as const,
   availableTimes: (expertId: string, date: string) =>
     ["booking", "available-times", expertId, date] as const,
-  bookingHistory: () => ["booking", "history"] as const,
+  myBookings: () => ["booking", "my-bookings"] as const,
+  expertAppointments: (filters?: Record<string, unknown>) =>
+    ["booking", "expert-appointments", filters ?? {}] as const,
   wallet: (ownerId: string) => ["payment", "wallet", ownerId] as const,
   assessmentTemplates: () => ["assessment", "templates"] as const,
   assessmentTemplate: (slug: string) => ["assessment", "template", slug] as const,
