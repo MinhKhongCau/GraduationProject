@@ -1,5 +1,4 @@
 export * from "./experts";
-export * from "./booking-history";
 export * from "./clinical-records";
 export * from "./notifications";
 export * from "./messages";

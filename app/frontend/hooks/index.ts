@@ -1,6 +1,7 @@
 export * from "./useApiQuery";
 export * from "./useApiMutation";
 export * from "./useAuth";
+export * from "./useBookings";
 export * from "./useMediaQuery";
 export * from "./useBreakpoint";
 export * from "./useLocalStorage";

@@ -4,31 +4,29 @@ import { useState } from "react";
 import { BookingListItem } from "./component/BookingListItem";
 import { CancelBookingDialog } from "./component/CancelBookingDialog";
 import { Spinner } from "@/components/ui";
-import { useApiQuery, useApiMutation } from "@/hooks";
-import { bookingApi } from "@/api";
-import { QUERY_KEYS } from "@/constants";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMyBookings, useCancelBooking } from "@/hooks";
 import { useErrorContext } from "@/context/ErrorContext";
-import type { Appointment } from "@/types";
+import type { AppointmentWithExpert } from "@/hooks";
 
 export default function MyBookingsPage() {
-  const [cancelingAppointment, setCancelingAppointment] = useState<Appointment | null>(null);
-  const queryClient = useQueryClient();
+  const [cancelingAppointment, setCancelingAppointment] = useState<AppointmentWithExpert | null>(null);
   const { showSuccess } = useErrorContext();
 
-  const { data: appointments = [], isLoading } = useApiQuery({
-    queryKey: QUERY_KEYS.bookingHistory(),
-    queryFn: () => bookingApi.getBookingHistory(),
-  });
+  const { data: appointments = [], isLoading } = useMyBookings();
+  const cancelMutation = useCancelBooking();
 
-  const cancelMutation = useApiMutation({
-    mutationFn: (appointmentId: string) => bookingApi.cancelAppointment(appointmentId),
-    onSuccess: () => {
-      showSuccess("Booking canceled.");
-      setCancelingAppointment(null);
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bookingHistory() });
-    },
-  });
+  function handleConfirmCancel(reason: string) {
+    if (!cancelingAppointment) return;
+    cancelMutation.mutate(
+      { appointmentId: cancelingAppointment.appointmentId, reason },
+      {
+        onSuccess: () => {
+          showSuccess("Booking canceled.");
+          setCancelingAppointment(null);
+        },
+      }
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -53,7 +51,7 @@ export default function MyBookingsPage() {
       <CancelBookingDialog
         appointment={cancelingAppointment}
         onOpenChange={(open) => !open && setCancelingAppointment(null)}
-        onConfirm={() => cancelingAppointment && cancelMutation.mutate(cancelingAppointment.appointmentId)}
+        onConfirm={handleConfirmCancel}
         isSubmitting={cancelMutation.isPending}
       />
     </div>
