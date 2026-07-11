@@ -7,6 +7,7 @@ from .dependencies import (
     get_template_by_slug,
     get_option_group_by_slug,
     get_question_by_slug,
+    get_dimension_by_slug,
     check_admin_role,
     generate_unique_slug,
 )
@@ -32,13 +33,21 @@ def create_bulk_questions(
         raise HTTPException(status_code=404, detail="Không tìm thấy nhóm phương án tương ứng!")
 
     for q in payload.questions:
+        # Verify dimension exists by slug
+        dimension = get_dimension_by_slug(q.dimension_id, db)
+        if not dimension:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Không tìm thấy khía cạnh (dimension) tương ứng cho câu hỏi thứ {q.question_order}!"
+            )
+
         # Generate unique 10-character question slug
         q_slug = generate_unique_slug(models.AssessQuestion, db)
         new_question = models.AssessQuestion(
             template_id=template.template_id,
             group_id=group.group_id,
             content=q.content,
-            dimension=q.dimension,
+            dimension_id=dimension.dimension_id,
             question_order=q.question_order,
             is_required=True,
             slug=q_slug
@@ -47,9 +56,12 @@ def create_bulk_questions(
         added_questions.append(new_question)
 
     db.commit()
+    for q in added_questions:
+        db.refresh(q)
 
     return {
-        "message": f"Đã thêm thành công {len(added_questions)} câu hỏi vào bài test!"
+        "message": f"Đã thêm thành công {len(added_questions)} câu hỏi vào bài test!",
+        "data": [types.QuestionResponse.model_validate(q) for q in added_questions]
     }
 
 
@@ -74,7 +86,8 @@ def get_question(slug: str, db: Session = Depends(get_db)):
 def update_question(
     slug: str,
     payload: types.QuestionUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    is_admin: bool = Depends(check_admin_role)
 ):
     question = get_question_by_slug(slug, db)
     if not question:
@@ -82,8 +95,18 @@ def update_question(
             status_code=404,
             detail="Không tìm thấy câu hỏi để cập nhật!"
         )
-    
+
     update_data = payload.model_dump(exclude_unset=True)
+
+    if "dimension_id" in update_data:
+        dimension_slug = update_data.pop("dimension_id")
+        dimension = get_dimension_by_slug(dimension_slug, db)
+        if not dimension:
+            raise HTTPException(
+                status_code=404,
+                detail="Không tìm thấy khía cạnh (dimension) tương ứng!"
+            )
+        question.dimension_id = dimension.dimension_id
 
     for key, value in update_data.items():
         setattr(question, key, value)

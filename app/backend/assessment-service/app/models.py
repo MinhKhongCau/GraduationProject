@@ -3,6 +3,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
 
@@ -22,6 +23,29 @@ class AssessTemplate(Base):
     description = Column(Text)
     instruction = Column(Text, nullable=True)
     certification = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    slug = Column(String, unique=True, index=True, nullable=True)
+    created_at = Column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+# =============================================
+# 1b. KHÍA CẠNH ĐÁNH GIÁ (DIMENSION)
+# =============================================
+class AssessDimension(Base):
+    """A dimension belongs to many questions (one-to-many); it has no
+    direct relation to AssessTemplate. Which dimensions a given test
+    "covers" is derived by looking at the dimensions of its questions,
+    not stored as a separate template<->dimension link."""
+    __tablename__ = "assess_dimensions"
+    dimension_id = Column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    # Ví dụ: DEPRESSION, ANXIETY, STRESS
+    code = Column(String, unique=True, index=True)
+    name = Column(String)
+    description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
     slug = Column(String, unique=True, index=True, nullable=True)
     created_at = Column(
@@ -81,12 +105,23 @@ class AssessQuestion(Base):
         ForeignKey("assess_option_groups.group_id")
     )
     content = Column(Text)
-    # Ví dụ: DEPRESSION, ANXIETY
-    dimension = Column(String)
+    dimension_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("assess_dimensions.dimension_id"),
+        nullable=True
+    )
+    dimension_ref = relationship("AssessDimension")
     question_order = Column(Integer)
     is_required = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
     slug = Column(String, unique=True, index=True, nullable=True)
+
+    @property
+    def dimension(self) -> str | None:
+        """Code of the assigned dimension (e.g. DEPRESSION). Kept as a
+        plain string property so scoring/AI-prompt code and response
+        schemas can keep reading `question.dimension` unchanged."""
+        return self.dimension_ref.code if self.dimension_ref else None
 
 
 # =============================================
