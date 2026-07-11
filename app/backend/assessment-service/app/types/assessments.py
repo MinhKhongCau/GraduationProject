@@ -6,6 +6,8 @@ import uuid
 class AnswerSubmit(BaseModel):
     question_id: str
     option_id: str
+    question_content: str
+    option_label: str
 
 
 class AssessmentSubmit(BaseModel):

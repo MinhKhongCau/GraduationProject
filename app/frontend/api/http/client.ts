@@ -47,9 +47,29 @@ export interface CreateHttpClientOptions {
   baseURL: string;
   /** false for auth-service, which already returns camelCase JSON. */
   transformCase: boolean;
+  /**
+   * true for services that wrap every response as
+   * { statusCode, timestamp, method, path, result, message } — unwraps
+   * `result` into response.data so call sites see the raw payload.
+   */
+  unwrapEnvelope?: boolean;
 }
 
-export function createHttpClient({ baseURL, transformCase }: CreateHttpClientOptions): AxiosInstance {
+function isEnvelope(data: unknown): data is { result: unknown; statusCode: unknown } {
+  return (
+    !!data &&
+    typeof data === "object" &&
+    "result" in data &&
+    "statusCode" in data &&
+    "message" in data
+  );
+}
+
+export function createHttpClient({
+  baseURL,
+  transformCase,
+  unwrapEnvelope = false,
+}: CreateHttpClientOptions): AxiosInstance {
   const instance = axios.create({ baseURL, timeout: 15000 });
 
   instance.interceptors.request.use((config) => {
@@ -68,6 +88,9 @@ export function createHttpClient({ baseURL, transformCase }: CreateHttpClientOpt
     (response) => {
       if (transformCase && response.data !== undefined) {
         response.data = toCamelCase(response.data);
+      }
+      if (unwrapEnvelope && isEnvelope(response.data)) {
+        response.data = response.data.result;
       }
       return response;
     },

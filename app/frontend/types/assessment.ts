@@ -1,4 +1,10 @@
-export type AssessmentDimension = "DEPRESSION" | "ANXIETY" | "STRESS";
+export interface AssessmentDimension {
+  code: string;
+  name: string;
+  description?: string;
+  slug: string;
+  isActive?: boolean;
+}
 
 export interface AssessmentTemplate {
   code: string;
@@ -29,6 +35,8 @@ export interface AssessmentQuestion {
 export interface AnswerSubmit {
   questionId: string; // holds question slug
   optionId: string;   // holds option slug
+  questionContent: string; // question text, used to build the AI prompt
+  optionLabel: string;     // selected answer label, used to build the AI prompt
 }
 
 export interface AssessmentSubmitRequest {

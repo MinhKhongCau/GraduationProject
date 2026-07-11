@@ -1,4 +1,5 @@
 from .templates import router as templates_router
+from .dimensions import router as dimensions_router
 from .option_groups import router as option_groups_router
 from .options import router as options_router
 from .questions import router as questions_router

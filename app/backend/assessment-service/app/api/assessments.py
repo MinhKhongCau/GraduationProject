@@ -26,6 +26,7 @@ def submit_assessment(
     dimension_scores = {}
     total_score = 0
     valid_answers = []
+    answered_qa = []
 
     for ans in payload.answers:
         question = (
@@ -57,8 +58,19 @@ def submit_assessment(
         total_score += score
 
         valid_answers.append({"question": question, "option": option})
+        answered_qa.append({
+            "question_content": ans.question_content,
+            "option_label": ans.option_label,
+        })
 
-    ai_eval = generate_psychological_advice(dimension_scores)
+    ai_eval = generate_psychological_advice(
+        dimension_scores,
+        answers=answered_qa,
+        title=template.title,
+        description=template.description,
+        instruction=template.instruction,
+        certification=template.certification,
+    )
 
     new_result = models.AssessResult(
         template_id=template.template_id,
