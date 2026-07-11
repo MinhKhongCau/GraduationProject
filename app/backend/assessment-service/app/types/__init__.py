@@ -1,4 +1,10 @@
 from .templates import TemplateCreate, TemplateResponse, TemplateUpdate
+from .dimensions import (
+    DimensionCreate,
+    DimensionResponse,
+    DimensionUpdate,
+    DimensionQuestionsBulkAssign,
+)
 from .options import OptionCreate, OptionResponse, OptionUpdate
 from .option_groups import OptionGroupCreate, OptionGroupResponse, OptionGroupUpdate
 from .questions import (

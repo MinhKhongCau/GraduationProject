@@ -26,7 +26,7 @@ class TemplateResponse(BaseModel):
     certification: Optional[str] = None
     slug: Optional[str] = Field(default=None, min_length=10, max_length=10)
     is_active: bool
-    
+
     class Config:
         from_attributes = True
 
