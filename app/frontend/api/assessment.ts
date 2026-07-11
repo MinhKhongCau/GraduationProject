@@ -1,6 +1,12 @@
 import { assessmentClient } from "./http/instances";
 import { ASSESSMENT_ENDPOINTS } from "@/constants/api";
-import type { AssessmentTemplate, AssessmentQuestion, AssessmentSubmitRequest, AssessmentSubmitResponse } from "@/types";
+import type {
+  AssessmentTemplate,
+  AssessmentQuestion,
+  AssessmentDimension,
+  AssessmentSubmitRequest,
+  AssessmentSubmitResponse,
+} from "@/types";
 
 export async function getTemplates(): Promise<AssessmentTemplate[]> {
   const response = await assessmentClient.get<AssessmentTemplate[]>(ASSESSMENT_ENDPOINTS.TEMPLATES);
@@ -63,6 +69,51 @@ export async function deleteTemplate(slug: string): Promise<any> {
   return response.data;
 }
 
+// Admin Dimensions Management
+export async function getDimensions(): Promise<AssessmentDimension[]> {
+  const response = await assessmentClient.get<AssessmentDimension[]>(ASSESSMENT_ENDPOINTS.DIMENSIONS);
+  return response.data;
+}
+
+export async function getDimension(slug: string): Promise<AssessmentDimension> {
+  const response = await assessmentClient.get<AssessmentDimension>(
+    ASSESSMENT_ENDPOINTS.DIMENSION(slug)
+  );
+  return response.data;
+}
+
+export async function createDimension(payload: {
+  code: string;
+  name: string;
+  description?: string;
+}): Promise<any> {
+  const response = await assessmentClient.post(ASSESSMENT_ENDPOINTS.DIMENSIONS, payload);
+  return response.data;
+}
+
+export async function updateDimension(
+  slug: string,
+  payload: { code?: string; name?: string; description?: string; isActive?: boolean }
+): Promise<any> {
+  const response = await assessmentClient.patch(ASSESSMENT_ENDPOINTS.DIMENSION(slug), payload);
+  return response.data;
+}
+
+export async function deleteDimension(slug: string): Promise<any> {
+  const response = await assessmentClient.delete(ASSESSMENT_ENDPOINTS.DIMENSION(slug));
+  return response.data;
+}
+
+export async function bulkAssignQuestionsToDimension(
+  slug: string,
+  questionIds: string[] // question slugs
+): Promise<any> {
+  const response = await assessmentClient.patch(ASSESSMENT_ENDPOINTS.DIMENSION_QUESTIONS_BULK(slug), {
+    questionIds,
+  });
+  return response.data;
+}
+
 // Admin Option Groups Management
 export async function getOptionGroups(): Promise<any[]> {
   const response = await assessmentClient.get<any[]>(ASSESSMENT_ENDPOINTS.OPTION_GROUPS);
@@ -106,7 +157,7 @@ export async function getQuestion(slug: string): Promise<any> {
 export async function createBulkQuestions(payload: {
   templateId: string; // template slug
   groupId: string; // option group slug
-  questions: { content: string; dimension: string; questionOrder: number }[];
+  questions: { content: string; dimensionId: string; questionOrder: number }[]; // dimensionId holds dimension slug
 }): Promise<any> {
   const response = await assessmentClient.post(ASSESSMENT_ENDPOINTS.BULK_QUESTIONS, payload);
   return response.data;
@@ -114,7 +165,7 @@ export async function createBulkQuestions(payload: {
 
 export async function updateQuestion(
   slug: string,
-  payload: { content?: string; dimension?: string; questionOrder?: number; isRequired?: boolean }
+  payload: { content?: string; dimensionId?: string; questionOrder?: number; isRequired?: boolean }
 ): Promise<any> {
   const response = await assessmentClient.patch(ASSESSMENT_ENDPOINTS.QUESTION(slug), payload);
   return response.data;

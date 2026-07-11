@@ -35,6 +35,13 @@ def get_template_by_slug(slug: str, db: Session) -> Optional[models.AssessTempla
     ).first()
 
 
+def get_dimension_by_slug(slug: str, db: Session) -> Optional[models.AssessDimension]:
+    return db.query(models.AssessDimension).filter(
+        models.AssessDimension.slug == slug,
+        models.AssessDimension.is_active.is_(True)
+    ).first()
+
+
 def get_option_group_by_slug(slug: str, db: Session) -> Optional[models.AssessOptionGroup]:
     return db.query(models.AssessOptionGroup).filter(
         models.AssessOptionGroup.slug == slug,

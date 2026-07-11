@@ -4,7 +4,7 @@ from .options import OptionResponse
 
 class QuestionCreate(BaseModel):
     content: str
-    dimension: str
+    dimension_id: str  # holds dimension slug
     question_order: int
 
 
@@ -38,6 +38,6 @@ class QuestionWithOptionsResponse(BaseModel):
 
 class QuestionUpdate(BaseModel):
     content: Optional[str] = None
-    dimension: Optional[str] = None
+    dimension_id: Optional[str] = None  # holds dimension slug
     question_order: Optional[int] = None
     is_required: Optional[bool] = None

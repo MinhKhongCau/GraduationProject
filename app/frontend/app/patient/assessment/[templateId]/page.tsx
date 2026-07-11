@@ -4,6 +4,7 @@ import { use, useState } from "react";
 import { QuestionStep } from "./component/QuestionStep";
 import { ProgressBar } from "./component/ProgressBar";
 import { ResultSummary } from "./component/ResultSummary";
+import { MarkdownRenderer } from "../component/MarkdownRenderer";
 import { Button, Spinner, Card } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { assessmentApi } from "@/api";
@@ -11,46 +12,6 @@ import { QUERY_KEYS } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
 import { BookOpen, Award, ChevronDown, ChevronUp, FileText, Play } from "lucide-react";
 import type { AnswerSubmit } from "@/types";
-
-// Safe, lightweight custom markdown parser
-function MarkdownRenderer({ text }: { text: string }) {
-  if (!text) return null;
-  
-  const lines = text.split("\n");
-  const processed = lines.map((line, idx) => {
-    const trimmed = line.trim();
-    if (trimmed.startsWith("# ")) {
-      return <h1 key={idx} className="text-lg font-bold text-foreground mt-4 mb-2">{trimmed.slice(2)}</h1>;
-    }
-    if (trimmed.startsWith("## ")) {
-      return <h2 key={idx} className="text-base font-bold text-foreground mt-3 mb-2">{trimmed.slice(3)}</h2>;
-    }
-    if (trimmed.startsWith("### ")) {
-      return <h3 key={idx} className="text-sm font-bold text-foreground mt-2 mb-1">{trimmed.slice(4)}</h3>;
-    }
-    if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
-      return <li key={idx} className="ml-4 list-disc text-sm text-muted-foreground mb-1.5">{trimmed.slice(2)}</li>;
-    }
-    if (trimmed === "") {
-      return <div key={idx} className="h-2" />;
-    }
-    
-    // Bold/Italic parser
-    const formattedHtml = trimmed
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.*?)\*/g, "<em>$1</em>");
-      
-    return (
-      <p 
-        key={idx} 
-        className="text-sm text-muted-foreground leading-relaxed mb-2"
-        dangerouslySetInnerHTML={{ __html: formattedHtml }}
-      />
-    );
-  });
-
-  return <div className="space-y-1">{processed}</div>;
-}
 
 export default function AssessmentDetailPage({ params }: { params: Promise<{ templateId: string }> }) {
   const { templateId } = use(params);
@@ -75,10 +36,16 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
 
   const submitMutation = useApiMutation({
     mutationFn: () => {
-      const answerList: AnswerSubmit[] = Object.entries(answers).map(([questionId, optionId]) => ({
-        questionId,
-        optionId,
-      }));
+      const answerList: AnswerSubmit[] = Object.entries(answers).map(([questionId, optionId]) => {
+        const question = questions.find((q) => q.slug === questionId);
+        const option = question?.options.find((o) => o.slug === optionId);
+        return {
+          questionId,
+          optionId,
+          questionContent: question?.content ?? "",
+          optionLabel: option?.label ?? "",
+        };
+      });
       return assessmentApi.submitAssessment({ templateId, userId: user!.id, answers: answerList });
     },
   });

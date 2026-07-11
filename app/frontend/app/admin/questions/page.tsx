@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Plus, Trash2, HelpCircle, FileText, CheckSquare } from "lucide-react";
 import { Card, Button, Spinner, Modal } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { assessmentApi } from "@/api";
-import { QUERY_KEYS } from "@/constants";
+import { QUERY_KEYS, ROUTES } from "@/constants";
 import { useErrorContext } from "@/context/ErrorContext";
 
 interface QuestionFormState {
   content: string;
-  dimension: string;
+  dimensionId: string; // holds dimension slug
   questionOrder: number;
 }
 
@@ -22,7 +23,7 @@ export default function AdminQuestionsPage() {
   // Bulk form states
   const [bulkGroupId, setBulkGroupId] = useState("");
   const [bulkQuestions, setBulkQuestions] = useState<QuestionFormState[]>([
-    { content: "", dimension: "DEPRESSION", questionOrder: 1 },
+    { content: "", dimensionId: "", questionOrder: 1 },
   ]);
 
   // Fetch templates for selector
@@ -35,6 +36,12 @@ export default function AdminQuestionsPage() {
   const { data: groups = [], isLoading: isLoadingGroups } = useApiQuery({
     queryKey: QUERY_KEYS.assessmentOptionGroups(),
     queryFn: () => assessmentApi.getOptionGroups(),
+  });
+
+  // Fetch dimensions for selector — admin must create these first (see /admin/dimensions)
+  const { data: dimensions = [] } = useApiQuery({
+    queryKey: QUERY_KEYS.assessmentDimensions(),
+    queryFn: () => assessmentApi.getDimensions(),
   });
 
   // Fetch questions of the selected template
@@ -70,13 +77,13 @@ export default function AdminQuestionsPage() {
 
   function resetBulkForm() {
     setBulkGroupId("");
-    setBulkQuestions([{ content: "", dimension: "DEPRESSION", questionOrder: 1 }]);
+    setBulkQuestions([{ content: "", dimensionId: dimensions[0]?.slug ?? "", questionOrder: 1 }]);
   }
 
   function handleAddQuestionRow() {
     setBulkQuestions((current) => [
       ...current,
-      { content: "", dimension: "DEPRESSION", questionOrder: current.length + 1 },
+      { content: "", dimensionId: dimensions[0]?.slug ?? "", questionOrder: current.length + 1 },
     ]);
   }
 
@@ -116,13 +123,23 @@ export default function AdminQuestionsPage() {
           </p>
         </div>
         <Button
-          disabled={!selectedTemplateSlug}
+          disabled={!selectedTemplateSlug || dimensions.length === 0}
           onClick={() => { resetBulkForm(); setIsBulkCreateOpen(true); }}
           className="flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" /> Thêm câu hỏi (Bulk)
         </Button>
       </div>
+
+      {dimensions.length === 0 && (
+        <Card className="p-4 text-sm text-muted-foreground">
+          Chưa có khía cạnh (dimension) nào. Hãy tạo khía cạnh ở trang{" "}
+          <Link href={ROUTES.ADMIN.DIMENSIONS} className="font-semibold text-primary hover:underline">
+            Quản lý Khía Cạnh
+          </Link>{" "}
+          trước khi thêm câu hỏi.
+        </Card>
+      )}
 
       <Card className="p-5">
         <label className="mb-2 block text-sm font-bold text-foreground">Chọn bài test để quản lý câu hỏi</label>
@@ -260,16 +277,19 @@ export default function AdminQuestionsPage() {
                       className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
                     />
                   </div>
-                  <div className="w-32 shrink-0">
+                  <div className="w-36 shrink-0">
                     <select
-                      value={q.dimension}
-                      onChange={(e) => handleQuestionChange(index, "dimension", e.target.value)}
+                      required
+                      value={q.dimensionId}
+                      onChange={(e) => handleQuestionChange(index, "dimensionId", e.target.value)}
                       className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
                     >
-                      <option value="DEPRESSION">Trầm cảm</option>
-                      <option value="ANXIETY">Lo âu</option>
-                      <option value="STRESS">Căng thẳng</option>
-                      <option value="OTHER">Khác</option>
+                      <option value="">-- Khía cạnh --</option>
+                      {dimensions.map((d) => (
+                        <option key={d.slug} value={d.slug}>
+                          {d.name} ({d.code})
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="w-16 shrink-0">

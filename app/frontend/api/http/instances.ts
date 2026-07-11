@@ -25,4 +25,5 @@ export const bookingClient = createHttpClient({
 export const assessmentClient = createHttpClient({
   baseURL,
   transformCase: true, // FastAPI/Pydantic returns snake_case.
+  unwrapEnvelope: true, // assessment-service wraps responses in {statusCode, result, message, ...}.
 });
