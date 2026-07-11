@@ -11,6 +11,7 @@ import {
   Users,
   CalendarClock,
   CalendarCheck,
+  Layers,
   type LucideIcon,
 } from "lucide-react";
 import { ROUTES } from "./route";
@@ -67,6 +68,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "schedules", labelKey: "nav.schedules", label: "Schedules", href: ROUTES.ADMIN.SCHEDULES, icon: CalendarClock },
   { id: "withdrawals", labelKey: "nav.withdrawals", label: "Withdrawals", href: ROUTES.ADMIN.WITHDRAWALS, icon: Wallet },
   { id: "templates", labelKey: "nav.templates", label: "Templates", href: ROUTES.ADMIN.TEMPLATES, icon: ClipboardCheck },
+  { id: "dimensions", labelKey: "nav.dimensions", label: "Dimensions", href: ROUTES.ADMIN.DIMENSIONS, icon: Layers },
   { id: "option-groups", labelKey: "nav.optionGroups", label: "Option Groups", href: ROUTES.ADMIN.OPTION_GROUPS, icon: ClipboardList },
   { id: "questions", labelKey: "nav.questions", label: "Questions", href: ROUTES.ADMIN.QUESTIONS, icon: FileText },
 ];
