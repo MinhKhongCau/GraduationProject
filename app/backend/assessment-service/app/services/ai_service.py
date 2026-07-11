@@ -1,5 +1,5 @@
 import os
-from typing import Mapping
+from typing import Mapping, Sequence
 
 from dotenv import load_dotenv
 from google import genai
@@ -24,27 +24,58 @@ def _format_dimension_scores(dimension_scores: Mapping[str, int]) -> str:
     )
 
 
-def _build_prompt(formatted_scores: str) -> str:
-    return f"""
-        Bạn là một chuyên gia tham vấn tâm lý, giao tiếp nhẹ nhàng và giàu đồng cảm.
+def _format_answers(answers: Sequence[Mapping[str, str]]) -> str:
+    if not answers:
+        return "N/A"
+    return "\n".join(
+        f"- Q: {answer.get('question_content', '')} | A: {answer.get('option_label', '')}"
+        for answer in answers
+    )
 
-        Người dùng vừa hoàn thành bài đánh giá DASS-21 với điểm số:
+
+def _build_prompt(
+    formatted_scores: str,
+    formatted_answers: str,
+    title: str | None,
+    description: str | None,
+    instruction: str | None,
+    certification: str | None,
+) -> str:
+    return f"""
+        You are an empathetic clinical psychology consultant.
+
+        Assessment information:
+        - Title: {title or "N/A"}
+        - Description: {description or "N/A"}
+        - Instruction: {instruction or "N/A"}
+        - Certification: {certification or "N/A"}
+
+        The user just completed this assessment with the following dimension scores:
         {formatted_scores}
 
-        Yêu cầu trả lời:
-        - Viết bằng tiếng Việt.
-        - Độ dài khoảng 3 đến 4 câu.
-        - Chỉ mang tính tham khảo, không chẩn đoán bệnh.
-        - Nếu có thang điểm cao, khuyên người dùng nên gặp bác sĩ hoặc chuyên gia tâm lý trên hệ thống MindCare.
-        - Giọng điệu hỗ trợ, rõ ràng, không gây hoang mang.
+        The user's individual questions and chosen answers were:
+        {formatted_answers}
+
+        Response requirements:
+        - First, detect whether the assessment information above is written in English or Vietnamese, then reply entirely in that same language.
+        - Use the individual questions and answers to make the advice specific and personal, not just a generic summary of the scores.
+        - Keep the response to approximately 100 words.
+        - This is for reference only, it is not a medical diagnosis.
+        - If any score indicates a high severity level, gently recommend the user consult a doctor or psychologist on the MindCare platform.
+        - Tone should be supportive, clear, and non-alarming.
         """.strip()
 
 
 def generate_psychological_advice(
-    dimension_scores: Mapping[str, int] | None
+    dimension_scores: Mapping[str, int] | None,
+    answers: Sequence[Mapping[str, str]] | None = None,
+    title: str | None = None,
+    description: str | None = None,
+    instruction: str | None = None,
+    certification: str | None = None,
 ) -> str:
     """
-    Tạo lời khuyên tâm lý tham khảo từ điểm số DASS-21 bằng Gemini.
+    Tạo lời khuyên tâm lý tham khảo từ điểm số và câu trả lời bài test bằng Gemini.
     """
     if not dimension_scores:
         return FALLBACK_MESSAGE
@@ -52,7 +83,14 @@ def generate_psychological_advice(
     if not GEMINI_API_KEY:
         return MAINTENANCE_MESSAGE
 
-    prompt = _build_prompt(_format_dimension_scores(dimension_scores))
+    prompt = _build_prompt(
+        _format_dimension_scores(dimension_scores),
+        _format_answers(answers or []),
+        title,
+        description,
+        instruction,
+        certification,
+    )
 
     try:
         client = genai.Client(api_key=GEMINI_API_KEY)

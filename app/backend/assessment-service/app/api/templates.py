@@ -45,7 +45,7 @@ def create_template(
 
     return {
         "message": "Tạo bài test thành công!",
-        "data": new_template
+        "data": types.TemplateResponse.model_validate(new_template)
     }
 
 
