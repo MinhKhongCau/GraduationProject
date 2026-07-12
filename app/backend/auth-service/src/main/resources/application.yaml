@@ -1,5 +1,5 @@
 server:
-  port: ${PORT:8080} # Mặc định 8081 khi chạy local để không bị đụng với Golang đang chạy cổng 8080
+  port: ${PORT:8080}
   forward-headers-strategy: framework
   tomcat:
     remoteip:
@@ -14,8 +14,6 @@ spring:
     name: auth-service
 
   datasource:
-    # url: jdbc:postgresql://${DB_URL:localhost}:${DB_PORT:5434}/${DB_NAME:auth_db}?sslmode=${DB_SSLMODE:disable}
-    
     url: jdbc:postgresql://${DB_URL:localhost}:${DB_PORT:5432}/${DB_NAME:auth_db}?sslmode=${DB_SSLMODE:disable}
     username: ${DB_USER:admin}
     password: ${DB_PASSWORD:admin}
@@ -30,11 +28,38 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
-# Kéo chữ jwt ra SÁT LỀ TRÁI, ngang hàng với chữ spring và server
+# ─── JWT Configuration ──────────────────────────────────────────────────────
 jwt:
-  # Một chuỗi mã hóa ngẫu nhiên (Hex 256-bit) làm khóa bí mật. TUYỆT ĐỐI KHÔNG để lộ chuỗi này!
-  secret:
-    404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-    # access-token-expiration: 900000 # 15 phút (tính bằng milliseconds)
-  access-token-expiration: 4320000000 # 50 ngày (tính bằng milliseconds)
-  refresh-token-expiration: 604800000 # 7 ngày (tính bằng milliseconds)
+  # Secret dự phòng (HMAC) - legacy, dùng RSA ký thực tế
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+
+  # RSA Key Pair (Base64-encoded DER) - đọc từ ENV khi deploy, fallback random khi dev
+  private-key: ${JWT_PRIVATE_KEY:}
+  public-key: ${JWT_PUBLIC_KEY:}
+
+  # User-facing token TTL
+  access-token-expiration: 4320000000   # 50 ngày (ms) — chỉnh lại 900000 khi go-live
+  refresh-token-expiration: 604800000   # 7 ngày (ms)
+
+  # ─── Internal Service-to-Service Token ──────────────────────────────────
+  # TTL ngắn 15 phút. Các service tự refresh trước 1 phút hết hạn.
+  internal-expiration-ms: 900000        # 15 phút (ms)
+
+# ─── Internal Service Clients (M2M Credentials) ─────────────────────────────
+# Format: <client-id>: "<bcrypt-hashed-secret>"
+# Để tạo hash mới: htpasswd -bnBC 10 "" <plain_secret> | tr -d ':\n'
+# Hoặc dùng: https://bcrypt-generator.com (cost=10)
+#
+# ⚠️  Secret PLAIN TEXT chỉ được lưu trong .env của từng service,
+#     KHÔNG BAO GIỜ commit plain text secret lên repo.
+#
+# Mapping hiện tại:
+#   booking-service   → plain: "booking_internal_secret_2024"
+#   payment-service   → plain: "payment_internal_secret_2024"
+#   profile-service   → plain: "profile_internal_secret_2024"
+#   assessment-service → plain: "assessment_internal_secret_2024"
+internal-clients:
+  booking-service:    ${INTERNAL_SECRET_BOOKING:$2a$10$LGepNLvn/DTB9Yepl5SVlOVbWPR.h/tC3XPQAXVVArXYdvsinTkH.}
+  payment-service:    ${INTERNAL_SECRET_PAYMENT:$2a$10$RMrOxu3QFcg.vJNCykUwMeAnNjdHPV2r9oreZuNDa2IRrEHQnPk8q}
+  profile-service:    ${INTERNAL_SECRET_PROFILE:$2a$10$mVZu8ru34TDvKpqwZdFm5ehRWdV3grAaoOpZiclHQUTT4NeNDnswO}
+  assessment-service: ${INTERNAL_SECRET_ASSESSMENT:$2a$10$El5khvnrOleBYhoSpzy.NeDW9v3gtSZuf.Py/1S97GN9SmMjq/GmC}
