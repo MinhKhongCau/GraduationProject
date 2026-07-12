@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/vo"
 	"payment-service/internal/withdrawal"
 	"payment-service/pkg/response"
 
@@ -33,7 +33,7 @@ type LinkBankAccountRequest struct {
 // @Param        X-User-Id    header    string                  true  "User ID (UUID)"
 // @Param        X-User-Role  header    string                  true  "User Role (EXPERT)"
 // @Param        body         body      LinkBankAccountRequest  true  "Thông tin tài khoản ngân hàng để liên kết"
-// @Success      200          {object}  response.Response{data=domain.BankAccount}
+// @Success      200          {object}  response.Response{data=entity.BankAccount}
 // @Failure      400          {object}  response.Response
 // @Failure      403          {object}  response.Response
 // @Failure      500          {object}  response.Response
@@ -74,7 +74,7 @@ func (h *Handler) LinkBankAccount(c *gin.Context) {
 // @Produce      json
 // @Param        X-User-Id    header    string  true  "User ID (UUID)"
 // @Param        X-User-Role  header    string  true  "User Role (EXPERT)"
-// @Success      200          {object}  response.Response{data=[]domain.BankAccount}
+// @Success      200          {object}  response.Response{data=[]entity.BankAccount}
 // @Failure      401          {object}  response.Response
 // @Failure      500          {object}  response.Response
 // @Router       /payments/bank-accounts [get]
@@ -148,7 +148,7 @@ func (h *Handler) CreateWithdrawal(c *gin.Context) {
 		return
 	}
 
-	request, err := h.usecase.CreateWithdrawal(c.Request.Context(), userID, bankAccountUUID, domain.Money(req.Amount))
+	request, err := h.usecase.CreateWithdrawal(c.Request.Context(), userID, bankAccountUUID, vo.Money(req.Amount))
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to request withdrawal", err.Error())
 		return

@@ -1,6 +1,7 @@
-package domain
+package entity
 
 import (
+	"payment-service/internal/domain/vo"
 	"time"
 
 	"github.com/google/uuid"
@@ -84,7 +85,7 @@ type WithdrawalRequest struct {
 	ID                     uuid.UUID        `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	WalletID               uuid.UUID        `json:"wallet_id" gorm:"type:uuid;not null;index;column:wallet_id"`
 	BankAccountID          uuid.UUID        `json:"bank_account_id" gorm:"type:uuid;not null;column:bank_account_id"`
-	Amount                 Money            `json:"amount" gorm:"type:bigint;not null;column:amount"`
+	Amount                 vo.Money         `json:"amount" gorm:"type:bigint;not null;column:amount"`
 	Status                 WithdrawalStatus `json:"status" gorm:"type:integer;not null;default:1;column:status"`
 	RequiresManualApproval bool             `json:"requires_manual_approval" gorm:"type:boolean;not null;default:false;column:requires_manual_approval"`
 	ApproverID             *uuid.UUID       `json:"approver_id" gorm:"type:uuid;column:approver_id"`

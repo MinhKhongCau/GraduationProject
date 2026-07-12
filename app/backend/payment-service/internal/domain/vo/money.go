@@ -1,4 +1,4 @@
-package domain
+package vo
 
 type Money int64
 

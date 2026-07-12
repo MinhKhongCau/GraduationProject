@@ -21,6 +21,12 @@ type Config struct {
 	RabbitMQPort string
 	RabbitMQUser string
 	RabbitMQPass string
+
+	// ─── Internal M2M Auth ──────────────────────────────────────────────────
+	// Dùng để xin token từ Auth Service khi gọi service khác nội bộ.
+	AuthServiceInternalURL string // http://auth-service:8080
+	InternalClientID       string // "payment-service"
+	InternalClientSecret   string // plain text secret (chỉ trong ENV, không commit)
 }
 
 var AppConfig *Config
@@ -44,6 +50,11 @@ func LoadConfig() {
 		RabbitMQPort: getEnvOrDefault("RABBITMQ_PORT", "5672"),
 		RabbitMQUser: getEnvOrDefault("RABBITMQ_DEFAULT_USER", "admin"),
 		RabbitMQPass: getEnvOrDefault("RABBITMQ_DEFAULT_PASS", "admin123"),
+
+		// Internal M2M Auth
+		AuthServiceInternalURL: getEnvOrDefault("AUTH_SERVICE_INTERNAL_URL", "http://auth-service:8080"),
+		InternalClientID:       getEnvOrDefault("INTERNAL_CLIENT_ID", "payment-service"),
+		InternalClientSecret:   getEnvOrDefault("INTERNAL_CLIENT_SECRET", ""),
 	}
 }
 

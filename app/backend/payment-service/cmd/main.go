@@ -8,26 +8,28 @@ import (
 
 	"payment-service/internal/config"
 	"payment-service/pkg/database"
+	"payment-service/pkg/internal_auth"
 	"payment-service/pkg/rabbitmq"
 	"payment-service/pkg/redis"
 	"payment-service/routes"
 
+	"payment-service/internal/payment"
 	paymentGateway "payment-service/internal/payment/gateway"
 	paymentHandler "payment-service/internal/payment/handler"
-	"payment-service/internal/payment"
-	
-	walletHandler "payment-service/internal/wallet/handler"
+
 	"payment-service/internal/wallet"
-	
-	withdrawalHandler "payment-service/internal/withdrawal/handler"
+	walletHandler "payment-service/internal/wallet/handler"
+
 	"payment-service/internal/withdrawal"
-	
+	withdrawalHandler "payment-service/internal/withdrawal/handler"
+
 	"payment-service/internal/outbox"
+
+	_ "payment-service/docs" // Import swagger docs
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "payment-service/docs" // Import swagger docs
 )
 
 // @title Payment Service API
@@ -41,6 +43,18 @@ import (
 func main() {
 	// 1. Load Cấu hình & Biến môi trường
 	config.LoadConfig()
+
+	// 1.1 Cache RSA Public Key từ Auth Service (dùng để verify JWT user và internal JWT)
+	internal_auth.InitPublicKey(config.AppConfig.AuthServiceInternalURL)
+
+	// 1.2 Khởi tạo TokenManager nội bộ — dùng để GỌI sang service khác
+	// Lưu vào biến global để các layer khác có thể inject nếu cần
+	_ = internal_auth.NewTokenManager(
+		config.AppConfig.AuthServiceInternalURL,
+		config.AppConfig.InternalClientID,
+		config.AppConfig.InternalClientSecret,
+	)
+	log.Printf("🔐 Internal M2M auth initialized for client: %s", config.AppConfig.InternalClientID)
 
 	// 2. Kết nối CSDL & Chạy Migration
 	database.ConnectDB()

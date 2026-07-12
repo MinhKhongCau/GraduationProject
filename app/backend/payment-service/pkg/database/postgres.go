@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"payment-service/internal/config"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/entity"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -35,12 +35,12 @@ func ConnectDB() {
 
 	fmt.Println("⏳ Running AutoMigrate...")
 	err = database.AutoMigrate(
-		&domain.BankAccount{},
-		&domain.Wallet{},
-		&domain.WalletTransaction{},
-		&domain.PaymentOrder{},
-		&domain.WithdrawalRequest{},
-		&domain.OutboxEvent{},
+		&entity.BankAccount{},
+		&entity.Wallet{},
+		&entity.WalletTransaction{},
+		&entity.PaymentOrder{},
+		&entity.WithdrawalRequest{},
+		&entity.OutboxEvent{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)

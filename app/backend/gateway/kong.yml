@@ -2,6 +2,27 @@ _format_version: "3.0"
 _transform: true
 
 services:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # SECURITY: Chặn hoàn toàn /internal/* từ Internet.
+  # Path này chỉ được gọi trong Docker internal network (container-to-container).
+  # Route này phải khai báo TRƯỚC các route service khác để được match ưu tiên.
+  # ═══════════════════════════════════════════════════════════════════════════
+  - name: block-internal-routes
+    # Dummy URL — request sẽ bị terminated trước khi forward đến đây
+    url: http://auth-service:8080
+    routes:
+      - name: block-internal
+        paths:
+          - /internal
+        strip_path: false
+        plugins:
+          - name: request-termination
+            config:
+              status_code: 403
+              message: "Forbidden: /internal paths are not accessible from outside the network"
+              content_type: "application/json"
+
+
   - name: auth-service
     url: http://auth-upstream
     routes:

@@ -3,7 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/vo"
 	"payment-service/internal/wallet"
 	"payment-service/pkg/response"
 	"time"
@@ -28,7 +28,7 @@ func NewHandler(usecase wallet.Usecase) *Handler {
 // @Produce      json
 // @Param        X-User-Id    header    string  true  "User ID (UUID)"
 // @Param        X-User-Role  header    string  true  "User Role (PATIENT hoặc EXPERT)"
-// @Success      200          {object}  response.Response{data=domain.Wallet}
+// @Success      200          {object}  response.Response{data=entity.Wallet}
 // @Failure      401          {object}  response.Response
 // @Failure      500          {object}  response.Response
 // @Router       /payments/wallets/me [get]
@@ -154,7 +154,7 @@ func (h *Handler) TopUpWallet(c *gin.Context) {
 
 	idempotencyKey := fmt.Sprintf("topup_%s_%d", userID.String(), time.Now().UnixNano())
 
-	err = h.usecase.CreditAvailable(c.Request.Context(), userID, domain.Money(req.Amount), "MANUAL", uuid.New(), idempotencyKey)
+	err = h.usecase.CreditAvailable(c.Request.Context(), userID, vo.Money(req.Amount), "MANUAL", uuid.New(), idempotencyKey)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to top up wallet", err.Error())
 		return
