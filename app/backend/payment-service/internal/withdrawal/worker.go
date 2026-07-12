@@ -3,7 +3,7 @@ package withdrawal
 import (
 	"context"
 	"log"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/entity"
 	"time"
 
 	"gorm.io/gorm"
@@ -44,8 +44,8 @@ func (w *Worker) checkProcessingTimeouts() {
 	now := time.Now().UnixMilli()
 	timeoutThreshold := now - w.timeout.Milliseconds()
 
-	var stuckRequests []domain.WithdrawalRequest
-	err := w.db.Where("status = ? AND requested_at <= ?", domain.WithdrawalStatusProcessing, timeoutThreshold).Find(&stuckRequests).Error
+	var stuckRequests []entity.WithdrawalRequest
+	err := w.db.Where("status = ? AND requested_at <= ?", entity.WithdrawalStatusProcessing, timeoutThreshold).Find(&stuckRequests).Error
 	if err != nil {
 		log.Printf("Worker error finding stuck processing requests: %v", err)
 		return

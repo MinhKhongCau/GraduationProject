@@ -3,7 +3,7 @@ package wallet
 import (
 	"context"
 	"log"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/entity"
 	"time"
 
 	"gorm.io/gorm"
@@ -44,9 +44,9 @@ func (w *Worker) releasePendingBalances() {
 	now := time.Now().UnixMilli()
 	holdThreshold := now - w.holdPeriod.Milliseconds()
 
-	var orders []domain.PaymentOrder
+	var orders []entity.PaymentOrder
 	// Find SUCCESS, unreleased orders paid before the hold threshold
-	err := w.db.Where("status = ? AND released = ? AND paid_at <= ?", domain.OrderStatusSuccess, false, holdThreshold).Find(&orders).Error
+	err := w.db.Where("status = ? AND released = ? AND paid_at <= ?", entity.OrderStatusSuccess, false, holdThreshold).Find(&orders).Error
 	if err != nil {
 		log.Printf("Worker release error finding orders: %v", err)
 		return
@@ -57,7 +57,7 @@ func (w *Worker) releasePendingBalances() {
 
 		err := w.db.Transaction(func(tx *gorm.DB) error {
 			// Find expert wallet
-			var wallet domain.Wallet
+			var wallet entity.Wallet
 			if err := tx.Where("user_id = ?", order.ExpertID).First(&wallet).Error; err != nil {
 				return err
 			}
@@ -68,9 +68,9 @@ func (w *Worker) releasePendingBalances() {
 
 			// Record transaction of type ADJUSTMENT
 			// Amount is 0 because total balance (Available + Pending + Locked) doesn't change
-			transaction := domain.WalletTransaction{
+			transaction := entity.WalletTransaction{
 				WalletID:       wallet.ID,
-				Type:           domain.TxTypeAdjustment,
+				Type:           entity.TxTypeAdjustment,
 				Amount:         0,
 				BalanceAfter:   wallet.AvailableBalance.Add(wallet.PendingBalance).Add(wallet.LockedBalance),
 				ReferenceType:  "PAYMENT_ORDER",
@@ -85,7 +85,7 @@ func (w *Worker) releasePendingBalances() {
 			// Update wallet using optimistic lock check
 			oldVersion := wallet.Version
 			wallet.Version++
-			result := tx.Model(&domain.Wallet{}).
+			result := tx.Model(&entity.Wallet{}).
 				Where("id = ? AND version = ?", wallet.ID, oldVersion).
 				Updates(map[string]interface{}{
 					"available_balance": wallet.AvailableBalance,

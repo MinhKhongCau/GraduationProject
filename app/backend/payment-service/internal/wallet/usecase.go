@@ -5,7 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/entity"
+	"payment-service/internal/domain/vo"
 	"payment-service/pkg/redis"
 	"time"
 
@@ -20,17 +21,17 @@ var (
 )
 
 type Usecase interface {
-	GetOrCreateWallet(ctx context.Context, userID uuid.UUID) (*domain.Wallet, error)
-	GetWalletByID(ctx context.Context, walletID uuid.UUID) (*domain.Wallet, error)
-	GetTransactionHistory(ctx context.Context, userID uuid.UUID) ([]domain.WalletTransaction, error)
+	GetOrCreateWallet(ctx context.Context, userID uuid.UUID) (*entity.Wallet, error)
+	GetWalletByID(ctx context.Context, walletID uuid.UUID) (*entity.Wallet, error)
+	GetTransactionHistory(ctx context.Context, userID uuid.UUID) ([]entity.WalletTransaction, error)
 
-	CreditPending(ctx context.Context, userID uuid.UUID, amount domain.Money, refType string, refID uuid.UUID, idempotencyKey string) error
-	CreditAvailable(ctx context.Context, userID uuid.UUID, amount domain.Money, refType string, refID uuid.UUID, idempotencyKey string) error
-	DebitAvailable(ctx context.Context, userID uuid.UUID, amount domain.Money, refType string, refID uuid.UUID, idempotencyKey string) error
-	DebitPending(ctx context.Context, userID uuid.UUID, amount domain.Money, refType string, refID uuid.UUID, idempotencyKey string) error
+	CreditPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error
+	CreditAvailable(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error
+	DebitAvailable(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error
+	DebitPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error
 
-	LockFunds(ctx context.Context, userID uuid.UUID, amount domain.Money) error
-	UnlockFunds(ctx context.Context, userID uuid.UUID, amount domain.Money) error
+	LockFunds(ctx context.Context, userID uuid.UUID, amount vo.Money) error
+	UnlockFunds(ctx context.Context, userID uuid.UUID, amount vo.Money) error
 }
 
 type walletUsecase struct {
@@ -41,11 +42,11 @@ func NewUsecase(repo Repository) Usecase {
 	return &walletUsecase{repo: repo}
 }
 
-func (u *walletUsecase) GetOrCreateWallet(ctx context.Context, userID uuid.UUID) (*domain.Wallet, error) {
+func (u *walletUsecase) GetOrCreateWallet(ctx context.Context, userID uuid.UUID) (*entity.Wallet, error) {
 	wallet, err := u.repo.GetByUserID(userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			newWallet := &domain.Wallet{
+			newWallet := &entity.Wallet{
 				UserID:           userID,
 				AvailableBalance: 0,
 				PendingBalance:   0,
@@ -63,11 +64,11 @@ func (u *walletUsecase) GetOrCreateWallet(ctx context.Context, userID uuid.UUID)
 	return wallet, nil
 }
 
-func (u *walletUsecase) GetWalletByID(ctx context.Context, walletID uuid.UUID) (*domain.Wallet, error) {
+func (u *walletUsecase) GetWalletByID(ctx context.Context, walletID uuid.UUID) (*entity.Wallet, error) {
 	return u.repo.GetByID(walletID)
 }
 
-func (u *walletUsecase) GetTransactionHistory(ctx context.Context, userID uuid.UUID) ([]domain.WalletTransaction, error) {
+func (u *walletUsecase) GetTransactionHistory(ctx context.Context, userID uuid.UUID) ([]entity.WalletTransaction, error) {
 	wallet, err := u.GetOrCreateWallet(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -75,14 +76,14 @@ func (u *walletUsecase) GetTransactionHistory(ctx context.Context, userID uuid.U
 	return u.repo.GetTransactionsByWalletID(wallet.ID)
 }
 
-func (u *walletUsecase) CreditPending(ctx context.Context, userID uuid.UUID, amount domain.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
-	return u.executeWithLockAndRetry(ctx, userID, func(wallet *domain.Wallet, tx *gorm.DB) error {
+func (u *walletUsecase) CreditPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
+	return u.executeWithLockAndRetry(ctx, userID, func(wallet *entity.Wallet, tx *gorm.DB) error {
 		wallet.PendingBalance = wallet.PendingBalance.Add(amount)
 
 		// Record transaction
-		transaction := &domain.WalletTransaction{
+		transaction := &entity.WalletTransaction{
 			WalletID:       wallet.ID,
-			Type:           domain.TxTypePaymentReceived,
+			Type:           entity.TxTypePaymentReceived,
 			Amount:         amount,
 			BalanceAfter:   wallet.AvailableBalance.Add(wallet.PendingBalance).Add(wallet.LockedBalance),
 			ReferenceType:  refType,
@@ -94,13 +95,13 @@ func (u *walletUsecase) CreditPending(ctx context.Context, userID uuid.UUID, amo
 	})
 }
 
-func (u *walletUsecase) CreditAvailable(ctx context.Context, userID uuid.UUID, amount domain.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
-	return u.executeWithLockAndRetry(ctx, userID, func(wallet *domain.Wallet, tx *gorm.DB) error {
+func (u *walletUsecase) CreditAvailable(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
+	return u.executeWithLockAndRetry(ctx, userID, func(wallet *entity.Wallet, tx *gorm.DB) error {
 		wallet.AvailableBalance = wallet.AvailableBalance.Add(amount)
 
-		transaction := &domain.WalletTransaction{
+		transaction := &entity.WalletTransaction{
 			WalletID:       wallet.ID,
-			Type:           domain.TxTypeRefund, // e.g. REFUND / ADJUSTMENT
+			Type:           entity.TxTypeRefund, // e.g. REFUND / ADJUSTMENT
 			Amount:         amount,
 			BalanceAfter:   wallet.AvailableBalance.Add(wallet.PendingBalance).Add(wallet.LockedBalance),
 			ReferenceType:  refType,
@@ -112,17 +113,17 @@ func (u *walletUsecase) CreditAvailable(ctx context.Context, userID uuid.UUID, a
 	})
 }
 
-func (u *walletUsecase) DebitAvailable(ctx context.Context, userID uuid.UUID, amount domain.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
-	return u.executeWithLockAndRetry(ctx, userID, func(wallet *domain.Wallet, tx *gorm.DB) error {
+func (u *walletUsecase) DebitAvailable(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
+	return u.executeWithLockAndRetry(ctx, userID, func(wallet *entity.Wallet, tx *gorm.DB) error {
 		if wallet.AvailableBalance.Int64() < amount.Int64() {
 			return ErrInsufficientBalance
 		}
 		wallet.AvailableBalance = wallet.AvailableBalance.Sub(amount)
 
-		transaction := &domain.WalletTransaction{
+		transaction := &entity.WalletTransaction{
 			WalletID:       wallet.ID,
-			Type:           domain.TxTypeCommissionDeducted, // e.g. COMMISSION_DEDUCTED
-			Amount:         domain.Money(-amount.Int64()),   // Negative amount representation
+			Type:           entity.TxTypeCommissionDeducted, // e.g. COMMISSION_DEDUCTED
+			Amount:         vo.Money(-amount.Int64()),       // Negative amount representation
 			BalanceAfter:   wallet.AvailableBalance.Add(wallet.PendingBalance).Add(wallet.LockedBalance),
 			ReferenceType:  refType,
 			ReferenceID:    refID,
@@ -133,17 +134,17 @@ func (u *walletUsecase) DebitAvailable(ctx context.Context, userID uuid.UUID, am
 	})
 }
 
-func (u *walletUsecase) DebitPending(ctx context.Context, userID uuid.UUID, amount domain.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
-	return u.executeWithLockAndRetry(ctx, userID, func(wallet *domain.Wallet, tx *gorm.DB) error {
+func (u *walletUsecase) DebitPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
+	return u.executeWithLockAndRetry(ctx, userID, func(wallet *entity.Wallet, tx *gorm.DB) error {
 		if wallet.PendingBalance.Int64() < amount.Int64() {
 			return ErrInsufficientBalance
 		}
 		wallet.PendingBalance = wallet.PendingBalance.Sub(amount)
 
-		transaction := &domain.WalletTransaction{
+		transaction := &entity.WalletTransaction{
 			WalletID:       wallet.ID,
-			Type:           domain.TxTypeCommissionDeducted,
-			Amount:         domain.Money(-amount.Int64()),
+			Type:           entity.TxTypeCommissionDeducted,
+			Amount:         vo.Money(-amount.Int64()),
 			BalanceAfter:   wallet.AvailableBalance.Add(wallet.PendingBalance).Add(wallet.LockedBalance),
 			ReferenceType:  refType,
 			ReferenceID:    refID,
@@ -154,8 +155,8 @@ func (u *walletUsecase) DebitPending(ctx context.Context, userID uuid.UUID, amou
 	})
 }
 
-func (u *walletUsecase) LockFunds(ctx context.Context, userID uuid.UUID, amount domain.Money) error {
-	return u.executeWithLockAndRetry(ctx, userID, func(wallet *domain.Wallet, tx *gorm.DB) error {
+func (u *walletUsecase) LockFunds(ctx context.Context, userID uuid.UUID, amount vo.Money) error {
+	return u.executeWithLockAndRetry(ctx, userID, func(wallet *entity.Wallet, tx *gorm.DB) error {
 		if wallet.AvailableBalance.Int64() < amount.Int64() {
 			return ErrInsufficientBalance
 		}
@@ -165,8 +166,8 @@ func (u *walletUsecase) LockFunds(ctx context.Context, userID uuid.UUID, amount 
 	})
 }
 
-func (u *walletUsecase) UnlockFunds(ctx context.Context, userID uuid.UUID, amount domain.Money) error {
-	return u.executeWithLockAndRetry(ctx, userID, func(wallet *domain.Wallet, tx *gorm.DB) error {
+func (u *walletUsecase) UnlockFunds(ctx context.Context, userID uuid.UUID, amount vo.Money) error {
+	return u.executeWithLockAndRetry(ctx, userID, func(wallet *entity.Wallet, tx *gorm.DB) error {
 		if wallet.LockedBalance.Int64() < amount.Int64() {
 			return errors.New("cannot unlock more than locked balance")
 		}
@@ -177,7 +178,7 @@ func (u *walletUsecase) UnlockFunds(ctx context.Context, userID uuid.UUID, amoun
 }
 
 // Helper to execute operations under a Redis lock and retry on optimistic locking collision
-func (u *walletUsecase) executeWithLockAndRetry(ctx context.Context, userID uuid.UUID, fn func(wallet *domain.Wallet, tx *gorm.DB) error) error {
+func (u *walletUsecase) executeWithLockAndRetry(ctx context.Context, userID uuid.UUID, fn func(wallet *entity.Wallet, tx *gorm.DB) error) error {
 	// TODO: RabbitMQ and Redis connection logging
 	log.Printf("[REDIS LOCK] Attempting to acquire lock for user %s", userID)
 
@@ -200,10 +201,10 @@ func (u *walletUsecase) executeWithLockAndRetry(ctx context.Context, userID uuid
 	for i := 0; i < maxRetries; i++ {
 		opErr = u.repo.WithTransaction(func(tx *gorm.DB) error {
 			// Get or create wallet inside transaction
-			var wallet domain.Wallet
+			var wallet entity.Wallet
 			if err := tx.Where("user_id = ?", userID).First(&wallet).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
-					wallet = domain.Wallet{
+					wallet = entity.Wallet{
 						UserID:           userID,
 						AvailableBalance: 0,
 						PendingBalance:   0,

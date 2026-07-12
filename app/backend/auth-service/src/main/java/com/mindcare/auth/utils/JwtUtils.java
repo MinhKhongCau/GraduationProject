@@ -7,8 +7,8 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import com.mindcare.auth.config.RsaKeyConfig;
 
-import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,8 +16,11 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
-    @Value("${jwt.secret}")
-    private String secretKey;
+    private final RsaKeyConfig rsaKeyConfig;
+
+    public JwtUtils(RsaKeyConfig rsaKeyConfig) {
+        this.rsaKeyConfig = rsaKeyConfig;
+    }
 
     @Value("${jwt.access-token-expiration}")
     private long jwtExpiration;
@@ -46,19 +49,13 @@ public class JwtUtils {
                 .setSubject(email)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .signWith(rsaKeyConfig.getPrivateKey(), SignatureAlgorithm.RS256)
                 .compact();
-    }
-
-    // Giải mã chữ ký bí mật từ application.yml
-    private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public boolean validateJwtToken(String authToken) {
         try {
-            Jwts.parserBuilder().setSigningKey(getSignInKey()).build().parseClaimsJws(authToken);
+            Jwts.parserBuilder().setSigningKey(rsaKeyConfig.getPublicKey()).build().parseClaimsJws(authToken);
             return true;
         } catch (Exception e) {
             return false;
@@ -68,7 +65,7 @@ public class JwtUtils {
     // 4. Hàm lấy Email (Subject) từ trong Token
     public String getEmailFromToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSignInKey())
+                .setSigningKey(rsaKeyConfig.getPublicKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody()

@@ -6,7 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/entity"
+	"payment-service/internal/domain/vo"
 	"payment-service/internal/payment/gateway"
 	"payment-service/internal/wallet"
 	"strconv"
@@ -17,7 +18,7 @@ import (
 )
 
 type Usecase interface {
-	CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount domain.Money, gatewayName string, ipAddr string) (*domain.PaymentOrder, string, error)
+	CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string) (*entity.PaymentOrder, string, error)
 	ProcessIPN(ctx context.Context, params map[string][]string) (bool, error)
 }
 
@@ -35,13 +36,13 @@ func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient *gate
 	}
 }
 
-func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount domain.Money, gatewayName string, ipAddr string) (*domain.PaymentOrder, string, error) {
+func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string) (*entity.PaymentOrder, string, error) {
 	// Mức hoa hồng là 15%
 	commissionRate := 0.15
-	commissionAmount := domain.Money(float64(grossAmount) * commissionRate)
+	commissionAmount := vo.Money(float64(grossAmount) * commissionRate)
 	netAmount := grossAmount.Sub(commissionAmount)
 
-	order := &domain.PaymentOrder{
+	order := &entity.PaymentOrder{
 		ID:               uuid.New(),
 		PayerID:          payerID,
 		ExpertID:         expertID,
@@ -50,7 +51,7 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid
 		CommissionAmount: commissionAmount,
 		NetAmount:        netAmount,
 		Gateway:          gatewayName,
-		Status:           domain.OrderStatusPending,
+		Status:           entity.OrderStatusPending,
 	}
 
 	if err := u.repo.Create(order); err != nil {
@@ -118,7 +119,7 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			return err
 		}
 
-		if order.Status != domain.OrderStatusPending {
+		if order.Status != entity.OrderStatusPending {
 			alreadyProcessed = true
 			return nil
 		}
@@ -137,7 +138,7 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 
 		paidAt := time.Now().UnixMilli()
 		if vnpResponseCode == "00" {
-			order.Status = domain.OrderStatusSuccess
+			order.Status = entity.OrderStatusSuccess
 			order.PaidAt = &paidAt
 			order.GatewayTxnRef = vnpTxnNo
 
@@ -157,7 +158,7 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			}
 			payloadBytes, _ := json.Marshal(payloadMap)
 
-			outbox := &domain.OutboxEvent{
+			outbox := &entity.OutboxEvent{
 				AggregateType: "PAYMENT_ORDER",
 				AggregateID:   order.ID,
 				EventType:     "wallet.payment.received",
@@ -182,7 +183,7 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			}
 
 		} else {
-			order.Status = domain.OrderStatusFailed
+			order.Status = entity.OrderStatusFailed
 			if err := u.repo.UpdateWithTx(tx, order); err != nil {
 				return err
 			}

@@ -2,7 +2,7 @@ package wallet
 
 import (
 	"errors"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/entity"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -11,13 +11,13 @@ import (
 var ErrConcurrentUpdate = errors.New("concurrent wallet update detected")
 
 type Repository interface {
-	GetByUserID(userID uuid.UUID) (*domain.Wallet, error)
-	GetByID(walletID uuid.UUID) (*domain.Wallet, error)
-	Create(wallet *domain.Wallet) error
-	Update(wallet *domain.Wallet) error
-	UpdateWithTx(tx *gorm.DB, wallet *domain.Wallet) error
-	CreateTransaction(tx *gorm.DB, transaction *domain.WalletTransaction) error
-	GetTransactionsByWalletID(walletID uuid.UUID) ([]domain.WalletTransaction, error)
+	GetByUserID(userID uuid.UUID) (*entity.Wallet, error)
+	GetByID(walletID uuid.UUID) (*entity.Wallet, error)
+	Create(wallet *entity.Wallet) error
+	Update(wallet *entity.Wallet) error
+	UpdateWithTx(tx *gorm.DB, wallet *entity.Wallet) error
+	CreateTransaction(tx *gorm.DB, transaction *entity.WalletTransaction) error
+	GetTransactionsByWalletID(walletID uuid.UUID) ([]entity.WalletTransaction, error)
 	WithTransaction(fn func(tx *gorm.DB) error) error
 }
 
@@ -29,8 +29,8 @@ func NewRepository(db *gorm.DB) Repository {
 	return &pgRepository{db: db}
 }
 
-func (r *pgRepository) GetByUserID(userID uuid.UUID) (*domain.Wallet, error) {
-	var wallet domain.Wallet
+func (r *pgRepository) GetByUserID(userID uuid.UUID) (*entity.Wallet, error) {
+	var wallet entity.Wallet
 	err := r.db.Where("user_id = ?", userID).First(&wallet).Error
 	if err != nil {
 		return nil, err
@@ -38,8 +38,8 @@ func (r *pgRepository) GetByUserID(userID uuid.UUID) (*domain.Wallet, error) {
 	return &wallet, nil
 }
 
-func (r *pgRepository) GetByID(walletID uuid.UUID) (*domain.Wallet, error) {
-	var wallet domain.Wallet
+func (r *pgRepository) GetByID(walletID uuid.UUID) (*entity.Wallet, error) {
+	var wallet entity.Wallet
 	err := r.db.Where("id = ?", walletID).First(&wallet).Error
 	if err != nil {
 		return nil, err
@@ -47,18 +47,18 @@ func (r *pgRepository) GetByID(walletID uuid.UUID) (*domain.Wallet, error) {
 	return &wallet, nil
 }
 
-func (r *pgRepository) Create(wallet *domain.Wallet) error {
+func (r *pgRepository) Create(wallet *entity.Wallet) error {
 	return r.db.Create(wallet).Error
 }
 
-func (r *pgRepository) Update(wallet *domain.Wallet) error {
+func (r *pgRepository) Update(wallet *entity.Wallet) error {
 	return r.UpdateWithTx(r.db, wallet)
 }
 
-func (r *pgRepository) UpdateWithTx(tx *gorm.DB, wallet *domain.Wallet) error {
+func (r *pgRepository) UpdateWithTx(tx *gorm.DB, wallet *entity.Wallet) error {
 	oldVersion := wallet.Version
 	wallet.Version++
-	result := tx.Model(&domain.Wallet{}).
+	result := tx.Model(&entity.Wallet{}).
 		Where("id = ? AND version = ?", wallet.ID, oldVersion).
 		Updates(map[string]interface{}{
 			"available_balance": wallet.AvailableBalance,
@@ -75,7 +75,7 @@ func (r *pgRepository) UpdateWithTx(tx *gorm.DB, wallet *domain.Wallet) error {
 	return nil
 }
 
-func (r *pgRepository) CreateTransaction(tx *gorm.DB, transaction *domain.WalletTransaction) error {
+func (r *pgRepository) CreateTransaction(tx *gorm.DB, transaction *entity.WalletTransaction) error {
 	db := r.db
 	if tx != nil {
 		db = tx
@@ -83,8 +83,8 @@ func (r *pgRepository) CreateTransaction(tx *gorm.DB, transaction *domain.Wallet
 	return db.Create(transaction).Error
 }
 
-func (r *pgRepository) GetTransactionsByWalletID(walletID uuid.UUID) ([]domain.WalletTransaction, error) {
-	var txs []domain.WalletTransaction
+func (r *pgRepository) GetTransactionsByWalletID(walletID uuid.UUID) ([]entity.WalletTransaction, error) {
+	var txs []entity.WalletTransaction
 	err := r.db.Where("wallet_id = ?", walletID).Order("created_at DESC").Find(&txs).Error
 	return txs, err
 }

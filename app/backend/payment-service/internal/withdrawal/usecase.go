@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/entity"
+	"payment-service/internal/domain/vo"
 	"payment-service/internal/wallet"
 	"time"
 
@@ -14,10 +15,10 @@ import (
 )
 
 type Usecase interface {
-	LinkBankAccount(ctx context.Context, userID uuid.UUID, bankCode, accountNumber, accountHolderName string) (*domain.BankAccount, error)
-	GetBankAccounts(ctx context.Context, userID uuid.UUID) ([]domain.BankAccount, error)
+	LinkBankAccount(ctx context.Context, userID uuid.UUID, bankCode, accountNumber, accountHolderName string) (*entity.BankAccount, error)
+	GetBankAccounts(ctx context.Context, userID uuid.UUID) ([]entity.BankAccount, error)
 
-	CreateWithdrawal(ctx context.Context, userID uuid.UUID, bankAccountID uuid.UUID, amount domain.Money) (*domain.WithdrawalRequest, error)
+	CreateWithdrawal(ctx context.Context, userID uuid.UUID, bankAccountID uuid.UUID, amount vo.Money) (*entity.WithdrawalRequest, error)
 	ApproveWithdrawal(ctx context.Context, adminID uuid.UUID, requestID uuid.UUID, note string) error
 	RejectWithdrawal(ctx context.Context, adminID uuid.UUID, requestID uuid.UUID, note string) error
 	HandlePayoutCallback(ctx context.Context, requestID uuid.UUID, payoutRef string, success bool, reason string) error
@@ -35,8 +36,8 @@ func NewUsecase(repo Repository, walletUsecase wallet.Usecase) Usecase {
 	}
 }
 
-func (u *withdrawalUsecase) LinkBankAccount(ctx context.Context, userID uuid.UUID, bankCode, accountNumber, accountHolderName string) (*domain.BankAccount, error) {
-	account := &domain.BankAccount{
+func (u *withdrawalUsecase) LinkBankAccount(ctx context.Context, userID uuid.UUID, bankCode, accountNumber, accountHolderName string) (*entity.BankAccount, error) {
+	account := &entity.BankAccount{
 		ID:                uuid.New(),
 		UserID:            userID,
 		BankCode:          bankCode,
@@ -48,11 +49,11 @@ func (u *withdrawalUsecase) LinkBankAccount(ctx context.Context, userID uuid.UUI
 	return account, err
 }
 
-func (u *withdrawalUsecase) GetBankAccounts(ctx context.Context, userID uuid.UUID) ([]domain.BankAccount, error) {
+func (u *withdrawalUsecase) GetBankAccounts(ctx context.Context, userID uuid.UUID) ([]entity.BankAccount, error) {
 	return u.repo.GetBankAccountsByUserID(userID)
 }
 
-func (u *withdrawalUsecase) CreateWithdrawal(ctx context.Context, userID uuid.UUID, bankAccountID uuid.UUID, amount domain.Money) (*domain.WithdrawalRequest, error) {
+func (u *withdrawalUsecase) CreateWithdrawal(ctx context.Context, userID uuid.UUID, bankAccountID uuid.UUID, amount vo.Money) (*entity.WithdrawalRequest, error) {
 	// 1. Kiểm tra tài khoản ngân hàng
 	bankAccount, err := u.repo.GetBankAccountByID(bankAccountID)
 	if err != nil {
@@ -76,15 +77,15 @@ func (u *withdrawalUsecase) CreateWithdrawal(ctx context.Context, userID uuid.UU
 	}
 
 	// Ngưỡng rút tự động duyệt là 5,000,000 VND
-	threshold := domain.Money(5000000)
+	threshold := vo.Money(5000000)
 	requiresManual := amount.Int64() > threshold.Int64()
 
-	status := domain.WithdrawalStatusApproved
+	status := entity.WithdrawalStatusApproved
 	if requiresManual {
-		status = domain.WithdrawalStatusPendingApproval
+		status = entity.WithdrawalStatusPendingApproval
 	}
 
-	req := &domain.WithdrawalRequest{
+	req := &entity.WithdrawalRequest{
 		ID:                     uuid.New(),
 		WalletID:               wlt.ID,
 		BankAccountID:          bankAccountID,
@@ -107,10 +108,10 @@ func (u *withdrawalUsecase) CreateWithdrawal(ctx context.Context, userID uuid.UU
 		}
 
 		// Ghi transaction log cho hành động khóa tiền (amount = 0 vì tổng số dư ví không đổi)
-		transaction := &domain.WalletTransaction{
+		transaction := &entity.WalletTransaction{
 			ID:             uuid.New(),
 			WalletID:       wlt.ID,
-			Type:           domain.TxTypeWithdrawalLocked,
+			Type:           entity.TxTypeWithdrawalLocked,
 			Amount:         0,
 			BalanceAfter:   wlt.AvailableBalance.Sub(amount).Add(wlt.PendingBalance).Add(wlt.LockedBalance.Add(amount)),
 			ReferenceType:  "WITHDRAWAL_REQUEST",
@@ -135,7 +136,7 @@ func (u *withdrawalUsecase) CreateWithdrawal(ctx context.Context, userID uuid.UU
 		}
 		payloadBytes, _ := json.Marshal(payloadMap)
 
-		outbox := &domain.OutboxEvent{
+		outbox := &entity.OutboxEvent{
 			AggregateType: "WITHDRAWAL_REQUEST",
 			AggregateID:   req.ID,
 			EventType:     eventType,
@@ -163,14 +164,14 @@ func (u *withdrawalUsecase) ApproveWithdrawal(ctx context.Context, adminID uuid.
 		return err
 	}
 
-	if req.Status != domain.WithdrawalStatusPendingApproval {
+	if req.Status != entity.WithdrawalStatusPendingApproval {
 		return errors.New("yêu cầu rút tiền không ở trạng thái chờ duyệt")
 	}
 
 	now := time.Now().UnixMilli()
-	req.Status = domain.WithdrawalStatusApproved
+	req.Status = entity.WithdrawalStatusApproved
 	req.ApproverID = &adminID
-	req.ApprovalAction = domain.ApprovalActionApprove
+	req.ApprovalAction = entity.ApprovalActionApprove
 	req.ApprovalNote = note
 	req.ApprovedAt = &now
 
@@ -188,7 +189,7 @@ func (u *withdrawalUsecase) ApproveWithdrawal(ctx context.Context, adminID uuid.
 		}
 		payloadBytes, _ := json.Marshal(payloadMap)
 
-		outbox := &domain.OutboxEvent{
+		outbox := &entity.OutboxEvent{
 			AggregateType: "WITHDRAWAL_REQUEST",
 			AggregateID:   req.ID,
 			EventType:     "wallet.withdrawal.approved",
@@ -214,18 +215,18 @@ func (u *withdrawalUsecase) RejectWithdrawal(ctx context.Context, adminID uuid.U
 		return err
 	}
 
-	if req.Status != domain.WithdrawalStatusPendingApproval {
+	if req.Status != entity.WithdrawalStatusPendingApproval {
 		return errors.New("yêu cầu rút tiền không ở trạng thái chờ duyệt")
 	}
 
 	now := time.Now().UnixMilli()
-	req.Status = domain.WithdrawalStatusRejected
+	req.Status = entity.WithdrawalStatusRejected
 	req.ApproverID = &adminID
-	req.ApprovalAction = domain.ApprovalActionReject
+	req.ApprovalAction = entity.ApprovalActionReject
 	req.ApprovalNote = note
 	req.ProcessedAt = &now
 
-	var walletObj domain.Wallet
+	var walletObj entity.Wallet
 	err = u.repo.WithTransaction(func(tx *gorm.DB) error {
 		if err := tx.Where("id = ?", req.WalletID).First(&walletObj).Error; err != nil {
 			return err
@@ -243,10 +244,10 @@ func (u *withdrawalUsecase) RejectWithdrawal(ctx context.Context, adminID uuid.U
 		}
 
 		// Ghi transaction log (amount = 0 vì tổng ví không đổi)
-		transaction := &domain.WalletTransaction{
+		transaction := &entity.WalletTransaction{
 			ID:             uuid.New(),
 			WalletID:       req.WalletID,
-			Type:           domain.TxTypeWithdrawalRejected,
+			Type:           entity.TxTypeWithdrawalRejected,
 			Amount:         0,
 			BalanceAfter:   walletObj.AvailableBalance.Add(req.Amount).Add(walletObj.PendingBalance).Add(walletObj.LockedBalance.Sub(req.Amount)),
 			ReferenceType:  "WITHDRAWAL_REQUEST",
@@ -267,7 +268,7 @@ func (u *withdrawalUsecase) RejectWithdrawal(ctx context.Context, adminID uuid.U
 		}
 		payloadBytes, _ := json.Marshal(payloadMap)
 
-		outbox := &domain.OutboxEvent{
+		outbox := &entity.OutboxEvent{
 			AggregateType: "WITHDRAWAL_REQUEST",
 			AggregateID:   req.ID,
 			EventType:     "wallet.withdrawal.rejected",
@@ -286,7 +287,7 @@ func (u *withdrawalUsecase) HandlePayoutCallback(ctx context.Context, requestID 
 		return err
 	}
 
-	if req.Status != domain.WithdrawalStatusProcessing {
+	if req.Status != entity.WithdrawalStatusProcessing {
 		log.Printf("Yêu cầu rút %s đã được xử lý từ trước (status=%s)", requestID, req.Status)
 		return nil
 	}
@@ -295,17 +296,17 @@ func (u *withdrawalUsecase) HandlePayoutCallback(ctx context.Context, requestID 
 	req.ProcessedAt = &now
 	req.PayoutRef = payoutRef
 
-	var walletObj domain.Wallet
+	var walletObj entity.Wallet
 	txErr := u.repo.WithTransaction(func(tx *gorm.DB) error {
 		if err := tx.Where("id = ?", req.WalletID).First(&walletObj).Error; err != nil {
 			return err
 		}
 
 		if success {
-			req.Status = domain.WithdrawalStatusCompleted
+			req.Status = entity.WithdrawalStatusCompleted
 
 			// Khóa dòng ví và trừ tiền khỏi locked_balance (lúc này tổng ví thực sự giảm)
-			var wlt domain.Wallet
+			var wlt entity.Wallet
 			if err := tx.Clauses(gorm.Expr("FOR UPDATE")).Where("id = ?", req.WalletID).First(&wlt).Error; err != nil {
 				return err
 			}
@@ -320,11 +321,11 @@ func (u *withdrawalUsecase) HandlePayoutCallback(ctx context.Context, requestID 
 			}
 
 			// Ghi transaction log cho withdrawal completed (số tiền giảm -> âm!)
-			transaction := &domain.WalletTransaction{
+			transaction := &entity.WalletTransaction{
 				ID:             uuid.New(),
 				WalletID:       req.WalletID,
-				Type:           domain.TxTypeWithdrawalCompleted,
-				Amount:         domain.Money(-req.Amount.Int64()),
+				Type:           entity.TxTypeWithdrawalCompleted,
+				Amount:         vo.Money(-req.Amount.Int64()),
 				BalanceAfter:   wlt.AvailableBalance.Add(wlt.PendingBalance).Add(wlt.LockedBalance),
 				ReferenceType:  "WITHDRAWAL_REQUEST",
 				ReferenceID:    req.ID,
@@ -343,7 +344,7 @@ func (u *withdrawalUsecase) HandlePayoutCallback(ctx context.Context, requestID 
 			}
 			payloadBytes, _ := json.Marshal(payloadMap)
 
-			outbox := &domain.OutboxEvent{
+			outbox := &entity.OutboxEvent{
 				AggregateType: "WITHDRAWAL_REQUEST",
 				AggregateID:   req.ID,
 				EventType:     "wallet.withdrawal.completed",
@@ -353,7 +354,7 @@ func (u *withdrawalUsecase) HandlePayoutCallback(ctx context.Context, requestID 
 			return u.repo.SaveOutboxEvent(tx, outbox)
 
 		} else {
-			req.Status = domain.WithdrawalStatusFailed
+			req.Status = entity.WithdrawalStatusFailed
 
 			// Thất bại: rollback locked -> available
 			err := u.walletUsecase.UnlockFunds(ctx, walletObj.UserID, req.Amount)
@@ -366,10 +367,10 @@ func (u *withdrawalUsecase) HandlePayoutCallback(ctx context.Context, requestID 
 			}
 
 			// Ghi transaction log (amount = 0 vì tổng ví không đổi)
-			transaction := &domain.WalletTransaction{
+			transaction := &entity.WalletTransaction{
 				ID:             uuid.New(),
 				WalletID:       req.WalletID,
-				Type:           domain.TxTypeWithdrawalRejected,
+				Type:           entity.TxTypeWithdrawalRejected,
 				Amount:         0,
 				BalanceAfter:   walletObj.AvailableBalance.Add(req.Amount).Add(walletObj.PendingBalance).Add(walletObj.LockedBalance.Sub(req.Amount)),
 				ReferenceType:  "WITHDRAWAL_REQUEST",
@@ -389,7 +390,7 @@ func (u *withdrawalUsecase) HandlePayoutCallback(ctx context.Context, requestID 
 			}
 			payloadBytes, _ := json.Marshal(payloadMap)
 
-			outbox := &domain.OutboxEvent{
+			outbox := &entity.OutboxEvent{
 				AggregateType: "WITHDRAWAL_REQUEST",
 				AggregateID:   req.ID,
 				EventType:     "wallet.withdrawal.failed",
@@ -404,12 +405,12 @@ func (u *withdrawalUsecase) HandlePayoutCallback(ctx context.Context, requestID 
 }
 
 // Giả lập payout gateway gọi webhook callback async sau 2s
-func (u *withdrawalUsecase) triggerPayoutGateway(req *domain.WithdrawalRequest) {
+func (u *withdrawalUsecase) triggerPayoutGateway(req *entity.WithdrawalRequest) {
 	log.Printf("[PAYOUT GATEWAY] Gọi cổng thanh toán cho yêu cầu ID %s", req.ID)
 
 	// Đổi trạng thái sang PROCESSING
 	err := u.repo.WithTransaction(func(tx *gorm.DB) error {
-		req.Status = domain.WithdrawalStatusProcessing
+		req.Status = entity.WithdrawalStatusProcessing
 		return u.repo.UpdateWithdrawalRequestWithTx(tx, req)
 	})
 	if err != nil {

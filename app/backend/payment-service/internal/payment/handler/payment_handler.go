@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/vo"
 	"payment-service/internal/payment"
 	"payment-service/pkg/response"
 	"strings"
@@ -72,7 +72,7 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	}
 
 	ipAddr := c.ClientIP()
-	order, payURL, err := h.usecase.CreateOrder(c.Request.Context(), payerUUID, expertUUID, domain.Money(req.Amount), gatewayName, ipAddr)
+	order, payURL, err := h.usecase.CreateOrder(c.Request.Context(), payerUUID, expertUUID, vo.Money(req.Amount), gatewayName, ipAddr)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to create payment order", err.Error())
 		return

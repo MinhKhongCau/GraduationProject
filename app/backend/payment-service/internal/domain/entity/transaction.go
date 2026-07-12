@@ -1,6 +1,7 @@
-package domain
+package entity
 
 import (
+	"payment-service/internal/domain/vo"
 	"time"
 
 	"github.com/google/uuid"
@@ -44,8 +45,8 @@ type WalletTransaction struct {
 	ID             uuid.UUID       `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	WalletID       uuid.UUID       `json:"wallet_id" gorm:"type:uuid;not null;index;column:wallet_id"`
 	Type           TransactionType `json:"type" gorm:"type:integer;not null;column:type"`
-	Amount         Money           `json:"amount" gorm:"type:bigint;not null;column:amount"`
-	BalanceAfter   Money           `json:"balance_after" gorm:"type:bigint;not null;column:balance_after"`
+	Amount         vo.Money        `json:"amount" gorm:"type:bigint;not null;column:amount"`
+	BalanceAfter   vo.Money        `json:"balance_after" gorm:"type:bigint;not null;column:balance_after"`
 	ReferenceType  string          `json:"reference_type" gorm:"type:varchar(50);column:reference_type"` // PAYMENT_ORDER | WITHDRAWAL_REQUEST | MANUAL
 	ReferenceID    uuid.UUID       `json:"reference_id" gorm:"type:uuid;column:reference_id"`
 	IdempotencyKey string          `json:"idempotency_key" gorm:"type:varchar(255);uniqueIndex;column:idempotency_key"`

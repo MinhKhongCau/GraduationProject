@@ -3,7 +3,7 @@ package wallet
 import (
 	"context"
 	"log"
-	"payment-service/internal/domain"
+	"payment-service/internal/domain/entity"
 	"time"
 
 	"gorm.io/gorm"
@@ -38,7 +38,7 @@ func (w *ReconciliationWorker) Start(ctx context.Context) {
 func (w *ReconciliationWorker) runLedgerReconciliation() {
 	log.Println("[RECONCILIATION] Running Ledger Reconciliation check...")
 
-	var wallets []domain.Wallet
+	var wallets []entity.Wallet
 	if err := w.db.Find(&wallets).Error; err != nil {
 		log.Printf("Reconciliation: Failed to fetch wallets: %v", err)
 		return
@@ -69,9 +69,9 @@ func (w *ReconciliationWorker) runLedgerReconciliation() {
 func (w *ReconciliationWorker) runVNPayReconciliation() {
 	log.Println("[RECONCILIATION] Running VNPay Transaction Reconciliation check...")
 
-	var pendingOrders []domain.PaymentOrder
+	var pendingOrders []entity.PaymentOrder
 	thresholdTime := time.Now().Add(-10 * time.Minute).UnixMilli()
-	err := w.db.Where("status = ? AND gateway = ? AND created_at <= ?", domain.OrderStatusPending, "VNPAY", thresholdTime).Find(&pendingOrders).Error
+	err := w.db.Where("status = ? AND gateway = ? AND created_at <= ?", entity.OrderStatusPending, "VNPAY", thresholdTime).Find(&pendingOrders).Error
 	if err != nil {
 		log.Printf("Reconciliation: Failed to fetch pending payment orders: %v", err)
 		return
