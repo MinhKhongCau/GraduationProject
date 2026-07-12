@@ -1,11 +1,16 @@
 package main
 
 import (
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/Kong/go-pdk"
 	"github.com/Kong/go-pdk/server"
@@ -13,11 +18,85 @@ import (
 )
 
 type Config struct {
-	JwtSecret string `json:"jwt_secret"`
+	AuthServiceUrl string `json:"auth_service_url"`
 }
+
+var (
+	publicKeyCache *rsa.PublicKey
+	pubKeyMutex    sync.RWMutex
+)
 
 func New() interface{} {
 	return &Config{}
+}
+
+// Hàm lấy Public Key từ Auth Service (có cache)
+func getPublicKey(authUrl string, kong *pdk.PDK) (*rsa.PublicKey, error) {
+	pubKeyMutex.RLock()
+	if publicKeyCache != nil {
+		pubKeyMutex.RUnlock()
+		return publicKeyCache, nil
+	}
+	pubKeyMutex.RUnlock()
+
+	pubKeyMutex.Lock()
+	defer pubKeyMutex.Unlock()
+
+	// Double check
+	if publicKeyCache != nil {
+		return publicKeyCache, nil
+	}
+
+	url := authUrl
+	if url == "" || strings.HasPrefix(url, "$") {
+		if envUrl := os.Getenv("AUTH_SERVICE_URL"); envUrl != "" {
+			url = envUrl
+		} else {
+			url = "http://auth-service:8080/api/v1/auth/public-key"
+		}
+	}
+
+	client := http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		kong.Log.Err(fmt.Sprintf("Failed to fetch public key from %s: %v", url, err))
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("auth service returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var data struct {
+		PublicKey string `json:"publicKey"`
+	}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+
+	pubKeyBytes, err := base64.StdEncoding.DecodeString(data.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+
+	pubKey, err := jwt.ParseRSAPublicKeyFromPEM(pubKeyBytes)
+	if err != nil {
+		// Fallback thử load raw X509 (nếu spring boot không xuất PEM chuẩn)
+		pubKey, err = jwt.ParseRSAPublicKeyFromPEM([]byte("-----BEGIN PUBLIC KEY-----\n" + data.PublicKey + "\n-----END PUBLIC KEY-----"))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	publicKeyCache = pubKey
+	kong.Log.Notice("✅ Successfully fetched and cached RSA Public Key from Auth Service")
+	return publicKeyCache, nil
 }
 
 func exitWithError(kong *pdk.PDK, status int, friendlyMsg string, errDetail string) {
@@ -30,13 +109,6 @@ func exitWithError(kong *pdk.PDK, status int, friendlyMsg string, errDetail stri
 	kong.Response.Exit(status, respBytes, map[string][]string{"Content-Type": {"application/json"}})
 }
 
-// signingKey giải mã base64 chuỗi jwt_secret trước khi dùng làm khoá HMAC, khớp với
-// auth-service (JwtUtils.java: Decoders.BASE64.decode(secretKey)). Nếu dùng thẳng
-// các byte ASCII của chuỗi cấu hình (như code cũ), chữ ký sẽ không bao giờ khớp vì
-// Java ký bằng key đã decode còn Go verify bằng key chưa decode.
-func signingKey(secret string) ([]byte, error) {
-	return base64.StdEncoding.DecodeString(secret)
-}
 
 // Access chỉ giải mã & gắn header định danh KHI request có kèm Authorization.
 // Không có Authorization -> cho qua ẩn danh (route công khai như GET /experts tự quyết
@@ -64,30 +136,22 @@ func (conf *Config) Access(kong *pdk.PDK) {
 	}
 	tokenString = strings.TrimSpace(tokenString)
 
-	// Resolve the JWT Secret Key (support environment variable fallback if config is a placeholder)
-	jwtSecret := conf.JwtSecret
-	if jwtSecret == "" || strings.HasPrefix(jwtSecret, "$") {
-		if envSecret := os.Getenv("JWT_SECRET_KEY"); envSecret != "" {
-			jwtSecret = envSecret
-		}
-	}
-
-	// Decode secret from Base64 to match Java auth-service's sign key logic
-	kong.Log.Err(fmt.Sprintf("Resolved JWT Secret: %s", jwtSecret))
-	secretBytes, err := base64.StdEncoding.DecodeString(jwtSecret)
+	// 3. Fetch Public Key
+	pubKey, err := getPublicKey(conf.AuthServiceUrl, kong)
 	if err != nil {
-		// Fallback to raw bytes if it is not valid base64
-		kong.Log.Err(fmt.Sprintf("Base64 decode failed, using raw secret. Error: %v", err))
-		secretBytes = []byte(jwtSecret)
+		kong.Log.Err("Could not get public key: " + err.Error())
+		exitWithError(kong, 500, "Internal Server Error", "Could not fetch public key for validation")
+		return
 	}
 
+	// 4. Verify JWT Token using RS256
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-		// Ensure signing method is HMAC
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		// Ensure signing method is RSA
+		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
 			kong.Log.Err(fmt.Sprintf("Invalid signing method: %v", t.Header["alg"]))
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
-		return secretBytes, nil
+		return pubKey, nil
 	})
 
 	if err != nil {

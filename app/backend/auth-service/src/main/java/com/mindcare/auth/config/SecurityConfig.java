@@ -39,19 +39,24 @@ public class SecurityConfig {
                 // Swagger UI / OpenAPI docs, không cần token
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .requestMatchers(
-                    "/api/v1/auth/register", 
-                    "/api/v1/auth/login", 
-                    "/api/v1/auth/refresh", 
+                    "/api/v1/auth/register",
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/refresh",
                     "/api/v1/auth/logout",
                     "/api/v1/auth/verify-email",
                     "/api/v1/auth/resend-verification",
                     "/api/v1/auth/forgot-password",
                     "/api/v1/auth/reset-password",
                     "/api/v1/auth/test-gateway",
+                    "/api/v1/auth/public-key",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
                     "/swagger-ui.html"
                 ).permitAll()
+                // ─── Internal M2M endpoint ────────────────────────────────────────────
+                // Spring bỏ qua auth filter → chỉ Kong mới chặn từ external.
+                // Đây là "double lock": Kong block ngoài, Spring chỉ check client_secret bên trong.
+                .requestMatchers("/internal/auth/token").permitAll()
                 // Tất cả các cửa khác phải quét thẻ
                 .anyRequest().authenticated()
             );

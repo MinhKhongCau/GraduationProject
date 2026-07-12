@@ -15,6 +15,12 @@ type Config struct {
 	DBName     string
 	DBSSLMode  string
 	ServerPort string
+
+	// ─── Internal M2M Auth ──────────────────────────────────────────────────
+	// Dùng để xin token từ Auth Service khi gọi service khác nội bộ.
+	AuthServiceInternalURL string // http://auth-service:8080
+	InternalClientID       string // "booking-service"
+	InternalClientSecret   string // plain text secret (chỉ trong ENV, không commit)
 }
 
 var AppConfig *Config
@@ -32,6 +38,11 @@ func LoadConfig() {
 		DBName:     getEnvOrDefault("BOOKING_DB_NAME", "booking_db"),
 		DBSSLMode:  getEnvOrDefault("DB_SSLMODE", "disable"),
 		ServerPort: getEnvOrDefault("PORT", "8083"),
+
+		// Internal M2M Auth
+		AuthServiceInternalURL: getEnvOrDefault("AUTH_SERVICE_INTERNAL_URL", "http://auth-service:8080"),
+		InternalClientID:       getEnvOrDefault("INTERNAL_CLIENT_ID", "booking-service"),
+		InternalClientSecret:   getEnvOrDefault("INTERNAL_CLIENT_SECRET", ""),
 	}
 }
 

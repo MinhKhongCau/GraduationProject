@@ -1,18 +1,35 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+	"time"
 
-	"payment-service/config"
+	"payment-service/internal/config"
+	"payment-service/pkg/database"
+	"payment-service/pkg/internal_auth"
+	"payment-service/pkg/rabbitmq"
+	"payment-service/pkg/redis"
 	"payment-service/routes"
 
-	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
+	"payment-service/internal/payment"
+	paymentGateway "payment-service/internal/payment/gateway"
+	paymentHandler "payment-service/internal/payment/handler"
 
+	"payment-service/internal/wallet"
+	walletHandler "payment-service/internal/wallet/handler"
+
+	"payment-service/internal/withdrawal"
+	withdrawalHandler "payment-service/internal/withdrawal/handler"
+
+	"payment-service/internal/outbox"
+
+	_ "payment-service/docs" // Import swagger docs
+
+	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "payment-service/docs" // Ignore error if it doesn't exist yet
 )
 
 // @title Payment Service API
@@ -24,25 +41,93 @@ import (
 // @name Authorization
 
 func main() {
-	// 1. Load biến môi trường từ file .env
-	if err := godotenv.Load(); err != nil {
-		log.Println("Cảnh báo: Không tìm thấy file .env, sẽ dùng biến môi trường của hệ thống")
+	// 1. Load Cấu hình & Biến môi trường
+	config.LoadConfig()
+
+	// 1.1 Cache RSA Public Key từ Auth Service (dùng để verify JWT user và internal JWT)
+	internal_auth.InitPublicKey(config.AppConfig.AuthServiceInternalURL)
+
+	// 1.2 Khởi tạo TokenManager nội bộ — dùng để GỌI sang service khác
+	// Lưu vào biến global để các layer khác có thể inject nếu cần
+	_ = internal_auth.NewTokenManager(
+		config.AppConfig.AuthServiceInternalURL,
+		config.AppConfig.InternalClientID,
+		config.AppConfig.InternalClientSecret,
+	)
+	log.Printf("🔐 Internal M2M auth initialized for client: %s", config.AppConfig.InternalClientID)
+
+	// 2. Kết nối CSDL & Chạy Migration
+	database.ConnectDB()
+
+	// 3. Kết nối hạ tầng RabbitMQ & Redis (hoạt động chế độ fallback nếu lỗi)
+	rabbitmq.InitRabbitMQ()
+	redis.InitRedis()
+
+	// 4. Khởi tạo các tầng nghiệp vụ
+	// Repositories
+	walletRepo := wallet.NewRepository(database.DB)
+	paymentRepo := payment.NewRepository(database.DB)
+	withdrawalRepo := withdrawal.NewRepository(database.DB)
+	outboxRepo := outbox.NewRepository(database.DB)
+
+	// Usecases
+	walletUsecase := wallet.NewUsecase(walletRepo)
+
+	vnpTmnCode := os.Getenv("VNP_TMN_CODE")
+	vnpHashSecret := os.Getenv("VNP_HASH_SECRET")
+	vnpPaymentURL := os.Getenv("VNP_PAYMENT_URL")
+	vnpReturnURL := os.Getenv("VNP_RETURN_URL")
+	vnpayClient := paymentGateway.NewVNPayClient(vnpTmnCode, vnpHashSecret, vnpPaymentURL, vnpReturnURL)
+
+	paymentUsecase := payment.NewUsecase(paymentRepo, walletUsecase, vnpayClient)
+	withdrawalUsecase := withdrawal.NewUsecase(withdrawalRepo, walletUsecase)
+
+	// Handlers
+	wHandler := walletHandler.NewHandler(walletUsecase)
+	pHandler := paymentHandler.NewHandler(paymentUsecase)
+	wdHandler := withdrawalHandler.NewHandler(withdrawalUsecase)
+
+	// 5. Khởi chạy Tần số quét (Background Workers)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Worker 1: Giải phóng tiền hold (Pending -> Available) sau 24h
+	// Để thuận tiện test, mặc định hold 1 phút nếu không cấu hình env
+	holdDuration := 24 * time.Hour
+	if envHold := os.Getenv("HOLD_PERIOD_MINUTES"); envHold != "" {
+		if min, err := time.ParseDuration(envHold + "m"); err == nil {
+			holdDuration = min
+		}
+	} else {
+		holdDuration = 1 * time.Minute // Mặc định dev là 1 phút
 	}
+	walletWorker := wallet.NewWorker(database.DB, walletRepo, holdDuration)
+	go walletWorker.Start(ctx)
 
-	// 2. Kết nối Database & Chạy Migration
-	config.ConnectDB()
+	// Worker 2: Xử lý timeout của các yêu cầu rút PROCESSING quá 5 phút
+	withdrawalWorker := withdrawal.NewWorker(database.DB, withdrawalUsecase, 5*time.Minute)
+	go withdrawalWorker.Start(ctx)
 
-	// 3. Khởi tạo Gin Router
+	// Worker 3: Quét Outbox events để publish sang RabbitMQ
+	outboxPublisher := outbox.NewPublisher(outboxRepo)
+	go outboxPublisher.Start(ctx)
+
+	// Worker 4: Đối soát ví (Ledger Audit) & Đối soát giao dịch VNPay
+	reconciliationWorker := wallet.NewReconciliationWorker(database.DB)
+	go reconciliationWorker.Start(ctx)
+
+	// 6. Khởi tạo Gin Router
 	r := gin.Default()
 
-	routes.SetupRoutes(r)
+	// Đăng ký API endpoints
+	routes.SetupRoutes(r, wHandler, pHandler, wdHandler)
 
 	// Swagger endpoint
 	r.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"message": "Payment Service is running smoothly!",
+			"message": "Payment Service is running smoothly with clean architecture!",
 		})
 	})
 
@@ -50,15 +135,14 @@ func main() {
 		c.JSON(200, gin.H{
 			"service": "payment-service",
 			"status":  "up and running",
+			"db":      "connected",
 		})
 	})
 
-	// 4. Lấy port và chạy server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8082" // Mặc định nếu quên setup
+	// 7. Chạy Server
+	port := config.AppConfig.ServerPort
+	log.Printf("🚀 Payment Service đang chạy tại http://localhost:%s", port)
+	if err := r.Run(":" + port); err != nil {
+		log.Fatalf("Không thể khởi chạy Server: %v", err)
 	}
-
-	log.Printf("🚀 Server đang chạy tại http://localhost:%s", port)
-	r.Run(":" + port)
 }
