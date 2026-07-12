@@ -50,7 +50,7 @@ services:
         plugins:
           - name: mindcare-auth
             config:
-              jwt_secret: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
+              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
       - name: profile-docs-routes
         paths:
           - /profile
@@ -82,7 +82,7 @@ services:
         plugins:
           - name: mindcare-auth
             config:
-              jwt_secret: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
+              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
       - name: booking-docs-routes
         paths:
           - /booking
@@ -98,7 +98,7 @@ services:
         plugins:
           - name: mindcare-auth
             config:
-              jwt_secret: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
+              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
       - name: assessment-docs-routes
         paths:
           - /assessment
