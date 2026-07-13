@@ -23,6 +23,34 @@ services:
     networks:
       - app-network
 
+  # 2. REDIS
+  redis:
+    image: redis:7-alpine
+    container_name: mindcare_redis
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+  # 3. RABBITMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: mindcare_rabbitmq
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+
   # 4. AUTH SERVICE (Java / Spring Boot)
   auth-service:
     build:
@@ -31,7 +59,7 @@ services:
     container_name: auth-service
     restart: always
     expose:
-      - "8080"
+      - "${PORT_AUTH_SERVICE}"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -45,14 +73,6 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=5432
       - PORT=${PORT_AUTH_SERVICE}
-      # RSA Keys
-      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:-}
-      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
-      # BCrypt-hashed secrets
-      - INTERNAL_SECRET_BOOKING=${INTERNAL_SECRET_BOOKING:-}
-      - INTERNAL_SECRET_PAYMENT=${INTERNAL_SECRET_PAYMENT:-}
-      - INTERNAL_SECRET_PROFILE=${INTERNAL_SECRET_PROFILE:-}
-      - INTERNAL_SECRET_ASSESSMENT=${INTERNAL_SECRET_ASSESSMENT:-}
 
   # 5. GO SERVICES (Payment, Booking)
   payment-service:
@@ -71,21 +91,18 @@ services:
     environment:
       - GO_ENV=${APP_ENV}
       - DB_HOST=${DB_HOST}
-      - DB_PORT=5432
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - PAYMENT_DB_NAME=${PAYMENT_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
       - PORT=${PORT_PAYMENT_SERVICE}
-      # VNPay Sandbox
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - INTERNAL_CLIENT_ID=payment-service
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT_SERVICE:-payment_internal_secret_2024}
       - VNP_TMN_CODE=${VNP_TMN_CODE}
       - VNP_HASH_SECRET=${VNP_HASH_SECRET}
       - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
       - VNP_RETURN_URL=${VNP_RETURN_URL}
-      # Internal M2M Auth
-      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:8080
-      - INTERNAL_CLIENT_ID=payment-service
-      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT:-payment_internal_secret_2024}
 
   booking-service:
     build:
@@ -109,6 +126,9 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=5432
       - PORT=${PORT_BOOKING_SERVICE}
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - INTERNAL_CLIENT_ID=booking-service
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING_SERVICE:-booking_internal_secret_2024}
 
   # 6. API GATEWAY (Kong)
   api-gateway:
@@ -132,6 +152,8 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
+  rabbitmq_data:
 
 networks:
   app-network:

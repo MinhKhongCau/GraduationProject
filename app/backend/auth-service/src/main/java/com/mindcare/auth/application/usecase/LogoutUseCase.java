@@ -14,7 +14,8 @@ public class LogoutUseCase {
     private final JwtUtils jwtUtils;
 
     public MessageResponse execute(LogoutCommand command) {
-        RefreshToken refreshToken = refreshTokenPort.findByTokenHash(jwtUtils.hashToken(command.getRefreshToken()))
+        String hashedToken = jwtUtils.hashToken(command.getRefreshToken());
+        RefreshToken refreshToken = refreshTokenPort.findByTokenHash(hashedToken)
                 .orElseThrow(() -> new RuntimeException("Session not found!"));
         refreshToken.setIsRevoked(true);
         refreshTokenPort.save(refreshToken);
