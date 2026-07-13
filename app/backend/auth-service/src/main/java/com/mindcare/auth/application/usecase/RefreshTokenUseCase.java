@@ -20,7 +20,8 @@ public class RefreshTokenUseCase {
         if (!jwtUtils.validateJwtToken(requestRefreshToken)) {
             throw new RuntimeException("Invalid refresh token!");
         }
-        RefreshToken refreshToken = refreshTokenPort.findByTokenHash(jwtUtils.hashToken(requestRefreshToken))
+        String hashedRequestToken = jwtUtils.hashToken(requestRefreshToken);
+        RefreshToken refreshToken = refreshTokenPort.findByTokenHash(hashedRequestToken)
                 .orElseThrow(() -> new RuntimeException("Session not found!"));
         if (refreshToken.getIsRevoked()) {
             throw new RuntimeException("Session has been revoked (Replay Attack check)!");
