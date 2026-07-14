@@ -19,8 +19,8 @@ services:
           - name: request-termination
             config:
               status_code: 403
-              message: "Forbidden: /internal paths are not accessible from outside the network"
-
+              body: '{"message":"Forbidden: /internal paths are not accessible from outside the network"}'
+              content_type: "application/json"
 
   - name: auth-service
     url: http://auth-upstream
@@ -60,11 +60,11 @@ services:
     routes:
       - name: payment-public-routes
         paths:
-          - /api/v1/public/payment
+          - /api/v1/payments/vnpay-ipn
         strip_path: false
       - name: payment-private-routes
         paths:
-          - /api/v1/payment
+          - /api/v1/payments
         strip_path: false
         plugins:
           - name: mindcare-auth
