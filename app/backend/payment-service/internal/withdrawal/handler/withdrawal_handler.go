@@ -25,13 +25,12 @@ type LinkBankAccountRequest struct {
 }
 
 // LinkBankAccount handles POST /api/v1/payments/bank-accounts
-// @Summary      Liên kết tài khoản ngân hàng mới
+// @Summary      [EXPERT] Link a new bank account
 // @Description  Chuyên gia thực hiện liên kết tài khoản ngân hàng để chuẩn bị cho việc rút tiền từ ví. Yêu cầu role: EXPERT.
 // @Tags         Rút tiền & Tài khoản ngân hàng
 // @Accept       json
 // @Produce      json
-// @Param        X-User-Id    header    string                  true  "User ID (UUID)"
-// @Param        X-User-Role  header    string                  true  "User Role (EXPERT)"
+// @Security     BearerAuth
 // @Param        body         body      LinkBankAccountRequest  true  "Thông tin tài khoản ngân hàng để liên kết"
 // @Success      200          {object}  response.Response{data=entity.BankAccount}
 // @Failure      400          {object}  response.Response
@@ -68,17 +67,22 @@ func (h *Handler) LinkBankAccount(c *gin.Context) {
 }
 
 // GetBankAccounts handles GET /api/v1/payments/bank-accounts
-// @Summary      Lấy danh sách tài khoản ngân hàng đã liên kết
+// @Summary      [EXPERT] Get linked bank accounts
 // @Description  Lấy toàn bộ các tài khoản ngân hàng đã liên kết của chuyên gia hiện tại. Yêu cầu role: EXPERT.
 // @Tags         Rút tiền & Tài khoản ngân hàng
 // @Produce      json
-// @Param        X-User-Id    header    string  true  "User ID (UUID)"
-// @Param        X-User-Role  header    string  true  "User Role (EXPERT)"
+// @Security     BearerAuth
 // @Success      200          {object}  response.Response{data=[]entity.BankAccount}
 // @Failure      401          {object}  response.Response
 // @Failure      500          {object}  response.Response
 // @Router       /payments/bank-accounts [get]
 func (h *Handler) GetBankAccounts(c *gin.Context) {
+	userRole := c.GetHeader("X-User-Role")
+	if userRole != "EXPERT" {
+		response.Error(c, http.StatusForbidden, "Only experts can get linked bank accounts", "forbidden")
+		return
+	}
+
 	userIDStr := c.GetHeader("X-User-Id")
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
@@ -109,13 +113,12 @@ type WithdrawalResponse struct {
 }
 
 // CreateWithdrawal handles POST /api/v1/payments/withdrawals
-// @Summary      Yêu cầu rút tiền từ ví về tài khoản ngân hàng
+// @Summary      [EXPERT] Request money withdrawal from wallet to bank account
 // @Description  Chuyên gia tạo phiếu yêu cầu rút tiền khả dụng. Dưới 5,000,000 VND sẽ tự động duyệt và chuyển khoản, trên 5,000,000 VND sẽ cần ADMIN duyệt thủ công. Yêu cầu role: EXPERT.
 // @Tags         Rút tiền & Tài khoản ngân hàng
 // @Accept       json
 // @Produce      json
-// @Param        X-User-Id    header    string                   true  "User ID (UUID)"
-// @Param        X-User-Role  header    string                   true  "User Role (EXPERT)"
+// @Security     BearerAuth
 // @Param        body         body      CreateWithdrawalRequest  true  "Thông tin yêu cầu rút tiền"
 // @Success      200          {object}  response.Response{data=WithdrawalResponse}
 // @Failure      400          {object}  response.Response
@@ -170,13 +173,12 @@ type AdminProcessRequest struct {
 }
 
 // ApproveWithdrawal handles POST /api/v1/payments/withdrawals/:id/approve
-// @Summary      Duyệt yêu cầu rút tiền của chuyên gia (Dành cho Admin)
+// @Summary      [ADMIN] Approve expert's withdrawal request
 // @Description  Quản trị viên phê duyệt yêu cầu rút tiền. Tiền được chuyển khoản qua Payout Gateway. Yêu cầu role: ADMIN.
 // @Tags         Rút tiền & Tài khoản ngân hàng (Quản trị viên)
 // @Accept       json
 // @Produce      json
-// @Param        X-User-Id    header    string               true  "Admin ID (UUID)"
-// @Param        X-User-Role  header    string               true  "Admin Role (ADMIN)"
+// @Security     BearerAuth
 // @Param        id           path      string               true  "Mã yêu cầu rút tiền (UUID)"
 // @Param        body         body      AdminProcessRequest  true  "Thông tin ghi chú duyệt"
 // @Success      200          {object}  response.Response
@@ -218,13 +220,12 @@ func (h *Handler) ApproveWithdrawal(c *gin.Context) {
 }
 
 // RejectWithdrawal handles POST /api/v1/payments/withdrawals/:id/reject
-// @Summary      Từ chối yêu cầu rút tiền của chuyên gia (Dành cho Admin)
+// @Summary      [ADMIN] Reject expert's withdrawal request
 // @Description  Quản trị viên từ chối yêu cầu rút tiền. Tiền bị khóa (locked_balance) được mở khóa hoàn trả lại ví chuyên gia (available_balance). Yêu cầu role: ADMIN.
 // @Tags         Rút tiền & Tài khoản ngân hàng (Quản trị viên)
 // @Accept       json
 // @Produce      json
-// @Param        X-User-Id    header    string               true  "Admin ID (UUID)"
-// @Param        X-User-Role  header    string               true  "Admin Role (ADMIN)"
+// @Security     BearerAuth
 // @Param        id           path      string               true  "Mã yêu cầu rút tiền (UUID)"
 // @Param        body         body      AdminProcessRequest  true  "Lý do từ chối (bắt buộc)"
 // @Success      200          {object}  response.Response

@@ -36,17 +36,24 @@ type CreateOrderResponse struct {
 }
 
 // CreateOrder handles POST /api/v1/payments/orders
-// @Summary      Tạo đơn hàng thanh toán mới
+// @Summary      [PATIENT/SYSTEM] Create a new payment order
 // @Description  Khởi tạo đơn hàng thanh toán cho cuộc hẹn. Trả về đường link thanh toán (Ví dụ: VNPay checkout). Yêu cầu role: PATIENT hoặc gọi nội bộ từ Booking Service.
 // @Tags         Thanh toán (Payment Orders)
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        body  body      CreateOrderRequest  true  "Thông tin khởi tạo giao dịch thanh toán"
 // @Success      200   {object}  response.Response{data=CreateOrderResponse}
 // @Failure      400   {object}  response.Response
 // @Failure      500   {object}  response.Response
 // @Router       /payments/orders [post]
 func (h *Handler) CreateOrder(c *gin.Context) {
+	userRole := c.GetHeader("X-User-Role")
+	if userRole != "PATIENT" && userRole != "" {
+		response.Error(c, http.StatusForbidden, "Only patients are allowed to create payment orders", "forbidden")
+		return
+	}
+
 	var req CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid request body", err.Error())
@@ -91,11 +98,10 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 }
 
 // HandleVNPayIPN handles GET /api/v1/payments/vnpay-ipn
-// @Summary      Webhook nhận thông báo kết quả thanh toán từ VNPay (IPN)
+// @Summary      [PUBLIC] Webhook to receive VNPay payment IPN
 // @Description  Cổng thanh toán VNPay gọi API này để cập nhật trạng thái thanh toán của đơn hàng. Yêu cầu role: Public (không cần token, kiểm tra bằng mã checksum).
 // @Tags         Thanh toán (Payment Orders)
 // @Produce      json
-// @Param        queryParams  query     interface{}  false  "Các tham số phản hồi tự động từ VNPay"
 // @Success      200          {object}  map[string]string
 // @Router       /payments/vnpay-ipn [get]
 func (h *Handler) HandleVNPayIPN(c *gin.Context) {

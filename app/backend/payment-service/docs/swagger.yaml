@@ -1,10 +1,515 @@
 basePath: /api/v1
+definitions:
+  entity.BankAccount:
+    properties:
+      account_holder_name:
+        type: string
+      account_number:
+        type: string
+      bank_code:
+        type: string
+      created_at:
+        type: integer
+      id:
+        type: string
+      user_id:
+        type: string
+      verified:
+        type: boolean
+    type: object
+  entity.Wallet:
+    properties:
+      available_balance:
+        type: integer
+      created_at:
+        type: integer
+      id:
+        type: string
+      locked_balance:
+        type: integer
+      pending_balance:
+        type: integer
+      updated_at:
+        type: integer
+      user_id:
+        type: string
+      version:
+        type: integer
+    type: object
+  handler.AdminProcessRequest:
+    properties:
+      note:
+        type: string
+    type: object
+  handler.CreateOrderRequest:
+    properties:
+      amount:
+        type: integer
+      expert_id:
+        type: string
+      gateway:
+        description: VNPAY | MOMO | MOCK
+        type: string
+      payer_id:
+        type: string
+    required:
+    - amount
+    - expert_id
+    - gateway
+    - payer_id
+    type: object
+  handler.CreateOrderResponse:
+    properties:
+      commission_amount:
+        type: integer
+      gross_amount:
+        type: integer
+      net_amount:
+        type: integer
+      order_id:
+        type: string
+      payment_url:
+        type: string
+      status:
+        type: string
+    type: object
+  handler.CreateWithdrawalRequest:
+    properties:
+      amount:
+        type: integer
+      bank_account_id:
+        type: string
+    required:
+    - amount
+    - bank_account_id
+    type: object
+  handler.LinkBankAccountRequest:
+    properties:
+      account_holder_name:
+        type: string
+      account_number:
+        type: string
+      bank_code:
+        type: string
+    required:
+    - account_holder_name
+    - account_number
+    - bank_code
+    type: object
+  handler.TopUpRequest:
+    properties:
+      amount:
+        type: integer
+    required:
+    - amount
+    type: object
+  handler.TxResponse:
+    properties:
+      amount:
+        type: integer
+      balance_after:
+        type: integer
+      created_at:
+        type: integer
+      id:
+        type: string
+      idempotency_key:
+        type: string
+      reference_id:
+        type: string
+      reference_type:
+        type: string
+      type:
+        type: string
+      wallet_id:
+        type: string
+    type: object
+  handler.WithdrawalResponse:
+    properties:
+      amount:
+        type: integer
+      id:
+        type: string
+      requested_at:
+        type: integer
+      requires_manual_approval:
+        type: boolean
+      status:
+        type: string
+    type: object
+  response.Response:
+    properties:
+      data: {}
+      error:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
 info:
   contact: {}
   description: Hệ thống thanh toán và ví điện tử - MindCare
   title: Payment Service API
   version: "1.0"
-paths: {}
+paths:
+  /payments/bank-accounts:
+    get:
+      description: 'Lấy toàn bộ các tài khoản ngân hàng đã liên kết của chuyên gia
+        hiện tại. Yêu cầu role: EXPERT.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/entity.BankAccount'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Get linked bank accounts'
+      tags:
+      - Rút tiền & Tài khoản ngân hàng
+    post:
+      consumes:
+      - application/json
+      description: 'Chuyên gia thực hiện liên kết tài khoản ngân hàng để chuẩn bị
+        cho việc rút tiền từ ví. Yêu cầu role: EXPERT.'
+      parameters:
+      - description: Thông tin tài khoản ngân hàng để liên kết
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LinkBankAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.BankAccount'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Link a new bank account'
+      tags:
+      - Rút tiền & Tài khoản ngân hàng
+  /payments/orders:
+    post:
+      consumes:
+      - application/json
+      description: 'Khởi tạo đơn hàng thanh toán cho cuộc hẹn. Trả về đường link thanh
+        toán (Ví dụ: VNPay checkout). Yêu cầu role: PATIENT hoặc gọi nội bộ từ Booking
+        Service.'
+      parameters:
+      - description: Thông tin khởi tạo giao dịch thanh toán
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.CreateOrderResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT/SYSTEM] Create a new payment order'
+      tags:
+      - Thanh toán (Payment Orders)
+  /payments/vnpay-ipn:
+    get:
+      description: 'Cổng thanh toán VNPay gọi API này để cập nhật trạng thái thanh
+        toán của đơn hàng. Yêu cầu role: Public (không cần token, kiểm tra bằng mã
+        checksum).'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: '[PUBLIC] Webhook to receive VNPay payment IPN'
+      tags:
+      - Thanh toán (Payment Orders)
+  /payments/wallets/history:
+    get:
+      consumes:
+      - application/json
+      description: 'Lấy danh sách các giao dịch (biến động số dư) của ví người dùng
+        hiện tại, sắp xếp theo thời gian mới nhất. Yêu cầu role: PATIENT hoặc EXPERT.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/handler.TxResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT/EXPERT] Get transaction history of current wallet'
+      tags:
+      - Ví điện tử
+  /payments/wallets/me:
+    get:
+      consumes:
+      - application/json
+      description: 'Lấy thông tin ví (số dư khả dụng, số dư chờ giải tỏa, số dư bị
+        khóa) của người dùng hiện tại. Yêu cầu role: PATIENT hoặc EXPERT.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/entity.Wallet'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT/EXPERT] Get current user''s wallet details'
+      tags:
+      - Ví điện tử
+  /payments/wallets/top-up:
+    post:
+      consumes:
+      - application/json
+      description: 'Nạp tiền trực tiếp vào ví của người dùng hiện tại (số dư khả dụng).
+        Yêu cầu role: PATIENT hoặc EXPERT.'
+      parameters:
+      - description: Thông tin nạp tiền
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.TopUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT/EXPERT] Top up wallet (Dev/Test only)'
+      tags:
+      - Ví điện tử
+  /payments/withdrawals:
+    post:
+      consumes:
+      - application/json
+      description: 'Chuyên gia tạo phiếu yêu cầu rút tiền khả dụng. Dưới 5,000,000
+        VND sẽ tự động duyệt và chuyển khoản, trên 5,000,000 VND sẽ cần ADMIN duyệt
+        thủ công. Yêu cầu role: EXPERT.'
+      parameters:
+      - description: Thông tin yêu cầu rút tiền
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateWithdrawalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/handler.WithdrawalResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] Request money withdrawal from wallet to bank account'
+      tags:
+      - Rút tiền & Tài khoản ngân hàng
+  /payments/withdrawals/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: 'Quản trị viên phê duyệt yêu cầu rút tiền. Tiền được chuyển khoản
+        qua Payout Gateway. Yêu cầu role: ADMIN.'
+      parameters:
+      - description: Mã yêu cầu rút tiền (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Thông tin ghi chú duyệt
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AdminProcessRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[ADMIN] Approve expert''s withdrawal request'
+      tags:
+      - Rút tiền & Tài khoản ngân hàng (Quản trị viên)
+  /payments/withdrawals/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: 'Quản trị viên từ chối yêu cầu rút tiền. Tiền bị khóa (locked_balance)
+        được mở khóa hoàn trả lại ví chuyên gia (available_balance). Yêu cầu role:
+        ADMIN.'
+      parameters:
+      - description: Mã yêu cầu rút tiền (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lý do từ chối (bắt buộc)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AdminProcessRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[ADMIN] Reject expert''s withdrawal request'
+      tags:
+      - Rút tiền & Tài khoản ngân hàng (Quản trị viên)
 securityDefinitions:
   BearerAuth:
     in: header

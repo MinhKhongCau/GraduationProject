@@ -3,6 +3,7 @@ import com.mindcare.auth.application.dto.command.LogoutCommand;
 import com.mindcare.auth.application.dto.response.MessageResponse;
 import com.mindcare.auth.application.port.out.RefreshTokenPort;
 import com.mindcare.auth.domain.entity.RefreshToken;
+import com.mindcare.auth.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -10,9 +11,10 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LogoutUseCase {
     private final RefreshTokenPort refreshTokenPort;
+    private final JwtUtils jwtUtils;
 
     public MessageResponse execute(LogoutCommand command) {
-        RefreshToken refreshToken = refreshTokenPort.findByTokenHash(command.getRefreshToken())
+        RefreshToken refreshToken = refreshTokenPort.findByTokenHash(jwtUtils.hashToken(command.getRefreshToken()))
                 .orElseThrow(() -> new RuntimeException("Session not found!"));
         refreshToken.setIsRevoked(true);
         refreshTokenPort.save(refreshToken);
