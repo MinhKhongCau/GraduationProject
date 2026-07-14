@@ -14,7 +14,798 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {},
+    "paths": {
+        "/payments/bank-accounts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy toàn bộ các tài khoản ngân hàng đã liên kết của chuyên gia hiện tại. Yêu cầu role: EXPERT.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rút tiền \u0026 Tài khoản ngân hàng"
+                ],
+                "summary": "[EXPERT] Get linked bank accounts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/entity.BankAccount"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Chuyên gia thực hiện liên kết tài khoản ngân hàng để chuẩn bị cho việc rút tiền từ ví. Yêu cầu role: EXPERT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rút tiền \u0026 Tài khoản ngân hàng"
+                ],
+                "summary": "[EXPERT] Link a new bank account",
+                "parameters": [
+                    {
+                        "description": "Thông tin tài khoản ngân hàng để liên kết",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.LinkBankAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/entity.BankAccount"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/orders": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Khởi tạo đơn hàng thanh toán cho cuộc hẹn. Trả về đường link thanh toán (Ví dụ: VNPay checkout). Yêu cầu role: PATIENT hoặc gọi nội bộ từ Booking Service.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Thanh toán (Payment Orders)"
+                ],
+                "summary": "[PATIENT/SYSTEM] Create a new payment order",
+                "parameters": [
+                    {
+                        "description": "Thông tin khởi tạo giao dịch thanh toán",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handler.CreateOrderResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/vnpay-ipn": {
+            "get": {
+                "description": "Cổng thanh toán VNPay gọi API này để cập nhật trạng thái thanh toán của đơn hàng. Yêu cầu role: Public (không cần token, kiểm tra bằng mã checksum).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Thanh toán (Payment Orders)"
+                ],
+                "summary": "[PUBLIC] Webhook to receive VNPay payment IPN",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/wallets/history": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy danh sách các giao dịch (biến động số dư) của ví người dùng hiện tại, sắp xếp theo thời gian mới nhất. Yêu cầu role: PATIENT hoặc EXPERT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ví điện tử"
+                ],
+                "summary": "[PATIENT/EXPERT] Get transaction history of current wallet",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/handler.TxResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/wallets/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lấy thông tin ví (số dư khả dụng, số dư chờ giải tỏa, số dư bị khóa) của người dùng hiện tại. Yêu cầu role: PATIENT hoặc EXPERT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ví điện tử"
+                ],
+                "summary": "[PATIENT/EXPERT] Get current user's wallet details",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/entity.Wallet"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/wallets/top-up": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Nạp tiền trực tiếp vào ví của người dùng hiện tại (số dư khả dụng). Yêu cầu role: PATIENT hoặc EXPERT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ví điện tử"
+                ],
+                "summary": "[PATIENT/EXPERT] Top up wallet (Dev/Test only)",
+                "parameters": [
+                    {
+                        "description": "Thông tin nạp tiền",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.TopUpRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/withdrawals": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Chuyên gia tạo phiếu yêu cầu rút tiền khả dụng. Dưới 5,000,000 VND sẽ tự động duyệt và chuyển khoản, trên 5,000,000 VND sẽ cần ADMIN duyệt thủ công. Yêu cầu role: EXPERT.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rút tiền \u0026 Tài khoản ngân hàng"
+                ],
+                "summary": "[EXPERT] Request money withdrawal from wallet to bank account",
+                "parameters": [
+                    {
+                        "description": "Thông tin yêu cầu rút tiền",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateWithdrawalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handler.WithdrawalResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/withdrawals/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Quản trị viên phê duyệt yêu cầu rút tiền. Tiền được chuyển khoản qua Payout Gateway. Yêu cầu role: ADMIN.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rút tiền \u0026 Tài khoản ngân hàng (Quản trị viên)"
+                ],
+                "summary": "[ADMIN] Approve expert's withdrawal request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Mã yêu cầu rút tiền (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Thông tin ghi chú duyệt",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AdminProcessRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/withdrawals/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Quản trị viên từ chối yêu cầu rút tiền. Tiền bị khóa (locked_balance) được mở khóa hoàn trả lại ví chuyên gia (available_balance). Yêu cầu role: ADMIN.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rút tiền \u0026 Tài khoản ngân hàng (Quản trị viên)"
+                ],
+                "summary": "[ADMIN] Reject expert's withdrawal request",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Mã yêu cầu rút tiền (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lý do từ chối (bắt buộc)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AdminProcessRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "entity.BankAccount": {
+            "type": "object",
+            "properties": {
+                "account_holder_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "verified": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "entity.Wallet": {
+            "type": "object",
+            "properties": {
+                "available_balance": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "locked_balance": {
+                    "type": "integer"
+                },
+                "pending_balance": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.AdminProcessRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.CreateOrderRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "expert_id",
+                "gateway",
+                "payer_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "expert_id": {
+                    "type": "string"
+                },
+                "gateway": {
+                    "description": "VNPAY | MOMO | MOCK",
+                    "type": "string"
+                },
+                "payer_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.CreateOrderResponse": {
+            "type": "object",
+            "properties": {
+                "commission_amount": {
+                    "type": "integer"
+                },
+                "gross_amount": {
+                    "type": "integer"
+                },
+                "net_amount": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "payment_url": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.CreateWithdrawalRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "bank_account_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "bank_account_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.LinkBankAccountRequest": {
+            "type": "object",
+            "required": [
+                "account_holder_name",
+                "account_number",
+                "bank_code"
+            ],
+            "properties": {
+                "account_holder_name": {
+                    "type": "string"
+                },
+                "account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.TopUpRequest": {
+            "type": "object",
+            "required": [
+                "amount"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.TxResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "balance_after": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "reference_id": {
+                    "type": "string"
+                },
+                "reference_type": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "wallet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.WithdrawalResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "requested_at": {
+                    "type": "integer"
+                },
+                "requires_manual_approval": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.Response": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        }
+    },
     "securityDefinitions": {
         "BearerAuth": {
             "type": "apiKey",

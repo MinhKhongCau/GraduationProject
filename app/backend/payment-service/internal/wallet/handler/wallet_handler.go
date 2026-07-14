@@ -21,18 +21,23 @@ func NewHandler(usecase wallet.Usecase) *Handler {
 }
 
 // GetWallet handles GET /api/v1/payments/wallets/me
-// @Summary      Xem thông tin ví của người dùng hiện tại
+// @Summary      [PATIENT/EXPERT] Get current user's wallet details
 // @Description  Lấy thông tin ví (số dư khả dụng, số dư chờ giải tỏa, số dư bị khóa) của người dùng hiện tại. Yêu cầu role: PATIENT hoặc EXPERT.
 // @Tags         Ví điện tử
 // @Accept       json
 // @Produce      json
-// @Param        X-User-Id    header    string  true  "User ID (UUID)"
-// @Param        X-User-Role  header    string  true  "User Role (PATIENT hoặc EXPERT)"
+// @Security     BearerAuth
 // @Success      200          {object}  response.Response{data=entity.Wallet}
 // @Failure      401          {object}  response.Response
 // @Failure      500          {object}  response.Response
 // @Router       /payments/wallets/me [get]
 func (h *Handler) GetWallet(c *gin.Context) {
+	userRole := c.GetHeader("X-User-Role")
+	if userRole != "PATIENT" && userRole != "EXPERT" {
+		response.Error(c, http.StatusForbidden, "Only patients or experts can view wallets", "forbidden")
+		return
+	}
+
 	userIDStr := c.GetHeader("X-User-Id")
 	if userIDStr == "" {
 		response.Error(c, http.StatusUnauthorized, "Missing X-User-Id header", "unauthorized")
@@ -67,18 +72,23 @@ type TxResponse struct {
 }
 
 // GetHistory handles GET /api/v1/payments/wallets/history
-// @Summary      Xem lịch sử giao dịch của ví hiện tại
+// @Summary      [PATIENT/EXPERT] Get transaction history of current wallet
 // @Description  Lấy danh sách các giao dịch (biến động số dư) của ví người dùng hiện tại, sắp xếp theo thời gian mới nhất. Yêu cầu role: PATIENT hoặc EXPERT.
 // @Tags         Ví điện tử
 // @Accept       json
 // @Produce      json
-// @Param        X-User-Id    header    string  true  "User ID (UUID)"
-// @Param        X-User-Role  header    string  true  "User Role (PATIENT hoặc EXPERT)"
+// @Security     BearerAuth
 // @Success      200          {object}  response.Response{data=[]TxResponse}
 // @Failure      401          {object}  response.Response
 // @Failure      500          {object}  response.Response
 // @Router       /payments/wallets/history [get]
 func (h *Handler) GetHistory(c *gin.Context) {
+	userRole := c.GetHeader("X-User-Role")
+	if userRole != "PATIENT" && userRole != "EXPERT" {
+		response.Error(c, http.StatusForbidden, "Only patients or experts can view transaction history", "forbidden")
+		return
+	}
+
 	userIDStr := c.GetHeader("X-User-Id")
 	if userIDStr == "" {
 		response.Error(c, http.StatusUnauthorized, "Missing X-User-Id header", "unauthorized")
@@ -121,12 +131,12 @@ type TopUpRequest struct {
 }
 
 // TopUpWallet handles POST /api/v1/payments/wallets/top-up
-// @Summary      Nạp tiền vào ví (Chỉ dùng cho Development/Test)
+// @Summary      [PATIENT/EXPERT] Top up wallet (Dev/Test only)
 // @Description  Nạp tiền trực tiếp vào ví của người dùng hiện tại (số dư khả dụng). Yêu cầu role: PATIENT hoặc EXPERT.
 // @Tags         Ví điện tử
 // @Accept       json
 // @Produce      json
-// @Param        X-User-Id  header    string        true  "User ID (UUID)"
+// @Security     BearerAuth
 // @Param        body       body      TopUpRequest  true  "Thông tin nạp tiền"
 // @Success      200        {object}  response.Response
 // @Failure      400        {object}  response.Response
@@ -134,6 +144,12 @@ type TopUpRequest struct {
 // @Failure      500        {object}  response.Response
 // @Router       /payments/wallets/top-up [post]
 func (h *Handler) TopUpWallet(c *gin.Context) {
+	userRole := c.GetHeader("X-User-Role")
+	if userRole != "PATIENT" && userRole != "EXPERT" {
+		response.Error(c, http.StatusForbidden, "Only patients or experts can top up wallets", "forbidden")
+		return
+	}
+
 	userIDStr := c.GetHeader("X-User-Id")
 	if userIDStr == "" {
 		response.Error(c, http.StatusUnauthorized, "Missing X-User-Id header", "unauthorized")
