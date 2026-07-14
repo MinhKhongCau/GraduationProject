@@ -1,6 +1,11 @@
 basePath: /api/v1
 definitions:
-  internal_payment_handler.CreateOrderRequest:
+  handler.AdminProcessRequest:
+    properties:
+      note:
+        type: string
+    type: object
+  handler.CreateOrderRequest:
     properties:
       amount:
         type: integer
@@ -17,7 +22,7 @@ definitions:
     - gateway
     - payer_id
     type: object
-  internal_payment_handler.CreateOrderResponse:
+  handler.CreateOrderResponse:
     properties:
       commission_amount:
         type: integer
@@ -32,14 +37,37 @@ definitions:
       status:
         type: string
     type: object
-  internal_wallet_handler.TopUpRequest:
+  handler.CreateWithdrawalRequest:
+    properties:
+      amount:
+        type: integer
+      bank_account_id:
+        type: string
+    required:
+    - amount
+    - bank_account_id
+    type: object
+  handler.LinkBankAccountRequest:
+    properties:
+      account_holder_name:
+        type: string
+      account_number:
+        type: string
+      bank_code:
+        type: string
+    required:
+    - account_holder_name
+    - account_number
+    - bank_code
+    type: object
+  handler.TopUpRequest:
     properties:
       amount:
         type: integer
     required:
     - amount
     type: object
-  internal_wallet_handler.TxResponse:
+  handler.TxResponse:
     properties:
       amount:
         type: integer
@@ -60,35 +88,7 @@ definitions:
       wallet_id:
         type: string
     type: object
-  internal_withdrawal_handler.AdminProcessRequest:
-    properties:
-      note:
-        type: string
-    type: object
-  internal_withdrawal_handler.CreateWithdrawalRequest:
-    properties:
-      amount:
-        type: integer
-      bank_account_id:
-        type: string
-    required:
-    - amount
-    - bank_account_id
-    type: object
-  internal_withdrawal_handler.LinkBankAccountRequest:
-    properties:
-      account_holder_name:
-        type: string
-      account_number:
-        type: string
-      bank_code:
-        type: string
-    required:
-    - account_holder_name
-    - account_number
-    - bank_code
-    type: object
-  payment-service_pkg_response.Response:
+  response.Response:
     properties:
       data: {}
       error:
@@ -125,15 +125,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: '[EXPERT] Get linked bank accounts'
       tags:
       - Withdrawals & Bank Accounts
@@ -142,41 +142,33 @@ paths:
       - application/json
       description: Link a new bank account for withdrawals. Requires EXPERT role.
       parameters:
-      - description: User ID (UUID)
-        in: header
-        name: X-User-Id
-        required: true
-        type: string
-      - description: User Role (EXPERT)
-        in: header
-        name: X-User-Role
-        required: true
-        type: string
       - description: Thông tin tài khoản ngân hàng để liên kết
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_withdrawal_handler.LinkBankAccountRequest'
+          $ref: '#/definitions/handler.LinkBankAccountRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
       summary: '[EXPERT] Link a new bank account'
       tags:
       - Withdrawals & Bank Accounts
@@ -193,7 +185,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_payment_handler.CreateOrderRequest'
+          $ref: '#/definitions/handler.CreateOrderRequest'
       produces:
       - application/json
       responses:
@@ -201,19 +193,21 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/payment-service_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_payment_handler.CreateOrderResponse'
+                  $ref: '#/definitions/handler.CreateOrderResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
       summary: '[PATIENT/SYSTEM] Create a new payment order'
       tags:
       - Payment Orders
@@ -244,17 +238,6 @@ paths:
       - application/json
       description: Retrieve the list of transactions (balance changes) for the current
         user's wallet, sorted by latest time. Requires PATIENT or EXPERT role.
-      parameters:
-      - description: User ID (UUID)
-        in: header
-        name: X-User-Id
-        required: true
-        type: string
-      - description: User Role (PATIENT hoặc EXPERT)
-        in: header
-        name: X-User-Role
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -262,21 +245,23 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/payment-service_pkg_response.Response'
+            - $ref: '#/definitions/response.Response'
             - properties:
                 data:
                   items:
-                    $ref: '#/definitions/internal_wallet_handler.TxResponse'
+                    $ref: '#/definitions/handler.TxResponse'
                   type: array
               type: object
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
       summary: '[PATIENT/EXPERT] Get transaction history'
       tags:
       - Wallets
@@ -303,15 +288,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: '[PATIENT/EXPERT] Get current user''s wallet'
       tags:
       - Wallets
@@ -322,84 +307,36 @@ paths:
       description: Directly top up the available balance of the current user's wallet.
         Requires PATIENT or EXPERT role.
       parameters:
-      - description: User ID (UUID)
-        in: header
-        name: X-User-Id
-        required: true
-        type: string
       - description: Thông tin nạp tiền
         in: body
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_wallet_handler.TopUpRequest'
+          $ref: '#/definitions/handler.TopUpRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
       summary: '[PATIENT/EXPERT] Top up wallet (Dev/Test only)'
       tags:
       - Wallets
-  /payments/withdrawals:
-    post:
-      consumes:
-      - application/json
-      description: Request a withdrawal to a linked bank account. Amounts < 5,000,000
-        VND are auto-approved. Requires EXPERT role.
-      parameters:
-      - description: User ID (UUID)
-        in: header
-        name: X-User-Id
-        required: true
-        type: string
-      - description: User Role (EXPERT)
-        in: header
-        name: X-User-Role
-        required: true
-        type: string
-      - description: Thông tin yêu cầu rút tiền
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/internal_withdrawal_handler.CreateWithdrawalRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
-      summary: '[EXPERT] Request a withdrawal'
-      tags:
-      - Withdrawals & Bank Accounts
   /payments/withdrawals/{id}/approve:
     post:
       consumes:
@@ -407,16 +344,6 @@ paths:
       description: Admin approves a pending withdrawal request. Funds are transferred
         via Payout Gateway. Requires ADMIN role.
       parameters:
-      - description: Admin ID (UUID)
-        in: header
-        name: X-User-Id
-        required: true
-        type: string
-      - description: Admin Role (ADMIN)
-        in: header
-        name: X-User-Role
-        required: true
-        type: string
       - description: Mã yêu cầu rút tiền (UUID)
         in: path
         name: id
@@ -427,26 +354,28 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_withdrawal_handler.AdminProcessRequest'
+          $ref: '#/definitions/handler.AdminProcessRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
       summary: '[ADMIN] Approve withdrawal request'
       tags:
       - Admin - Withdrawals
@@ -457,16 +386,6 @@ paths:
       description: Admin rejects a pending withdrawal request. Locked funds are returned
         to the expert's wallet. Requires ADMIN role.
       parameters:
-      - description: Admin ID (UUID)
-        in: header
-        name: X-User-Id
-        required: true
-        type: string
-      - description: Admin Role (ADMIN)
-        in: header
-        name: X-User-Role
-        required: true
-        type: string
       - description: Mã yêu cầu rút tiền (UUID)
         in: path
         name: id
@@ -477,26 +396,28 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_withdrawal_handler.AdminProcessRequest'
+          $ref: '#/definitions/handler.AdminProcessRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/payment-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
       summary: '[ADMIN] Reject withdrawal request'
       tags:
       - Admin - Withdrawals
