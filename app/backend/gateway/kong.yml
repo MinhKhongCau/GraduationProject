@@ -20,9 +20,9 @@ services:
               status_code: 403
               content_type: "application/json"
               body: |
-              {
-                "message": "Forbidden: /internal paths are not accessible from outside the network"
-              }
+                {
+                  "message": "Forbidden: /internal paths are not accessible from outside the network"
+                }
 
 
   - name: auth-service
