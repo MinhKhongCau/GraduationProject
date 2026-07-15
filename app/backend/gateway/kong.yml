@@ -3,9 +3,8 @@ _transform: true
 
 services:
   # ═══════════════════════════════════════════════════════════════════════════
-  # SECURITY: Chặn hoàn toàn /internal/* từ Internet.
-  # Path này chỉ được gọi trong Docker internal network (container-to-container).
-  # Route này phải khai báo TRƯỚC các route service khác để được match ưu tiên.
+  # SECURITY: Block endpoint /internal/* from Internet.
+  # This path just use in Docker internal network (container-to-container).
   # ═══════════════════════════════════════════════════════════════════════════
   - name: block-internal-routes
     # Dummy URL — request sẽ bị terminated trước khi forward đến đây
@@ -19,8 +18,11 @@ services:
           - name: request-termination
             config:
               status_code: 403
-              message: "Forbidden: /internal paths are not accessible from outside the network"
               content_type: "application/json"
+              body: |
+              {
+                "message": "Forbidden: /internal paths are not accessible from outside the network"
+              }
 
 
   - name: auth-service
