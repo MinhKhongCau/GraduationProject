@@ -17,30 +17,16 @@ const docTemplate = `{
     "paths": {
         "/payments/bank-accounts": {
             "get": {
-                "description": "Retrieve all linked bank accounts for the current expert. Requires EXPERT role.",
-                "produces": [
-                    "application/json"
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
                 ],
+                "description": "Retrieve all linked bank accounts for the current expert. Requires EXPERT role.",
                 "tags": [
                     "Withdrawals \u0026 Bank Accounts"
                 ],
                 "summary": "[EXPERT] Get linked bank accounts",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID (UUID)",
-                        "name": "X-User-Id",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User Role (EXPERT)",
-                        "name": "X-User-Role",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -269,6 +255,11 @@ const docTemplate = `{
         },
         "/payments/wallets/me": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieve wallet information (available balance, pending balance, locked balance) for the current user. Requires PATIENT or EXPERT role.",
                 "consumes": [
                     "application/json"
@@ -280,22 +271,6 @@ const docTemplate = `{
                     "Wallets"
                 ],
                 "summary": "[PATIENT/EXPERT] Get current user's wallet",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "User ID (UUID)",
-                        "name": "X-User-Id",
-                        "in": "header",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User Role (PATIENT hoặc EXPERT)",
-                        "name": "X-User-Role",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -352,6 +327,75 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/withdrawals": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Request a withdrawal to a linked bank account. Amounts \u003c 5,000,000 VND are auto-approved. Requires EXPERT role.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Withdrawals \u0026 Bank Accounts"
+                ],
+                "summary": "[EXPERT] Request a withdrawal",
+                "parameters": [
+                    {
+                        "description": "Thông tin yêu cầu rút tiền",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateWithdrawalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/handler.WithdrawalResponse"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -633,6 +677,26 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "wallet_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.WithdrawalResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "requested_at": {
+                    "type": "integer"
+                },
+                "requires_manual_approval": {
+                    "type": "boolean"
+                },
+                "status": {
                     "type": "string"
                 }
             }

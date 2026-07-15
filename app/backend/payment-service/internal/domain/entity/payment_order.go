@@ -36,6 +36,9 @@ type PaymentOrder struct {
 	ID               uuid.UUID          `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	PayerID          uuid.UUID          `json:"payer_id" gorm:"type:uuid;not null;column:payer_id"`
 	ExpertID         uuid.UUID          `json:"expert_id" gorm:"type:uuid;not null;column:expert_id"`
+	// AppointmentID là nullable — chỉ có giá trị khi order được tạo từ luồng đặt lịch.
+	// Nếu Patient nạp tiền thủ công vào ví (top-up), trường này sẽ là NULL.
+	AppointmentID    *uuid.UUID         `json:"appointment_id,omitempty" gorm:"type:uuid;column:appointment_id"`
 	GrossAmount      vo.Money           `json:"gross_amount" gorm:"type:bigint;not null;column:gross_amount"`
 	CommissionRate   float64            `json:"commission_rate" gorm:"type:numeric(5,2);not null;column:commission_rate"`
 	CommissionAmount vo.Money           `json:"commission_amount" gorm:"type:bigint;not null;column:commission_amount"`
