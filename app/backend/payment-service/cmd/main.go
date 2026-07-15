@@ -24,6 +24,7 @@ import (
 	withdrawalHandler "payment-service/internal/withdrawal/handler"
 
 	"payment-service/internal/outbox"
+	bookingClient "payment-service/internal/booking/client"
 
 	_ "payment-service/docs" // Import swagger docs
 
@@ -48,13 +49,20 @@ func main() {
 	internal_auth.InitPublicKey(config.AppConfig.AuthServiceInternalURL)
 
 	// 1.2 Khởi tạo TokenManager nội bộ — dùng để GỌI sang service khác
-	// Lưu vào biến global để các layer khác có thể inject nếu cần
-	_ = internal_auth.NewTokenManager(
+	// TokenManager được lưu lại để inject vào BookingServiceClient
+	tokenManager := internal_auth.NewTokenManager(
 		config.AppConfig.AuthServiceInternalURL,
 		config.AppConfig.InternalClientID,
 		config.AppConfig.InternalClientSecret,
 	)
 	log.Printf("🔐 Internal M2M auth initialized for client: %s", config.AppConfig.InternalClientID)
+
+	// 1.3 Khởi tạo BookingServiceClient (REST implementation)
+	// Để chuyển sang gRPC sau này: chỉ đổi dòng này thành bookingClient.NewGrpcBookingClient(...)
+	bookingSvcClient := bookingClient.NewRestBookingClient(
+		config.AppConfig.BookingServiceInternalURL,
+		tokenManager,
+	)
 
 	// 2. Kết nối CSDL & Chạy Migration
 	database.ConnectDB()
@@ -108,8 +116,8 @@ func main() {
 	withdrawalWorker := withdrawal.NewWorker(database.DB, withdrawalUsecase, 5*time.Minute)
 	go withdrawalWorker.Start(ctx)
 
-	// Worker 3: Quét Outbox events để publish sang RabbitMQ
-	outboxPublisher := outbox.NewPublisher(outboxRepo)
+	// Worker 3: Quét Outbox events để dispatch (RabbitMQ / Internal REST Call sang Booking)
+	outboxPublisher := outbox.NewPublisher(outboxRepo, bookingSvcClient)
 	go outboxPublisher.Start(ctx)
 
 	// Worker 4: Đối soát ví (Ledger Audit) & Đối soát giao dịch VNPay

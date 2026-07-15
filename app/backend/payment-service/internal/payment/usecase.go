@@ -18,7 +18,9 @@ import (
 )
 
 type Usecase interface {
-	CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string) (*entity.PaymentOrder, string, error)
+	// CreateOrder tạo một payment order mới và trả về payment URL.
+	// appointmentID là optional: nếu có giá trị, order sẽ được liên kết với lịch hẹn tương ứng.
+	CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string, appointmentID *string) (*entity.PaymentOrder, string, error)
 	ProcessIPN(ctx context.Context, params map[string][]string) (bool, error)
 }
 
@@ -36,7 +38,7 @@ func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient *gate
 	}
 }
 
-func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string) (*entity.PaymentOrder, string, error) {
+func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string, appointmentID *string) (*entity.PaymentOrder, string, error) {
 	// Mức hoa hồng là 15%
 	commissionRate := 0.15
 	commissionAmount := vo.Money(float64(grossAmount) * commissionRate)
@@ -52,6 +54,15 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid
 		NetAmount:        netAmount,
 		Gateway:          gatewayName,
 		Status:           entity.OrderStatusPending,
+	}
+
+	// Gắn appointment_id nếu được cung cấp
+	if appointmentID != nil && *appointmentID != "" {
+		parsed, err := uuid.Parse(*appointmentID)
+		if err != nil {
+			return nil, "", fmt.Errorf("invalid appointment_id format: %w", err)
+		}
+		order.AppointmentID = &parsed
 	}
 
 	if err := u.repo.Create(order); err != nil {
@@ -146,7 +157,7 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 				return err
 			}
 
-			// Lưu Outbox event
+			// Lưu Outbox event 1: wallet nhận tiền
 			payloadMap := map[string]interface{}{
 				"order_id":          order.ID,
 				"payer_id":          order.PayerID,
@@ -167,6 +178,26 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			}
 			if err := u.repo.SaveOutboxEvent(tx, outbox); err != nil {
 				return err
+			}
+
+			// Lưu Outbox event 2: thông báo Booking Service xác nhận lịch hẹn
+			// Chỉ emit nếu order này có appointment_id.
+			if order.AppointmentID != nil {
+				bookingPayload, _ := json.Marshal(map[string]interface{}{
+					"appointment_id": order.AppointmentID.String(),
+					"order_id":       order.ID.String(),
+					"status":         "SUCCESS",
+				})
+				bookingOutbox := &entity.OutboxEvent{
+					AggregateType: "PAYMENT_ORDER",
+					AggregateID:   order.ID,
+					EventType:     "booking.appointment.confirm",
+					Payload:       string(bookingPayload),
+					Published:     false,
+				}
+				if err := u.repo.SaveOutboxEvent(tx, bookingOutbox); err != nil {
+					return err
+				}
 			}
 
 			// Thao tác với ví: credit gross, sau đó debit commission

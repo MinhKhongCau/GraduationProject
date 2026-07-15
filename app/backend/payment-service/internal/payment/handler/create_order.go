@@ -3,7 +3,6 @@ package handler
 import (
 	"net/http"
 	"payment-service/internal/domain/vo"
-	"payment-service/internal/payment"
 	"payment-service/pkg/response"
 	"strings"
 
@@ -11,19 +10,14 @@ import (
 	"github.com/google/uuid"
 )
 
-type Handler struct {
-	usecase payment.Usecase
-}
-
-func NewHandler(usecase payment.Usecase) *Handler {
-	return &Handler{usecase: usecase}
-}
-
 type CreateOrderRequest struct {
-	PayerID  string `json:"payer_id" binding:"required"`
-	ExpertID string `json:"expert_id" binding:"required"`
-	Amount   int64  `json:"amount" binding:"required,gt=0"`
-	Gateway  string `json:"gateway" binding:"required"` // VNPAY | MOMO | MOCK
+	PayerID        string  `json:"payer_id" binding:"required"`
+	ExpertID       string  `json:"expert_id" binding:"required"`
+	Amount         int64   `json:"amount" binding:"required,gt=0"`
+	Gateway        string  `json:"gateway" binding:"required"` // VNPAY | MOMO | MOCK
+	// AppointmentID liên kết order này với lịch hẹn. Optional — nếu không cung cấp
+	// thì đây là order nạp tiền ví trực tiếp, không liên quan đến booking.
+	AppointmentID  *string `json:"appointment_id,omitempty"`
 }
 
 type CreateOrderResponse struct {
@@ -71,8 +65,14 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	// Parse appointment_id (optional)
+	var appointmentID *string
+	if req.AppointmentID != nil && *req.AppointmentID != "" {
+		appointmentID = req.AppointmentID
+	}
+
 	ipAddr := c.ClientIP()
-	order, payURL, err := h.usecase.CreateOrder(c.Request.Context(), payerUUID, expertUUID, vo.Money(req.Amount), gatewayName, ipAddr)
+	order, payURL, err := h.usecase.CreateOrder(c.Request.Context(), payerUUID, expertUUID, vo.Money(req.Amount), gatewayName, ipAddr, appointmentID)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to create payment order", err.Error())
 		return
@@ -88,42 +88,4 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	}
 
 	response.Success(c, "Payment order created successfully", res)
-}
-
-// HandleVNPayIPN handles GET /api/v1/payments/vnpay-ipn
-// @Summary      [PUBLIC/WEBHOOK] Receive VNPay payment webhook (IPN)
-// @Description  VNPay calls this API to update the payment status of an order. Role: Public (no token required, verifies checksum).
-// @Tags         Payment Orders
-// @Produce      json
-// @Param        queryParams  query     object  false  "VNPay automated response parameters"
-// @Success      200          {object}  map[string]string
-// @Router       /payments/vnpay-ipn [get]
-func (h *Handler) HandleVNPayIPN(c *gin.Context) {
-	queryParams := c.Request.URL.Query()
-
-	alreadyProcessed, err := h.usecase.ProcessIPN(c.Request.Context(), queryParams)
-	if err != nil {
-		logStr := err.Error()
-		if strings.Contains(logStr, "checksum") {
-			c.JSON(http.StatusOK, gin.H{"RspCode": "97", "Message": "Invalid Signature"})
-			return
-		}
-		if strings.Contains(logStr, "not found") {
-			c.JSON(http.StatusOK, gin.H{"RspCode": "01", "Message": "Order not found"})
-			return
-		}
-		if strings.Contains(logStr, "amount") {
-			c.JSON(http.StatusOK, gin.H{"RspCode": "04", "Message": "Invalid amount"})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"RspCode": "99", "Message": "Unknown error: " + logStr})
-		return
-	}
-
-	if alreadyProcessed {
-		c.JSON(http.StatusOK, gin.H{"RspCode": "02", "Message": "Order already confirmed"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"RspCode": "00", "Message": "Confirm Success"})
 }
