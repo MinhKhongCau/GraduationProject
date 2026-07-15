@@ -28,5 +28,8 @@ func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, internalGroup *g
 	{
 		// POST /internal/appointments/:id/webhook
 		internalAppt.POST("/:id/webhook", h.InternalPaymentWebhook)
+		
+		// GET /internal/appointments/:id
+		internalAppt.GET("/:id", h.InternalGetAppointment)
 	}
 }

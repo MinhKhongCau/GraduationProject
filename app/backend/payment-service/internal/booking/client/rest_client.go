@@ -40,6 +40,44 @@ func NewRestBookingClient(baseURL string, tokenProvider httpclient.TokenProvider
 	}
 }
 
+type APIResponse struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    Appointment `json:"data"`
+}
+
+// GetAppointment gọi internal API để lấy thông tin chi tiết của appointment.
+func (c *restBookingClient) GetAppointment(ctx context.Context, appointmentID string) (*Appointment, error) {
+	url := fmt.Sprintf("%s/internal/appointments/%s", c.baseURL, appointmentID)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("booking_client: create get request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("booking_client: get appointment %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("booking_client: appointment not found")
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("booking_client: unexpected status %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	var apiResp APIResponse
+	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
+		return nil, fmt.Errorf("booking_client: decode response: %w", err)
+	}
+
+	return &apiResp.Data, nil
+}
+
 // ConfirmAppointment gọi endpoint internal của Booking Service để xác nhận lịch hẹn.
 func (c *restBookingClient) ConfirmAppointment(ctx context.Context, appointmentID string) error {
 	return c.callWebhook(ctx, appointmentID, "SUCCESS")

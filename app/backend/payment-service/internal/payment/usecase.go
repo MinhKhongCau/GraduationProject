@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"payment-service/internal/booking/client"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
 	"payment-service/internal/payment/gateway"
@@ -28,13 +29,15 @@ type paymentUsecase struct {
 	repo          Repository
 	walletUsecase wallet.Usecase
 	vnpayClient   *gateway.VNPayClient
+	bookingClient client.BookingServiceClient
 }
 
-func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient *gateway.VNPayClient) Usecase {
+func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient *gateway.VNPayClient, bookingClient client.BookingServiceClient) Usecase {
 	return &paymentUsecase{
 		repo:          repo,
 		walletUsecase: walletUsecase,
 		vnpayClient:   vnpayClient,
+		bookingClient: bookingClient,
 	}
 }
 
@@ -62,6 +65,24 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid
 		if err != nil {
 			return nil, "", fmt.Errorf("invalid appointment_id format: %w", err)
 		}
+		
+		// 1. Xác minh Appointment qua Booking Service
+		appt, err := u.bookingClient.GetAppointment(ctx, *appointmentID)
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to verify appointment: %w", err)
+		}
+		
+		// 2. Validate Ownership (chỉ người đặt lịch mới được tạo order)
+		if appt.PatientID != payerID.String() {
+			return nil, "", errors.New("unauthorized: appointment does not belong to the payer")
+		}
+		
+		// 3. Validate Status (chỉ PENDING_PAYMENT mới được thanh toán)
+		// Trạng thái 0 = PENDING_PAYMENT, 1 = CONFIRMED, 2 = CANCELLED
+		if appt.Status != 0 {
+			return nil, "", errors.New("appointment is not in PENDING_PAYMENT status")
+		}
+		
 		order.AppointmentID = &parsed
 	}
 
@@ -71,7 +92,14 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid
 
 	var paymentURL string
 	if gatewayName == "VNPAY" {
-		createDate := time.Now().Format("20060102150405")
+		// VNPay yêu cầu định dạng thời gian theo múi giờ Việt Nam (GMT+7)
+		loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+		var createDate string
+		if err == nil {
+			createDate = time.Now().In(loc).Format("20060102150405")
+		} else {
+			createDate = time.Now().Add(7 * time.Hour).Format("20060102150405")
+		}
 		desc := fmt.Sprintf("Thanh toan MindCare don hang %s", order.ID.String())
 		paymentURL = u.vnpayClient.GeneratePaymentURL(order.ID.String(), order.GrossAmount.Int64(), ipAddr, desc, createDate)
 	} else {
