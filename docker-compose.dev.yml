@@ -90,6 +90,14 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_AUTH_SERVICE}
+      # RSA Keys — set trong .env bằng base64 DER. Để trống = random key (dev only)
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:-}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+      # BCrypt-hashed secrets của từng service nội bộ
+      - INTERNAL_SECRET_BOOKING=${INTERNAL_SECRET_BOOKING}
+      - INTERNAL_SECRET_PAYMENT=${INTERNAL_SECRET_PAYMENT}
+      - INTERNAL_SECRET_PROFILE=${INTERNAL_SECRET_PROFILE}
+      - INTERNAL_SECRET_ASSESSMENT=${INTERNAL_SECRET_ASSESSMENT}
 
   # 6. GO SERVICES (Profile, Payment, Booking)
   profile-service:
@@ -114,6 +122,10 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_PROFILE_SERVICE}
+      # Internal M2M Auth
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${PROFILE_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PROFILE}
 
   payment-service:
     build:
@@ -132,6 +144,10 @@ services:
       - GO_ENV=${APP_ENV}
       - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
       - PORT=${PORT_PAYMENT_SERVICE}
+      # Internal M2M Auth
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
 
   booking-service:
     build:
@@ -155,6 +171,10 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_BOOKING_SERVICE}
+      # Internal M2M Auth
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:
@@ -180,6 +200,10 @@ services:
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_ASSESSMENT_SERVICE}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Internal M2M Auth
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${ASSESSMENT_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_ASSESSMENT}
 
   # 8. API GATEWAY (Kong)
   api-gateway:

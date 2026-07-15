@@ -32,6 +32,14 @@ jobs:
           APP_ENV=${{ vars.APP_ENV }}
           NODE_ENV=${{ vars.NODE_ENV }}
 
+          AUTH_SERVICE_NAME=${{ vars.AUTH_SERVICE_NAME }}
+          PROFILE_SERVICE_NAME=${{ vars.PROFILE_SERVICE_NAME }}
+          PAYMENT_SERVICE_NAME=${{ vars.PAYMENT_SERVICE_NAME }}
+          BOOKING_SERVICE_NAME=${{ vars.BOOKING_SERVICE_NAME }}
+          ASSESSMENT_SERVICE_NAME=${{ vars.ASSESSMENT_SERVICE_NAME }}
+          FORUM_SERVICE_NAME=${{ vars.FORUM_SERVICE_NAME }}
+          CHATROOM_SERVICE_NAME=${{ vars.CHATROOM_SERVICE_NAME }}
+
           DB_HOST=${{ vars.DB_HOST }}
           DB_PORT=${{ vars.DB_PORT }}
           DB_USER=${{ secrets.DB_USER }}
@@ -45,6 +53,8 @@ jobs:
           PAYMENT_DB_NAME=${{ vars.PAYMENT_DB_NAME }}
           BOOKING_DB_NAME=${{ vars.BOOKING_DB_NAME }}
           ASSESSMENT_DB_NAME=${{ vars.ASSESSMENT_DB_NAME }}
+          FORUM_DB_NAME=${{ vars.FORUM_DB_NAME }}
+          CHATROOM_DB_NAME=${{ vars.CHATROOM_DB_NAME }}
 
           PORT_FRONTEND=${{ vars.PORT_FRONTEND }}
           PORT_AUTH_SERVICE=${{ vars.PORT_AUTH_SERVICE }}
@@ -52,6 +62,8 @@ jobs:
           PORT_PAYMENT_SERVICE=${{ vars.PORT_PAYMENT_SERVICE }}
           PORT_BOOKING_SERVICE=${{ vars.PORT_BOOKING_SERVICE }}
           PORT_ASSESSMENT_SERVICE=${{ vars.PORT_ASSESSMENT_SERVICE }}
+          PORT_FORUM_SERVICE=${{ vars.PORT_FORUM_SERVICE }}
+          PORT_CHATROOM_SERVICE=${{ vars.PORT_CHATROOM_SERVICE }}
           PORT_API_GATEWAY=${{ vars.PORT_API_GATEWAY }}
 
           REACT_APP_API_URL=${{ vars.REACT_APP_API_URL }}
@@ -65,7 +77,21 @@ jobs:
           RABBITMQ_PORT=${{ vars.RABBITMQ_PORT }}
           RABBITMQ_MANAGEMENT_PORT=${{ vars.RABBITMQ_MANAGEMENT_PORT }}
 
+          AUTH_SERVICE_INTERNAL_URL=${{ secrets.AUTH_SERVICE_INTERNAL_URL }}
+
           JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY}}
+
+          JWT_PRIVATE_KEY=${{ secrets.JWT_PRIVATE_KEY }}
+          JWT_PUBLIC_KEY=${{ secrets.JWT_PUBLIC_KEY }}
+
+          INTERNAL_SECRET_BOOKING=${{ secrets.INTERNAL_SECRET_BOOKING }}
+          INTERNAL_SECRET_PAYMENT=${{ secrets.INTERNAL_SECRET_PAYMENT }}
+          INTERNAL_SECRET_PROFILE=${{ secrets.INTERNAL_SECRET_PROFILE }}
+          INTERNAL_SECRET_ASSESSMENT=${{ secrets.INTERNAL_SECRET_ASSESSMENT }}
+          INTERNAL_PLAIN_SECRET_BOOKING=${{ secrets.INTERNAL_PLAIN_SECRET_BOOKING }}
+          INTERNAL_PLAIN_SECRET_PAYMENT=${{ secrets.INTERNAL_PLAIN_SECRET_PAYMENT }}
+          INTERNAL_PLAIN_SECRET_PROFILE=${{ secrets.INTERNAL_PLAIN_SECRET_PROFILE }}
+          INTERNAL_PLAIN_SECRET_ASSESSMENT=${{ secrets.INTERNAL_PLAIN_SECRET_ASSESSMENT }}
           EOF
 
       # Bước 3: Pull Image lasted from Docker Hub before deploy.

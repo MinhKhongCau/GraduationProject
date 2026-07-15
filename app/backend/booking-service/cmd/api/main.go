@@ -10,6 +10,7 @@ import (
 	// Import các package nội bộ của dự án
 	"booking-service/internal/config"
 	"booking-service/pkg/database"
+	"booking-service/pkg/internal_auth"
 
 	"booking-service/internal/appointment"
 	apptHandler "booking-service/internal/appointment/handler"
@@ -36,6 +37,17 @@ import (
 func main() {
 	// 0. Load Configuration
 	config.LoadConfig()
+
+	// 0.1 Cache RSA Public Key từ Auth Service (verify cả JWT user lẫn internal JWT)
+	internal_auth.InitPublicKey(config.AppConfig.AuthServiceInternalURL)
+
+	// 0.2 Khởi tạo TokenManager nội bộ — booking có thể gọi payment-service nội bộ
+	_ = internal_auth.NewTokenManager(
+		config.AppConfig.AuthServiceInternalURL,
+		config.AppConfig.InternalClientID,
+		config.AppConfig.InternalClientSecret,
+	)
+	log.Printf("🔐 Internal M2M auth initialized for client: %s", config.AppConfig.InternalClientID)
 
 	// 1. Kết nối Database
 	database.ConnectDB()
