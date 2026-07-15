@@ -17,7 +17,7 @@ func (s AppointmentStatus) String() string {
 // Appointment - Cuộc hẹn đã đặt
 type Appointment struct {
 	AppointmentID      string            `json:"appointment_id"      gorm:"column:appointment_id;primaryKey;type:uuid"`
-	SlotID             string            `json:"slot_id"             gorm:"column:slot_id;type:uuid;unique"`
+	SlotID             string            `json:"slot_id"             gorm:"column:slot_id;type:uuid;index"`
 	PatientID          string            `json:"patient_id"          gorm:"column:patient_id;type:uuid;not null"`
 	ExpertID           string            `json:"expert_id"           gorm:"column:expert_id;type:uuid;not null"`
 	CancellationReason string            `json:"cancellation_reason" gorm:"column:cancellation_reason"`

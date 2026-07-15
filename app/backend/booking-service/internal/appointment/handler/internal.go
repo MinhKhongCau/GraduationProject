@@ -60,3 +60,33 @@ func (h *Handler) InternalPaymentWebhook(c *gin.Context) {
 		})
 	}
 }
+
+// InternalGetAppointment - GET /internal/appointments/:id
+// Được gọi bởi Payment Service để lấy thông tin xác minh đơn hàng.
+// Bảo vệ bởi internal_auth.Middleware() — chỉ service nội bộ mới gọi được.
+//
+//	@Summary      [INTERNAL] Lấy chi tiết lịch hẹn
+//	@Description  [INTERNAL] Payment Service gọi endpoint này để lấy chi tiết lịch hẹn (verify trước khi tạo Order).
+//	@Tags         Internal
+//	@Produce      json
+//	@Param        id    path      string  true  "Appointment ID"
+//	@Success      200   {object}  map[string]interface{}
+//	@Failure      400   {object}  map[string]interface{}
+//	@Failure      404   {object}  map[string]interface{}
+//	@Failure      500   {object}  map[string]interface{}
+//	@Router       /internal/appointments/{id} [get]
+func (h *Handler) InternalGetAppointment(c *gin.Context) {
+	appointmentID := c.Param("id")
+	if appointmentID == "" {
+		response.Error(c, http.StatusBadRequest, "appointment_id is required", "missing path param :id")
+		return
+	}
+
+	appt, err := h.usecase.GetAppointmentByID(appointmentID)
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Appointment not found", err.Error())
+		return
+	}
+
+	response.Success(c, "Get appointment successfully", appt)
+}

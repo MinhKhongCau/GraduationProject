@@ -87,7 +87,7 @@ func main() {
 	vnpReturnURL := os.Getenv("VNP_RETURN_URL")
 	vnpayClient := paymentGateway.NewVNPayClient(vnpTmnCode, vnpHashSecret, vnpPaymentURL, vnpReturnURL)
 
-	paymentUsecase := payment.NewUsecase(paymentRepo, walletUsecase, vnpayClient)
+	paymentUsecase := payment.NewUsecase(paymentRepo, walletUsecase, vnpayClient, bookingSvcClient)
 	withdrawalUsecase := withdrawal.NewUsecase(withdrawalRepo, walletUsecase)
 
 	// Handlers

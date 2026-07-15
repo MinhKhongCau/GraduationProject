@@ -569,6 +569,10 @@ const docTemplate = `{
                 "amount": {
                     "type": "integer"
                 },
+                "appointment_id": {
+                    "description": "AppointmentID liên kết order này với lịch hẹn. Optional — nếu không cung cấp\nthì đây là order nạp tiền ví trực tiếp, không liên quan đến booking.",
+                    "type": "string"
+                },
                 "expert_id": {
                     "type": "string"
                 },

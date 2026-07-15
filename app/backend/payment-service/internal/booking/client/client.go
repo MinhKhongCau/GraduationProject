@@ -9,9 +9,19 @@ package client
 
 import "context"
 
+type Appointment struct {
+	AppointmentID string `json:"appointment_id"`
+	PatientID     string `json:"patient_id"`
+	ExpertID      string `json:"expert_id"`
+	Status        int    `json:"status"`
+}
+
 // BookingServiceClient là port để giao tiếp với Booking Service.
 // Mọi implementation (REST, gRPC...) đều phải implement interface này.
 type BookingServiceClient interface {
+	// GetAppointment lấy thông tin lịch hẹn từ Booking Service
+	GetAppointment(ctx context.Context, appointmentID string) (*Appointment, error)
+
 	// ConfirmAppointment thông báo cho Booking Service rằng thanh toán thành công.
 	// Booking Service sẽ chuyển appointment → CONFIRMED, slot → OCCUPIED.
 	ConfirmAppointment(ctx context.Context, appointmentID string) error

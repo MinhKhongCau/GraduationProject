@@ -11,7 +11,7 @@ import (
 )
 
 type CreateOrderRequest struct {
-	PayerID        string  `json:"payer_id" binding:"required"`
+	PayerID        string  `json:"payer_id"` // Trở thành optional, ưu tiên lấy từ Header X-User-Id
 	ExpertID       string  `json:"expert_id" binding:"required"`
 	Amount         int64   `json:"amount" binding:"required,gt=0"`
 	Gateway        string  `json:"gateway" binding:"required"` // VNPAY | MOMO | MOCK
@@ -40,6 +40,7 @@ type CreateOrderResponse struct {
 // @Failure      400   {object}  response.Response
 // @Failure      500   {object}  response.Response
 // @Router       /payments/orders [post]
+// @Param        X-User-Id  header  string  false  "User ID (automatically populated by API Gateway from token)"
 func (h *Handler) CreateOrder(c *gin.Context) {
 	var req CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -47,7 +48,20 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	payerUUID, err := uuid.Parse(req.PayerID)
+	// Ưu tiên lấy Payer ID từ header X-User-Id (do Gateway giải mã từ JWT token)
+	// để tăng tính bảo mật (tránh lỗi IDOR) và tiện lợi cho Client.
+	// Nếu không có header này (system-to-system call nội bộ), ta mới lấy từ Body.
+	finalPayerID := c.GetHeader("X-User-Id")
+	if finalPayerID == "" {
+		finalPayerID = req.PayerID
+	}
+
+	if finalPayerID == "" {
+		response.Error(c, http.StatusBadRequest, "Missing Payer ID", "Payer ID must be provided in X-User-Id header or in request body")
+		return
+	}
+
+	payerUUID, err := uuid.Parse(finalPayerID)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid Payer ID format", err.Error())
 		return
