@@ -75,9 +75,8 @@ services:
       dockerfile: Dockerfile
     container_name: auth-service
     restart: always
-    # ✅ SECURITY: Không expose port ra host — chỉ các container cùng network mới thấy
-    expose:
-      - "8080"  # Chỉ mở trong Docker internal network, không map ra host
+    ports:
+      - "${PORT_AUTH_SERVICE}:${PORT_AUTH_SERVICE}"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -95,11 +94,10 @@ services:
       - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:-}
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
       # BCrypt-hashed secrets của từng service nội bộ
-      # ⚠️  Thay thế bằng bcrypt hash thực khi deploy production
-      - INTERNAL_SECRET_BOOKING=${INTERNAL_SECRET_BOOKING:-}
-      - INTERNAL_SECRET_PAYMENT=${INTERNAL_SECRET_PAYMENT:-}
-      - INTERNAL_SECRET_PROFILE=${INTERNAL_SECRET_PROFILE:-}
-      - INTERNAL_SECRET_ASSESSMENT=${INTERNAL_SECRET_ASSESSMENT:-}
+      - INTERNAL_SECRET_BOOKING=${INTERNAL_SECRET_BOOKING}
+      - INTERNAL_SECRET_PAYMENT=${INTERNAL_SECRET_PAYMENT}
+      - INTERNAL_SECRET_PROFILE=${INTERNAL_SECRET_PROFILE}
+      - INTERNAL_SECRET_ASSESSMENT=${INTERNAL_SECRET_ASSESSMENT}
 
   # 6. GO SERVICES (Profile, Payment, Booking)
   profile-service:
@@ -124,6 +122,10 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_PROFILE_SERVICE}
+      # Internal M2M Auth
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${PROFILE_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PROFILE}
 
   payment-service:
     build:
@@ -143,9 +145,9 @@ services:
       - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
       - PORT=${PORT_PAYMENT_SERVICE}
       # Internal M2M Auth
-      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:8080
-      - INTERNAL_CLIENT_ID=payment-service
-      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT:-payment_internal_secret_2024}
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
 
   booking-service:
     build:
@@ -170,9 +172,9 @@ services:
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_BOOKING_SERVICE}
       # Internal M2M Auth
-      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:8080
-      - INTERNAL_CLIENT_ID=booking-service
-      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING:-booking_internal_secret_2024}
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:
@@ -198,6 +200,10 @@ services:
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_ASSESSMENT_SERVICE}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # Internal M2M Auth
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${ASSESSMENT_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_ASSESSMENT}
 
   # 8. API GATEWAY (Kong)
   api-gateway:
