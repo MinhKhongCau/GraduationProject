@@ -41,6 +41,10 @@ jobs:
             context: ./app/backend/gateway
             dockerfile: ./app/backend/gateway/Dockerfile
             image-tag: api-gateway-dev
+          - service-name: forum-service
+            context: ./app/backend/forum-service
+            dockerfile: ./app/backend/forum-service/Dockerfile
+            image-tag: forum-service-dev
 
     steps:
       - name: Checkout Code
@@ -65,7 +69,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image-tag }}:latest
-          
+
           # Cấu hình Cache ma thuật bằng Buildx qua GitHub Actions Cache (gha)
           cache-from: type=gha,scope=${{ matrix.service-name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.service-name }}
