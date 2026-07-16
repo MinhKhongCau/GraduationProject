@@ -12,6 +12,7 @@ import {
   CalendarClock,
   CalendarCheck,
   Layers,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 import { ROUTES } from "./route";
@@ -33,6 +34,7 @@ export const PATIENT_NAV_ITEMS: NavItem[] = [
   { id: "assessment", labelKey: "nav.assessment", label: "Assessment", href: ROUTES.PATIENT.ASSESSMENT, icon: ClipboardCheck },
   { id: "medical-history", labelKey: "nav.medicalHistory", label: "Medical History", href: ROUTES.PATIENT.MEDICAL_HISTORY, icon: FileText },
   { id: "messages", labelKey: "nav.messages", label: "Messages", href: ROUTES.PATIENT.MESSAGES, icon: MessageSquare },
+  { id: "forum", labelKey: "nav.forum", label: "Community", href: ROUTES.PATIENT.FORUM, icon: MessageCircle },
 ];
 
 export const PATIENT_BOTTOM_NAV_ITEMS: NavItem[] = [
@@ -50,6 +52,8 @@ export const EXPERT_NAV_ITEMS: NavItem[] = [
   { id: "patients", labelKey: "nav.patients", label: "My Patients", href: ROUTES.EXPERT.PATIENTS, icon: Users },
   { id: "clinical-records", labelKey: "nav.clinicalRecords", label: "Clinical Records", href: ROUTES.EXPERT.CLINICAL_RECORDS, icon: FileText },
   { id: "wallet", labelKey: "nav.wallet", label: "Wallet", href: ROUTES.EXPERT.WALLET, icon: Wallet },
+  { id: "messages", labelKey: "nav.messages", label: "Messages", href: ROUTES.EXPERT.MESSAGES, icon: MessageSquare },
+  { id: "forum", labelKey: "nav.forum", label: "Community", href: ROUTES.EXPERT.FORUM, icon: MessageCircle },
 ];
 
 export const EXPERT_BOTTOM_NAV_ITEMS: NavItem[] = [

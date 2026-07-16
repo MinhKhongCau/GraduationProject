@@ -7,3 +7,5 @@ export * from "./booking";
 export * from "./payment";
 export * from "./assessment";
 export * from "./clinical-record";
+export * from "./chat";
+export * from "./forum";
