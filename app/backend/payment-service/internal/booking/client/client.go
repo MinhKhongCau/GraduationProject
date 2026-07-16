@@ -10,10 +10,11 @@ package client
 import "context"
 
 type Appointment struct {
-	AppointmentID string `json:"appointment_id"`
-	PatientID     string `json:"patient_id"`
-	ExpertID      string `json:"expert_id"`
-	Status        int    `json:"status"`
+	AppointmentID string  `json:"appointment_id"`
+	PatientID     string  `json:"patient_id"`
+	ExpertID      string  `json:"expert_id"`
+	Status        int     `json:"status"`
+	Price         float64 `json:"price"` // Giá thực tế của lịch khám
 }
 
 // BookingServiceClient là port để giao tiếp với Booking Service.
