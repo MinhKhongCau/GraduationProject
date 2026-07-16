@@ -6,4 +6,5 @@ export * as bookingApi from "./booking";
 export * as paymentApi from "./payment";
 export * as assessmentApi from "./assessment";
 export * as clinicalRecordApi from "./clinical-record";
+export * as forumApi from "./forum";
 export * from "./http";

@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { QueryProvider } from "./QueryProvider";
 import { LocaleProvider, type Locale } from "./LocaleContext";
 import { AuthProvider } from "./AuthContext";
+import { ChatProvider } from "./ChatContext";
 import { ErrorProvider } from "./ErrorContext";
 import { ToastContainer } from "@/components/ui/Toast";
 
@@ -27,10 +28,12 @@ export function AppProviders({ children, initialLocale }: AppProvidersProps) {
       <QueryProvider>
         <LocaleProvider initialLocale={initialLocale}>
           <AuthProvider>
-            <ErrorProvider>
-              {children}
-              <ToastContainer />
-            </ErrorProvider>
+            <ChatProvider>
+              <ErrorProvider>
+                {children}
+                <ToastContainer />
+              </ErrorProvider>
+            </ChatProvider>
           </AuthProvider>
         </LocaleProvider>
       </QueryProvider>

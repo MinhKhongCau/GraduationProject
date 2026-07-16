@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { ContactList } from "./component/ContactList";
 import { ChatWindow } from "./component/ChatWindow";
-import { usePatientChatContacts, useDmThread } from "@/hooks";
+import { useExpertChatContacts, useDmThread } from "@/hooks";
 import { useAuthContext } from "@/context/AuthContext";
 import { useChatContext } from "@/context/ChatContext";
 
-export default function MessagesPage() {
+export default function ExpertMessagesPage() {
   const { user } = useAuthContext();
-  const { data: contacts = [] } = usePatientChatContacts();
+  const { data: contacts = [] } = useExpertChatContacts();
   const { onlineByContactId, queryPresence } = useChatContext();
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ export default function MessagesPage() {
         />
       ) : (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-          {contacts.length === 0 ? "No conversations yet — book an expert to start chatting." : "Select a conversation"}
+          {contacts.length === 0 ? "No conversations yet." : "Select a conversation"}
         </div>
       )}
     </div>
