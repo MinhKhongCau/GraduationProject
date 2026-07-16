@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [profile-service, payment-service, booking-service]
+        service: [profile-service, payment-service, booking-service, forum-service]
 
     steps:
       - uses: actions/checkout@v4
