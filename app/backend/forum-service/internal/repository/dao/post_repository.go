@@ -18,7 +18,7 @@ func NewPostRepository(db *gorm.DB) *PostRepository {
 type PostListFilter struct {
 	CategoryID *int64
 	TagSlug    string
-	AuthorID   *int64
+	AuthorID   *string
 	Status     string
 	Search     string
 	Page       int

@@ -41,7 +41,7 @@ func (r *CommentRepository) FindByID(id int64) (*CommentDAO, error) {
 // the generated id, then compute the real ltree path from that id (root
 // comment: its own id; reply: parent's path + its own id) and update the
 // row within the same transaction.
-func (r *CommentRepository) CreateWithPath(postID, userID int64, parentID *int64, content string) (*CommentDAO, error) {
+func (r *CommentRepository) CreateWithPath(postID int64, userID string, parentID *int64, content string) (*CommentDAO, error) {
 	var created CommentDAO
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		row := CommentDAO{

@@ -79,7 +79,7 @@ func (s *PostService) List(f dao.PostListFilter) (*PostListResult, error) {
 // GetBySlug returns a post by slug, applying the visibility rule from
 // SPEC.md §3.4 (PUBLISHED is visible to everyone; DRAFT/ARCHIVED only to
 // the author or an ADMIN) and incrementing view_count on success.
-func (s *PostService) GetBySlug(slug string, requesterID int64, isAdmin bool) (*entity.Post, error) {
+func (s *PostService) GetBySlug(slug string, requesterID string, isAdmin bool) (*entity.Post, error) {
 	row, err := s.postRepo.FindBySlug(slug)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
@@ -111,7 +111,7 @@ func (s *PostService) GetBySlug(slug string, requesterID int64, isAdmin bool) (*
 
 type CreatePostInput struct {
 	CategoryID   int64
-	AuthorID     int64
+	AuthorID     string
 	Title        string
 	Summary      string
 	Content      string
@@ -214,7 +214,7 @@ type UpdatePostInput struct {
 	Tags         *[]string
 }
 
-func (s *PostService) Update(id, requesterID int64, isAdmin bool, in UpdatePostInput) (*entity.Post, error) {
+func (s *PostService) Update(id int64, requesterID string, isAdmin bool, in UpdatePostInput) (*entity.Post, error) {
 	row, err := s.postRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
@@ -297,7 +297,7 @@ func (s *PostService) Update(id, requesterID int64, isAdmin bool, in UpdatePostI
 // ChangeStatus validates and applies a post status transition (SPEC.md
 // §3.4), publishing forum.post.created the first time a post transitions
 // into PUBLISHED via this endpoint (mirroring Create's behavior).
-func (s *PostService) ChangeStatus(id, requesterID int64, isAdmin bool, newStatus entity.PostStatus) (*entity.Post, error) {
+func (s *PostService) ChangeStatus(id int64, requesterID string, isAdmin bool, newStatus entity.PostStatus) (*entity.Post, error) {
 	row, err := s.postRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
@@ -331,7 +331,7 @@ func (s *PostService) ChangeStatus(id, requesterID int64, isAdmin bool, newStatu
 	return &e, nil
 }
 
-func (s *PostService) SoftDelete(id, requesterID int64, isAdmin bool) error {
+func (s *PostService) SoftDelete(id int64, requesterID string, isAdmin bool) error {
 	row, err := s.postRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
