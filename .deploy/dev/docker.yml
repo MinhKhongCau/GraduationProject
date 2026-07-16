@@ -97,7 +97,7 @@ services:
       # RSA Keys
       - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY}
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}
-      # BCrypt-hashed secrets 
+      # BCrypt-hashed secrets
       - INTERNAL_SECRET_BOOKING=${INTERNAL_SECRET_BOOKING}
       - INTERNAL_SECRET_PAYMENT=${INTERNAL_SECRET_PAYMENT}
       - INTERNAL_SECRET_PROFILE=${INTERNAL_SECRET_PROFILE}
@@ -210,6 +210,32 @@ services:
       - INTERNAL_CLIENT_ID=${ASSESSMENT_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_ASSESSMENT}
 
+  # 7. FORUM SERVICE (Go)
+  forum-service:
+    image: ${DOCKERHUB_USERNAME}/forum-service-dev:latest
+    container_name: forum-service
+    restart: always
+    expose:
+      - "${PORT_FORUM_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - FORUM_DB_NAME=${FORUM_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_FORUM_SERVICE}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      # Internal M2M Auth
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - INTERNAL_CLIENT_ID=${FORUM_SERVICE_NAME}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_FORUM}
 
   # 8. API GATEWAY (Kong)
   api-gateway:
