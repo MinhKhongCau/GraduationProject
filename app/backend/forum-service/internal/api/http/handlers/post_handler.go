@@ -23,6 +23,20 @@ func NewPostHandler(svc *service.PostService) *PostHandler {
 	return &PostHandler{svc: svc}
 }
 
+// @Summary      List and search posts
+// @Description  Retrieve a paginated list of posts with filtering. Only PUBLISHED posts are returned unless the caller is the author or ADMIN.
+// @Tags         posts
+// @Produce      json
+// @Param        page        query     int     false  "Page number"      default(1)
+// @Param        pageSize    query     int     false  "Page size"        default(20)
+// @Param        tag         query     string  false  "Filter by tag slug"
+// @Param        search      query     string  false  "Search in title/summary"
+// @Param        status      query     string  false  "Filter by status (DRAFT/PUBLISHED/ARCHIVED)"
+// @Param        categoryId  query     int     false  "Filter by category ID"
+// @Param        authorId    query     int     false  "Filter by author ID"
+// @Success      200         {object}  response.Response
+// @Failure      500         {object}  response.Response
+// @Router       /api/v1/forum/posts [get]
 func (h *PostHandler) List(c *gin.Context) {
 	f := dao.PostListFilter{
 		TagSlug:  c.Query("tag"),
@@ -68,9 +82,15 @@ func (h *PostHandler) List(c *gin.Context) {
 	})
 }
 
-// GetBySlug handles GET /posts/:id — the path param is named "id" (not
-// "slug") to share Gin's GET route tree with GET /posts/:id/comments;
-// see router.go's doc comment for why.
+// @Summary      Get post by slug
+// @Description  Retrieve full post detail by its slug and increment view count.
+// @Tags         posts
+// @Produce      json
+// @Param        id   path      string  true  "Post Slug"
+// @Success      200  {object}  response.Response
+// @Failure      404  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/posts/{id} [get]
 func (h *PostHandler) GetBySlug(c *gin.Context) {
 	slug := c.Param("id")
 	userID, _ := middleware.UserID(c)
@@ -86,6 +106,18 @@ func (h *PostHandler) GetBySlug(c *gin.Context) {
 	response.Success(c, "Post retrieved", dto.NewPostDetailResponse(*post))
 }
 
+// @Summary      Create post
+// @Description  Create a new post. Tags supplied by name that do not exist are auto-created.
+// @Tags         posts
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      dto.CreatePostRequest  true  "Post creation payload"
+// @Success      201      {object}  response.Response
+// @Failure      400      {object}  response.Response
+// @Failure      401      {object}  response.Response
+// @Failure      500      {object}  response.Response
+// @Router       /api/v1/forum/posts [post]
 func (h *PostHandler) Create(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
 
@@ -115,6 +147,21 @@ func (h *PostHandler) Create(c *gin.Context) {
 	response.Created(c, "Post created", dto.NewPostDetailResponse(*post))
 }
 
+// @Summary      Update post
+// @Description  Update an existing post. Restricted to post Owner or ADMIN.
+// @Tags         posts
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id       path      int                    true  "Post ID"
+// @Param        request  body      dto.UpdatePostRequest  true  "Post update payload"
+// @Success      200      {object}  response.Response
+// @Failure      400      {object}  response.Response
+// @Failure      401      {object}  response.Response
+// @Failure      403      {object}  response.Response
+// @Failure      404      {object}  response.Response
+// @Failure      500      {object}  response.Response
+// @Router       /api/v1/forum/posts/{id} [put]
 func (h *PostHandler) Update(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -140,6 +187,18 @@ func (h *PostHandler) Update(c *gin.Context) {
 	response.Success(c, "Post updated", dto.NewPostDetailResponse(*post))
 }
 
+// @Summary      Soft-delete post
+// @Description  Soft delete a post. Comments and likes remain in DB but are excluded from read endpoints. Restricted to post Owner or ADMIN.
+// @Tags         posts
+// @Security     BearerAuth
+// @Param        id   path      int  true  "Post ID"
+// @Success      204  "No Content"
+// @Failure      400  {object}  response.Response
+// @Failure      401  {object}  response.Response
+// @Failure      403  {object}  response.Response
+// @Failure      404  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/posts/{id} [delete]
 func (h *PostHandler) SoftDelete(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -154,6 +213,21 @@ func (h *PostHandler) SoftDelete(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// @Summary      Change post status
+// @Description  Transition a post's status (DRAFT -> PUBLISHED, or PUBLISHED/DRAFT -> ARCHIVED). Restricted to post Owner or ADMIN.
+// @Tags         posts
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id       path      int                          true  "Post ID"
+// @Param        request  body      dto.ChangePostStatusRequest  true  "Status change payload"
+// @Success      200      {object}  response.Response
+// @Failure      400      {object}  response.Response
+// @Failure      401      {object}  response.Response
+// @Failure      403      {object}  response.Response
+// @Failure      404      {object}  response.Response
+// @Failure      500      {object}  response.Response
+// @Router       /api/v1/forum/posts/{id}/status [patch]
 func (h *PostHandler) ChangeStatus(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {

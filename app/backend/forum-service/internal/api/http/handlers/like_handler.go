@@ -21,6 +21,18 @@ func NewLikeHandler(svc *service.LikeService) *LikeHandler {
 	return &LikeHandler{svc: svc}
 }
 
+// @Summary      Like a post
+// @Description  Like a post for the authenticated user.
+// @Tags         likes
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id   path      int  true  "Post ID"
+// @Success      200  {object}  response.Response
+// @Failure      400  {object}  response.Response
+// @Failure      401  {object}  response.Response
+// @Failure      404  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/posts/{id}/like [post]
 func (h *LikeHandler) Like(c *gin.Context) {
 	postID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -41,6 +53,18 @@ func (h *LikeHandler) Like(c *gin.Context) {
 	response.Success(c, "Post liked", dto.LikeResponse{PostID: postID, Liked: true, LikeCount: count})
 }
 
+// @Summary      Unlike a post
+// @Description  Remove a post like for the authenticated user.
+// @Tags         likes
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id   path      int  true  "Post ID"
+// @Success      200  {object}  response.Response
+// @Failure      400  {object}  response.Response
+// @Failure      401  {object}  response.Response
+// @Failure      404  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/posts/{id}/like [delete]
 func (h *LikeHandler) Unlike(c *gin.Context) {
 	postID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {

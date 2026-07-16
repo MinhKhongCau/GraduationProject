@@ -21,6 +21,13 @@ func NewTagHandler(tagSvc *service.TagService, postSvc *service.PostService) *Ta
 	return &TagHandler{tagSvc: tagSvc, postSvc: postSvc}
 }
 
+// @Summary      List all tags
+// @Description  Get a list of all forum tags.
+// @Tags         tags
+// @Produce      json
+// @Success      200  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/tags [get]
 func (h *TagHandler) List(c *gin.Context) {
 	tags, err := h.tagSvc.List()
 	if err != nil {
@@ -34,6 +41,17 @@ func (h *TagHandler) List(c *gin.Context) {
 	response.Success(c, "Tags retrieved", resp)
 }
 
+// @Summary      List posts by tag slug
+// @Description  Get a paginated list of published posts associated with a specific tag slug.
+// @Tags         tags
+// @Produce      json
+// @Param        slug      path      string  true   "Tag Slug"
+// @Param        page      query     int     false  "Page number"  default(1)
+// @Param        pageSize  query     int     false  "Page size"    default(20)
+// @Success      200       {object}  response.Response
+// @Failure      404       {object}  response.Response
+// @Failure      500       {object}  response.Response
+// @Router       /api/v1/forum/tags/{slug}/posts [get]
 func (h *TagHandler) ListPosts(c *gin.Context) {
 	slug := c.Param("slug")
 	if _, err := h.tagSvc.GetBySlug(slug); err != nil {
