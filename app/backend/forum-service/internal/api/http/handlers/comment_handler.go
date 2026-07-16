@@ -23,6 +23,15 @@ func NewCommentHandler(svc *service.CommentService) *CommentHandler {
 
 // Tree handles GET /posts/:id/comments — :id here is the numeric post id
 // (see router.go's doc comment on why the GET tree shares one param name).
+// @Summary      Get comment tree
+// @Description  Get a nested comment tree for a specific post.
+// @Tags         comments
+// @Produce      json
+// @Param        id   path      int  true  "Post ID"
+// @Success      200  {object}  response.Response
+// @Failure      400  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/posts/{id}/comments [get]
 func (h *CommentHandler) Tree(c *gin.Context) {
 	postID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -41,6 +50,20 @@ func (h *CommentHandler) Tree(c *gin.Context) {
 	response.Success(c, "Comments retrieved", resp)
 }
 
+// @Summary      Create comment
+// @Description  Create a comment or reply to a comment on a specific post.
+// @Tags         comments
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id       path      int                       true  "Post ID"
+// @Param        request  body      dto.CreateCommentRequest  true  "Comment payload"
+// @Success      201      {object}  response.Response
+// @Failure      400      {object}  response.Response
+// @Failure      401      {object}  response.Response
+// @Failure      404      {object}  response.Response
+// @Failure      500      {object}  response.Response
+// @Router       /api/v1/forum/posts/{id}/comments [post]
 func (h *CommentHandler) Create(c *gin.Context) {
 	postID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -67,6 +90,21 @@ func (h *CommentHandler) Create(c *gin.Context) {
 	response.Created(c, "Comment created", dto.NewCommentResponse(comment))
 }
 
+// @Summary      Edit comment
+// @Description  Edit the content of a comment. Restricted to comment Owner or ADMIN.
+// @Tags         comments
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Param        id       path      int                       true  "Comment ID"
+// @Param        request  body      dto.UpdateCommentRequest  true  "Comment edit payload"
+// @Success      200      {object}  response.Response
+// @Failure      400      {object}  response.Response
+// @Failure      401      {object}  response.Response
+// @Failure      403      {object}  response.Response
+// @Failure      404      {object}  response.Response
+// @Failure      500      {object}  response.Response
+// @Router       /api/v1/forum/comments/{id} [put]
 func (h *CommentHandler) Edit(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -89,6 +127,18 @@ func (h *CommentHandler) Edit(c *gin.Context) {
 	response.Success(c, "Comment updated", dto.NewCommentResponse(comment))
 }
 
+// @Summary      Soft-delete comment
+// @Description  Soft-delete a comment. Replies remain intact but the deleted comment's content is set to null. Restricted to comment Owner or ADMIN.
+// @Tags         comments
+// @Security     BearerAuth
+// @Param        id   path      int  true  "Comment ID"
+// @Success      204  "No Content"
+// @Failure      400  {object}  response.Response
+// @Failure      401  {object}  response.Response
+// @Failure      403  {object}  response.Response
+// @Failure      404  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/comments/{id} [delete]
 func (h *CommentHandler) SoftDelete(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
