@@ -11,8 +11,19 @@ import (
 	"forum-service/internal/app/service"
 	"forum-service/internal/repository/dao"
 	"forum-service/internal/repository/db"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	_ "forum-service/docs"
 )
 
+// @title Forum Service API
+// @version 1.0
+// @description Forum Service API - MindCare
+// @BasePath /
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// 1. Load configuration.
 	configs.LoadConfig()
@@ -57,6 +68,10 @@ func main() {
 	// 5. Router + health check.
 	r := gin.Default()
 	apihttp.SetupRoutes(r, h)
+
+	// Swagger endpoint
+	r.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"service": "forum-service",
