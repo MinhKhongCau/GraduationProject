@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  pgvector_db:
+    image: ankane/pgvector:latest
+    container_name: mental_wellness_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_DB: wellness_bot_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
