@@ -225,4 +225,86 @@ docker exec -it booking-service sh -c '
 
 **Q: Service Python (assessment-service) thì xử lý token bằng gì?**
 
-> Dùng `PyJWT` + `cryptography`. Lấy RSA Public Key từ `GET /api/v1/auth/public-key`, decode base64, verify với `algorithms=["RS256"]`, kiểm tra `payload["role"] == "internal"`.
+> Bên Python sẽ có bộ thư viện riêng `PyJWT` để tạo Token (ký bằng `INTERNAL_SECRET_ASSESSMENT_SERVICE`). Logic vẫn là M2M JWT hoàn toàn tương tự.
+
+---
+
+## 📁 CÁCH TỔ CHỨC CODE CHUẨN CHO CLIENT REST (Golang)
+
+Để đảm bảo kiến trúc sạch (Clean Architecture), nếu **Service A** cần gọi sang **Service B**, bạn phải tạo cấu trúc thư mục chuẩn bên trong **Service A** như sau (Tham khảo mã nguồn: `payment-service` gọi sang `booking-service`):
+
+```text
+app/backend/payment-service/
+└── internal/
+    └── booking/                    <-- Tên của service bị gọi
+        └── client/                 <-- Nơi chứa toàn bộ logic giao tiếp nội bộ
+            ├── client.go           <-- Chứa Interface (Port) và các Struct DTO
+            └── rest_client.go      <-- Chứa implement thật sự bằng HTTP REST
+```
+
+### 1. File `client.go` (Định nghĩa Interface)
+Tập trung định nghĩa ra cái "Vỏ" (Interface) và các Struct (DTO). UseCase ở các module khác sẽ chỉ phụ thuộc vào file này, không được phụ thuộc vào `rest_client.go`.
+```go
+package client
+
+import "context"
+
+// Khai báo cấu trúc trả về
+type Appointment struct {
+	AppointmentID string `json:"appointment_id"`
+	Status        int    `json:"status"`
+}
+
+// Khai báo Interface để module khác tiêm (inject) vào
+type BookingServiceClient interface {
+	GetAppointment(ctx context.Context, appointmentID string) (*Appointment, error)
+	ConfirmAppointment(ctx context.Context, appointmentID string) error
+}
+```
+
+### 2. File `rest_client.go` (Thực thi bằng `pkg/httpclient`)
+File này sẽ implement Interface ở trên. Bắt buộc sử dụng `pkg/httpclient` của dự án để hệ thống **tự động hóa việc gắn JWT Token** vào mọi Request (M2M Auth).
+```go
+package client
+
+import "payment-service/pkg/httpclient"
+
+type restBookingClient struct {
+	baseURL    string 
+	httpClient *httpclient.Client
+}
+
+// Khởi tạo Client, truyền TokenManager vào cấu hình TokenProvider
+func NewRestBookingClient(baseURL string, tokenProvider httpclient.TokenProvider) BookingServiceClient {
+	return &restBookingClient{
+		baseURL: baseURL,
+		httpClient: httpclient.New(httpclient.Options{
+			MaxRetries:    3,
+			TokenProvider: tokenProvider, // Tự động xin Token và gắn "Bearer xxx" vào Request
+		}),
+	}
+}
+```
+
+### 3. Thực hiện Request nội bộ
+Khi gọi `c.httpClient.Do(ctx, req)`, hệ thống sẽ tự động gọi sang Auth Service (nếu thiếu Token), hoặc dùng Token trong Cache, và gắn `Authorization: Bearer <token>` vào request của bạn!
+
+```go
+func (c *restBookingClient) GetAppointment(ctx context.Context, appointmentID string) (*Appointment, error) {
+	url := fmt.Sprintf("%s/internal/appointments/%s", c.baseURL, appointmentID)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	// ... (bỏ qua bắt lỗi tạo req)
+	
+	// Thực thi Request (Token đã được tự động tiêm vào phía sau hậu trường)
+	resp, err := c.httpClient.Do(ctx, req)
+	
+	// ... (xử lý resp.StatusCode và JSON Decode như bình thường)
+	return &apiResp.Data, nil
+}
+```
+
+**Lợi ích của cách viết này:**
+1. **DRY (Don't Repeat Yourself):** Không cần phải tự viết code lấy Token, check Hết hạn, parse Header ở mọi hàm.
+2. **Resilience:** Cấu hình được số lần thử lại (`MaxRetries: 3`) nếu network chập chờn.
+3. **Hexagonal Architecture:** Dễ dàng thay đổi `restBookingClient` thành `grpcBookingClient` mà không ảnh hưởng tới UseCase.

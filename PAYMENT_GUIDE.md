@@ -1,65 +1,51 @@
-# 💳 HƯỚNG DẪN TEST TOÀN BỘ LUỒNG API PAYMENT SERVICE
+# 💳 HƯỚNG DẪN TEST TOÀN BỘ LUỒNG API PAYMENT & BOOKING (DÀNH CHO FE)
 
-Hệ thống thanh toán gồm **4 mảng nghiệp vụ** liên kết với nhau:
+Tài liệu này cung cấp chi tiết toàn bộ luồng API, Payload (Request/Response) và giải thích các cơ chế chạy ngầm (Hoa hồng 15%, Đồng bộ trạng thái) giúp Frontend tích hợp và test dễ dàng nhất.
 
-| # | Nhóm | Mô tả |
-|---|------|--------|
-| 1 | **Ví điện tử (Wallets)** | Xem số dư, nạp tiền nhanh (Dev), xem lịch sử giao dịch |
-| 2 | **Đặt lịch → Thanh toán (Full Flow)** | Booking → tạo order → VNPay Sandbox → tự động CONFIRMED |
-| 3 | **Rút tiền (Withdrawals)** | Liên kết ngân hàng → tạo phiếu rút → Admin duyệt/từ chối |
-| 4 | **Nạp tiền thủ công (Dev only)** | Nạp thẳng vào ví không qua cổng thanh toán |
+Mọi API đều đi qua **Kong API Gateway** tại `http://localhost:8000`. Cần truyền header xác thực:
+`Authorization: Bearer <JWT_TOKEN>`
 
 ---
 
-## 🗺️ Sơ đồ luồng tiền đầy đủ
+## 🗺️ TỔNG QUAN LUỒNG CHẠY (FLOWCHART)
 
 ```mermaid
-flowchart TD
-    subgraph "LUỒNG HOÀN CHỈNH: Booking → Payment → Confirm"
-        A[PATIENT đăng nhập] --> B["POST /booking/slots/:id/lock\nLock slot 15 phút"]
-        B --> C["POST /booking/appointments\nTạo lịch hẹn → PENDING_PAYMENT"]
-        C --> D["POST /payments/orders\n(có appointment_id)\nTạo đơn hàng VNPay"]
-        D --> E[Thanh toán trên VNPay Sandbox]
-        E --> F["GET /payments/vnpay-ipn\nVNPay tự gọi IPN Webhook"]
-        F --> G["[Outbox Worker ~2s]\nPayment gọi nội bộ sang Booking"]
-        G --> H[✅ Lịch hẹn → CONFIRMED\nSlot → OCCUPIED\nVí Expert được cộng tiền]
-    end
+sequenceDiagram
+    actor Patient
+    participant BookingService
+    participant PaymentService
+    participant VNPay
+    actor Expert
 
-    subgraph "LUỒNG EXPERT: Rút tiền về ngân hàng"
-        H -->|Khi Expert muốn rút| I["Ví Expert có available_balance"]
-        I --> J["POST /bank-accounts\nKhai báo tài khoản ngân hàng"]
-        J --> K["POST /withdrawals\nYêu cầu rút tiền"]
-        K --> L{"Số tiền rút?"}
-        L -->|"< 5,000,000 VND"| M[✅ Tự động APPROVED]
-        L -->|">= 5,000,000 VND"| N["⏳ PENDING → Admin duyệt"]
-    end
+    %% Bước 1 & 2
+    Patient->>BookingService: 1. Đặt lịch hẹn (Trạng thái: PENDING_PAYMENT)
+    Patient->>PaymentService: 2. Tạo đơn thanh toán (Kèm appointment_id)
+    Note over PaymentService: Đơn hàng PENDING. Trích trước 15% hoa hồng trên DB.
+    PaymentService-->>Patient: Trả về link VNPay Sandbox
+    
+    %% Bước 3 & 4
+    Patient->>VNPay: 3. Nhập thẻ test NCB để thanh toán
+    VNPay->>PaymentService: 4. Gọi Webhook ẩn (IPN) báo thành công
+    
+    %% Bước 5 & 6
+    PaymentService->>BookingService: 5. Chạy ngầm (Outbox): Báo Booking đổi trạng thái sang CONFIRMED
+    PaymentService->>PaymentService: 6. Chạy ngầm: Cộng số tiền thực nhận (85%) vào Ví Expert
+    
+    %% Rút tiền
+    Expert->>PaymentService: 7. Thêm Ngân hàng & Rút tiền từ Ví
 ```
 
 ---
 
-## 🔑 Yêu cầu chung trước khi test
+## 🚀 PHẦN 1: LUỒNG CHÍNH ĐẶT LỊCH VÀ THANH TOÁN (PATIENT)
 
-- Mọi API đều đi qua **Kong API Gateway** tại `http://localhost:8000`
-- Các API Private yêu cầu header JWT token:
-  ```
-  Authorization: Bearer <JWT_TOKEN>
-  ```
-- Lấy token bằng cách đăng nhập qua `POST /api/v1/auth/login` với tài khoản tương ứng Role cần test.
-
----
-
-## 🚀 LUỒNG CHÍNH: Đặt lịch → Thanh toán → Xác nhận tự động
-
-> Đây là luồng đầy đủ mới nhất, test được toàn bộ kết nối Payment ↔ Booking.
-
-### Bước 1 — PATIENT lock slot (15 phút)
-
-```
+### Bước 1 — Khóa Slot tạm thời (15 phút)
+Giữ chỗ trước khi tạo lịch để tránh người khác đặt trùng.
+```http
 POST http://localhost:8000/api/v1/booking/slots/<slot_id>/lock
 Role: PATIENT
 ```
-
-**Response mẫu:**
+**Response (200 OK):**
 ```json
 {
   "code": 200,
@@ -71,27 +57,23 @@ Role: PATIENT
 }
 ```
 
----
-
-### Bước 2 — PATIENT tạo lịch hẹn
-
-```
+### Bước 2 — Tạo lịch hẹn
+Chuyển Slot đã khóa thành một cuộc hẹn chờ thanh toán.
+```http
 POST http://localhost:8000/api/v1/booking/appointments
 Role: PATIENT
 ```
-
-**Body:**
+**Request Body:**
 ```json
 {
-  "slot_id": "uuid-của-slot-vừa-lock"
+  "slot_id": "uuid-của-slot-ở-bước-1"
 }
 ```
-
-**Response mẫu:**
+**Response (200 OK):**
 ```json
 {
   "code": 200,
-  "message": "Appointment created successfully! Please complete payment within 15 minutes.",
+  "message": "Appointment created successfully!",
   "data": {
     "appointment_id": "uuid-của-lịch-hẹn",
     "status": "PENDING_PAYMENT",
@@ -100,19 +82,14 @@ Role: PATIENT
   }
 }
 ```
+> ⚠️ **FE Lưu ý:** Lưu lại `appointment_id` để nạp vào API thanh toán bên dưới.
 
-> ⚠️ **Lưu lại `appointment_id`** — cần dùng ở bước tiếp theo.
-
----
-
-### Bước 3 — PATIENT tạo đơn hàng thanh toán (CÓ appointment_id)
-
-```
+### Bước 3 — Tạo đơn hàng thanh toán VNPay
+```http
 POST http://localhost:8000/api/v1/payments/orders
 Role: PATIENT
 ```
-
-**Body:**
+**Request Body:**
 ```json
 {
   "payer_id": "uuid-của-patient",
@@ -122,13 +99,13 @@ Role: PATIENT
   "appointment_id": "uuid-của-lịch-hẹn-ở-bước-2"
 }
 ```
+> 🕵️ **LUỒNG ẨN (Giải thích hệ thống):** Ngay khi tạo Order, hệ thống đã tính sẵn mức hoa hồng (Commission). Ví dụ `amount: 200,000đ` thì Hoa hồng 15% là `30,000đ`. Số tiền Thực nhận (Net Amount) Expert sẽ được hưởng là `170,000đ`.
 
-> 💡 `appointment_id` là trường **mới** — giúp Payment Service biết phải confirm lịch hẹn nào sau khi thanh toán xong.
-
-**Response mẫu:**
+**Response (200 OK):**
 ```json
 {
   "code": 200,
+  "message": "Payment order created successfully",
   "data": {
     "order_id": "uuid-đơn-hàng",
     "gross_amount": 200000,
@@ -139,74 +116,46 @@ Role: PATIENT
   }
 }
 ```
+> ⚠️ **FE Action:** Chuyển hướng (Redirect) người dùng sang `payment_url` để họ nhập thẻ.
 
-> ⚠️ **Copy `payment_url`** — dán vào trình duyệt để thanh toán ở bước tiếp theo.
+### Bước 4 — Bảng thẻ Test cho VNPay Sandbox
+Trên giao diện VNPay, chọn **"Thẻ nội địa và tài khoản ngân hàng"** -> Chọn ngân hàng **NCB**, và nhập đúng thông tin sau:
 
----
-
-### Bước 4 — Thanh toán trên trang VNPay Sandbox (Trình duyệt)
-
-1. Dán `payment_url` vào thanh địa chỉ trình duyệt.
-2. Chọn **"Thẻ nội địa và tài khoản ngân hàng"**.
-3. Chọn ngân hàng **NCB**.
-4. Nhập thông tin thẻ test:
-
-| Trường | Giá trị |
-|--------|---------:|
+| Thông tin | Giá trị |
+|-----------|---------|
+| Ngân hàng | **NCB** |
 | Số thẻ | `9704198526191432198` |
 | Tên chủ thẻ | `NGUYEN VAN A` |
 | Ngày phát hành | `07/15` |
 | Mã OTP | `123456` |
 
-5. Bấm **Xác nhận thanh toán**.
+### Bước 5 — Hệ thống xử lý ngầm sau khi thanh toán
+Ngay sau khi nhập thẻ thành công, bạn không cần làm gì thêm, hệ thống Backend sẽ chạy ngầm các bước sau trong chưa tới 2 giây:
+1. **IPN Webhook:** VNPay bắn tín hiệu báo thanh toán thành công về Backend.
+2. **Cộng tiền Ví Expert:** Số tiền `net_amount` (ví dụ 170,000đ) lập tức được cộng vào `available_balance` của Expert. Số dư của Patient giữ nguyên (vì họ trả bằng tiền thẻ ngân hàng bên ngoài).
+3. **Đồng bộ Lịch hẹn (Outbox Pattern):** Payment Service tự động gọi Booking Service để đổi trạng thái Lịch hẹn sang `CONFIRMED`.
+
+**FE có thể gọi lại API Booking để kiểm chứng:**
+`GET /api/v1/booking/appointments` -> Kiểm tra xem lịch hẹn đã chuyển sang `CONFIRMED` chưa.
 
 ---
 
-### Bước 5 — Chờ Outbox Worker (~2 giây) và kiểm tra kết quả
+## 💰 PHẦN 2: LUỒNG QUẢN LÝ VÍ & RÚT TIỀN (EXPERT)
 
-Sau khi thanh toán thành công, luồng tự động diễn ra:
-
-```
-VNPay → IPN → Payment Service (cập nhật order SUCCESS + lưu outbox event)
-                                    ↓ (Outbox Worker quét mỗi 2 giây)
-                         Booking Service nhận internal call
-                                    ↓
-                  Lịch hẹn: PENDING_PAYMENT → CONFIRMED ✅
-                  Slot: LOCKED → OCCUPIED ✅
-                  Ví Expert: cộng 170,000 VND (sau khi trừ 15% hoa hồng) ✅
-```
-
-**Kiểm tra lịch hẹn đã CONFIRMED chưa:**
-```
-GET http://localhost:8000/api/v1/booking/appointments
-Role: PATIENT
-```
-
-**Kiểm tra ví Expert đã được cộng tiền chưa:**
-```
+### 2.1 - Xem số dư ví
+```http
 GET http://localhost:8000/api/v1/payments/wallets/me
 Role: EXPERT
 ```
-
----
-
-## 1️⃣ Luồng phụ: Quản lý ví điện tử (PATIENT / EXPERT)
-
-### API — Xem thông tin ví
-```
-GET http://localhost:8000/api/v1/payments/wallets/me
-Role: PATIENT | EXPERT
-```
-
-**Response mẫu (ví mới — sẽ tự tạo nếu chưa tồn tại):**
+**Response (200 OK):**
 ```json
 {
   "code": 200,
   "message": "Wallet retrieved successfully",
   "data": {
     "id": "uuid-của-ví",
-    "user_id": "uuid-của-bạn",
-    "available_balance": 0,
+    "user_id": "uuid-của-expert",
+    "available_balance": 170000,
     "pending_balance": 0,
     "locked_balance": 0,
     "created_at": 1720000000
@@ -214,121 +163,68 @@ Role: PATIENT | EXPERT
 }
 ```
 
----
-
-### API — Nạp tiền nhanh ⚡ (Dev/Test only — không qua VNPay)
-```
+### 2.2 - (Dành cho Tester) Nạp tiền nhanh
+Dùng để bơm tiền trực tiếp vào ví Expert để test luồng rút tiền nhanh mà không cần tạo lịch hẹn.
+```http
 POST http://localhost:8000/api/v1/payments/wallets/top-up
-Role: PATIENT | EXPERT
+Role: EXPERT
 ```
-
-**Body:**
+**Request Body:**
 ```json
 {
-  "amount": 1000000
+  "amount": 10000000
 }
 ```
 
-> **Dùng khi nào?** Dùng API này để nạp tiền thẳng vào ví mà không cần qua VNPay. Thích hợp để test nhanh luồng rút tiền.
-
----
-
-### API — Xem lịch sử giao dịch ví
-```
-GET http://localhost:8000/api/v1/payments/wallets/history
-Role: PATIENT | EXPERT
-```
-
----
-
-## 2️⃣ Luồng phụ: Liên kết ngân hàng & Rút tiền (EXPERT)
-
-> Trước tiên Expert cần có `available_balance > 0`. Dùng API top-up hoặc hoàn thành luồng chính ở trên.
-
-### API — Liên kết tài khoản ngân hàng
-```
+### 2.3 - Liên kết tài khoản ngân hàng
+```http
 POST http://localhost:8000/api/v1/payments/bank-accounts
 Role: EXPERT
 ```
-
-**Body:**
+**Request Body:**
 ```json
 {
-  "bank_name": "Vietcombank",
+  "bank_code": "Vietcombank",
   "account_number": "1011223344",
-  "account_holder": "NGUYEN VAN B"
+  "account_holder_name": "NGUYEN VAN B"
 }
 ```
+> 🛠 **LƯU Ý TEST MOCK:** Hiện tại API đang bật chế độ giả lập check tên ngân hàng. 
+> Nếu bạn nhập `account_number` là `"1011223344"`, bắt buộc `account_holder_name` phải nhập chính xác là `"NGUYEN VAN B"`. Nếu sai tên sẽ báo lỗi ngay lập tức. Các số tài khoản khác sẽ auto pass.
 
----
-
-### API — Lấy danh sách ngân hàng đã liên kết
-```
-GET http://localhost:8000/api/v1/payments/bank-accounts
-Role: EXPERT
-```
-
----
-
-### API — Yêu cầu rút tiền
-```
+### 2.4 - Tạo Yêu cầu Rút tiền
+```http
 POST http://localhost:8000/api/v1/payments/withdrawals
 Role: EXPERT
 ```
-
-**Body:**
+**Request Body:**
 ```json
 {
-  "bank_account_id": "uuid-của-tài-khoản-ngân-hàng",
+  "bank_account_id": "uuid-ngân-hàng-đã-liên-kết-bên-trên",
   "amount": 2500000
 }
 ```
 
-**Quy tắc xét duyệt tự động:**
-
-| Điều kiện | Kết quả |
-|-----------|---------|
-| Số tiền **< 5,000,000 VND** | ✅ Tự động **APPROVED** — Trừ tiền ví ngay lập tức |
-| Số tiền **≥ 5,000,000 VND** | ⏳ Trạng thái **PENDING** — Tiền bị khóa, chờ Admin duyệt |
+> 🕵️ **CƠ CHẾ XÉT DUYỆT RÚT TIỀN (ẨN):**
+> * **Nếu Rút < 5,000,000 VNĐ:** Phiếu rút tự động được **APPROVED** (Duyệt). Số dư bị trừ ngay. Hàm giả lập ngân hàng sẽ chạy ngầm và báo hoàn tất (`COMPLETED`) sau 2 giây.
+> * **Nếu Rút >= 5,000,000 VNĐ:** Phiếu rút bị treo ở trạng thái **PENDING_APPROVAL** (Chờ duyệt). Số tiền trong ví bị khóa (`locked_balance`). Chuyển sang Bước 3 để Admin duyệt.
 
 ---
 
-## 3️⃣ Luồng phụ: Admin xét duyệt rút tiền (ADMIN)
+## 🛡️ PHẦN 3: LUỒNG DUYỆT RÚT TIỀN (ADMIN)
+*(Chỉ dùng khi Expert rút tiền >= 5.000.000 VNĐ)*
 
-> Chỉ áp dụng cho phiếu rút ≥ 5,000,000 VND đang ở trạng thái `PENDING`.
-
-### API — Phê duyệt yêu cầu rút tiền
-```
+### Phê duyệt lệnh rút
+```http
 POST http://localhost:8000/api/v1/payments/withdrawals/:id/approve
 Role: ADMIN
 ```
+- `:id` là ID của Withdrawal request
+- **Kết quả:** Trạng thái chuyển thành `APPROVED`. Số tiền bị khóa được giải ngân và gửi lệnh rút ra ngân hàng (Mock sau 2 giây sẽ báo `COMPLETED`).
 
-- `:id` = Withdrawal ID nhận được từ API tạo rút tiền
-- **Kết quả:** Phiếu rút chuyển sang `APPROVED`, tiền trong `locked_balance` được giải ngân.
-
----
-
-### API — Từ chối yêu cầu rút tiền
-```
+### Từ chối lệnh rút
+```http
 POST http://localhost:8000/api/v1/payments/withdrawals/:id/reject
 Role: ADMIN
 ```
-
-- `:id` = Withdrawal ID nhận được từ API tạo rút tiền
-- **Kết quả:** Phiếu rút chuyển sang `REJECTED`, tiền đang bị khóa được **hoàn trả** về `available_balance` của Expert.
-
----
-
-## 🧪 Checklist tự test nhanh (5 phút)
-
-```
-[ ] 1. Đăng nhập PATIENT → lấy JWT
-[ ] 2. GET /booking/slots → tìm slot available
-[ ] 3. POST /booking/slots/:id/lock → lock slot
-[ ] 4. POST /booking/appointments → tạo lịch → lưu appointment_id
-[ ] 5. POST /payments/orders (có appointment_id) → lấy payment_url
-[ ] 6. Mở payment_url trên trình duyệt → điền thẻ test NCB → xác nhận
-[ ] 7. Chờ ~5 giây
-[ ] 8. GET /booking/appointments → kiểm tra status = "CONFIRMED" ✅
-[ ] 9. Đăng nhập EXPERT → GET /payments/wallets/me → kiểm tra pending_balance tăng ✅
-```
+- **Kết quả:** Trạng thái chuyển thành `REJECTED`. Số tiền bị khóa được hoàn trả lại vào `available_balance` của Expert.

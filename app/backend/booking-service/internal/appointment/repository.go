@@ -45,7 +45,11 @@ func (r *pgRepository) GetAppointmentBySlotID(slotID string) (*domain.Appointmen
 // Lấy Appointment theo AppointmentID
 func (r *pgRepository) GetAppointmentByID(appointmentID string) (*domain.Appointment, error) {
 	var appt domain.Appointment
-	err := r.db.Where("appointment_id = ?", appointmentID).First(&appt).Error
+	err := r.db.Table("Booking_Appointments").
+		Select("\"Booking_Appointments\".*, \"Booking_Expert_Slots\".price").
+		Joins("JOIN \"Booking_Expert_Slots\" ON \"Booking_Appointments\".slot_id = \"Booking_Expert_Slots\".slot_id").
+		Where("\"Booking_Appointments\".appointment_id = ?", appointmentID).
+		First(&appt).Error
 	if err != nil {
 		return nil, err
 	}

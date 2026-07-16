@@ -42,24 +42,9 @@ func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient *gate
 }
 
 func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string, appointmentID *string) (*entity.PaymentOrder, string, error) {
-	// Mức hoa hồng là 15%
-	commissionRate := 0.15
-	commissionAmount := vo.Money(float64(grossAmount) * commissionRate)
-	netAmount := grossAmount.Sub(commissionAmount)
+	var parsedApptID *uuid.UUID
 
-	order := &entity.PaymentOrder{
-		ID:               uuid.New(),
-		PayerID:          payerID,
-		ExpertID:         expertID,
-		GrossAmount:      grossAmount,
-		CommissionRate:   commissionRate,
-		CommissionAmount: commissionAmount,
-		NetAmount:        netAmount,
-		Gateway:          gatewayName,
-		Status:           entity.OrderStatusPending,
-	}
-
-	// Gắn appointment_id nếu được cung cấp
+	// Nếu có appointment_id, ta phải lấy giá từ Booking Service để tránh lỗi bảo mật
 	if appointmentID != nil && *appointmentID != "" {
 		parsed, err := uuid.Parse(*appointmentID)
 		if err != nil {
@@ -83,7 +68,30 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid
 			return nil, "", errors.New("appointment is not in PENDING_PAYMENT status")
 		}
 		
-		order.AppointmentID = &parsed
+		// 4. BẢO MẬT: Ghi đè số tiền gửi từ FE bằng giá trị thực tế của lịch khám
+		if appt.Price > 0 {
+			grossAmount = vo.Money(appt.Price)
+		}
+		
+		parsedApptID = &parsed
+	}
+
+	// Mức hoa hồng là 15% - Tính toán DỰA TRÊN grossAmount đã được xác thực
+	commissionRate := 0.15
+	commissionAmount := vo.Money(float64(grossAmount) * commissionRate)
+	netAmount := grossAmount.Sub(commissionAmount)
+
+	order := &entity.PaymentOrder{
+		ID:               uuid.New(),
+		PayerID:          payerID,
+		ExpertID:         expertID,
+		GrossAmount:      grossAmount,
+		CommissionRate:   commissionRate,
+		CommissionAmount: commissionAmount,
+		NetAmount:        netAmount,
+		Gateway:          gatewayName,
+		Status:           entity.OrderStatusPending,
+		AppointmentID:    parsedApptID,
 	}
 
 	if err := u.repo.Create(order); err != nil {

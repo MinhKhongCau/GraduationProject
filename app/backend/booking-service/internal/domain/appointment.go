@@ -24,6 +24,7 @@ type Appointment struct {
 	CancelledBy        *string           `json:"cancelled_by"        gorm:"column:cancelled_by;type:varchar(50)"` // SYSTEM / PATIENT / EXPERT
 	Status             AppointmentStatus `json:"status"              gorm:"column:status;type:smallint;default:0"`
 	StatusLabel        string            `json:"status_label"        gorm:"-"` // Tự động điền bởi AfterFind hook
+	Price              float64           `json:"price"               gorm:"-"` // Giá tiền lấy từ bảng Slot thông qua JOIN
 	MeetingLink        string            `json:"meeting_link"        gorm:"column:meeting_link"`
 	CreatedAt          int64             `json:"created_at"          gorm:"column:created_at"` // Unix ms
 	UpdatedAt          int64             `json:"updated_at"          gorm:"column:updated_at"` // Unix ms
