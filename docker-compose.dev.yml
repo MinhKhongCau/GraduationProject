@@ -27,6 +27,7 @@ services:
       PAYMENT_DB_NAME: ${PAYMENT_DB_NAME}
       BOOKING_DB_NAME: ${BOOKING_DB_NAME}
       ASSESSMENT_DB_NAME: ${ASSESSMENT_DB_NAME}
+      FORUM_DB_NAME: ${FORUM_DB_NAME}
     ports:
       - "${DB_PORT}:5432"
     volumes:
@@ -205,7 +206,38 @@ services:
       - INTERNAL_CLIENT_ID=${ASSESSMENT_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_ASSESSMENT}
 
-  # 8. API GATEWAY (Kong)
+  # 8. FORUM SERVICE (Go)
+  # Not yet wired into api-gateway/kong.yml — see app/backend/forum-service/SPEC.md
+  # Context for why gateway wiring is deferred. Reachable directly on PORT_FORUM_SERVICE
+  # for now.
+  forum-service:
+    build:
+      context: ./app/backend/forum-service
+      dockerfile: Dockerfile
+    container_name: forum-service
+    restart: always
+    ports:
+      - "${PORT_FORUM_SERVICE}:${PORT_FORUM_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - GO_ENV=${APP_ENV}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${FORUM_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=${DB_PORT}
+      - PORT=${PORT_FORUM_SERVICE}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+
+  # 9. API GATEWAY (Kong)
   api-gateway:
     build:
       context: ./app/backend/gateway
