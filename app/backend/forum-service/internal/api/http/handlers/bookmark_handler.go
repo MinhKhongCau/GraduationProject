@@ -21,6 +21,18 @@ func NewBookmarkHandler(svc *service.BookmarkService) *BookmarkHandler {
 	return &BookmarkHandler{svc: svc}
 }
 
+// @Summary      Bookmark a post
+// @Description  Bookmark a post for the authenticated user.
+// @Tags         bookmarks
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id   path      int  true  "Post ID"
+// @Success      200  {object}  response.Response
+// @Failure      400  {object}  response.Response
+// @Failure      401  {object}  response.Response
+// @Failure      404  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/posts/{id}/bookmark [post]
 func (h *BookmarkHandler) Bookmark(c *gin.Context) {
 	postID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -41,6 +53,18 @@ func (h *BookmarkHandler) Bookmark(c *gin.Context) {
 	response.Success(c, "Post bookmarked", dto.BookmarkResponse{PostID: postID, Bookmarked: true, BookmarkCount: count})
 }
 
+// @Summary      Remove bookmark
+// @Description  Remove a post bookmark for the authenticated user.
+// @Tags         bookmarks
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id   path      int  true  "Post ID"
+// @Success      200  {object}  response.Response
+// @Failure      400  {object}  response.Response
+// @Failure      401  {object}  response.Response
+// @Failure      404  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/posts/{id}/bookmark [delete]
 func (h *BookmarkHandler) Remove(c *gin.Context) {
 	postID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
@@ -61,6 +85,17 @@ func (h *BookmarkHandler) Remove(c *gin.Context) {
 	response.Success(c, "Bookmark removed", dto.BookmarkResponse{PostID: postID, Bookmarked: false, BookmarkCount: count})
 }
 
+// @Summary      List my bookmarks
+// @Description  Get a paginated list of bookmarked posts of the authenticated user.
+// @Tags         bookmarks
+// @Security     BearerAuth
+// @Produce      json
+// @Param        page      query  int  false  "Page number"  default(1)
+// @Param        pageSize  query  int  false  "Page size"    default(20)
+// @Success      200  {object}  response.Response
+// @Failure      401  {object}  response.Response
+// @Failure      500  {object}  response.Response
+// @Router       /api/v1/forum/users/me/bookmarks [get]
 func (h *BookmarkHandler) ListMine(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
 	page := parseIntOrDefault(c.Query("page"), 1)
