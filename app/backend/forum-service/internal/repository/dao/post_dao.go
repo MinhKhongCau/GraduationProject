@@ -9,7 +9,7 @@ import (
 type PostDAO struct {
 	ID            int64      `gorm:"column:id;primaryKey"`
 	CategoryID    int64      `gorm:"column:category_id"`
-	AuthorID      int64      `gorm:"column:author_id"`
+	AuthorID      string     `gorm:"column:author_id"`
 	Title         string     `gorm:"column:title"`
 	Slug          string     `gorm:"column:slug"`
 	Summary       string     `gorm:"column:summary"`
