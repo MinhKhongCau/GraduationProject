@@ -3,8 +3,9 @@ _transform: true
 
 services:
   # ═══════════════════════════════════════════════════════════════════════════
-  # SECURITY: Block endpoint /internal/* from Internet.
-  # This path just use in Docker internal network (container-to-container).
+  # SECURITY: Chặn hoàn toàn /internal/* từ Internet.
+  # Path này chỉ được gọi trong Docker internal network (container-to-container).
+  # Route này phải khai báo TRƯỚC các route service khác để được match ưu tiên.
   # ═══════════════════════════════════════════════════════════════════════════
   - name: block-internal-routes
     # Dummy URL — request sẽ bị terminated trước khi forward đến đây
@@ -18,12 +19,8 @@ services:
           - name: request-termination
             config:
               status_code: 403
+              body: '{"message":"Forbidden: /internal paths are not accessible from outside the network"}'
               content_type: "application/json"
-              body: |
-                {
-                  "message": "Forbidden: /internal paths are not accessible from outside the network"
-                }
-
 
   - name: auth-service
     url: http://auth-upstream
@@ -61,10 +58,18 @@ services:
   - name: payment-service
     url: http://payment-upstream
     routes:
-      - name: payment-routes
+      - name: payment-public-routes
         paths:
-          - /api/v1/payment
+          - /api/v1/payments/vnpay-ipn
         strip_path: false
+      - name: payment-private-routes
+        paths:
+          - /api/v1/payments
+        strip_path: false
+        plugins:
+          - name: mindcare-auth
+            config:
+              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
       - name: payment-docs-routes
         paths:
           - /payment
@@ -111,43 +116,6 @@ services:
           - /openapi.json
           - /redoc
         strip_path: false
-
-  - name: forum-service
-    url: http://forum-upstream
-    routes:
-      - name: forum-public-routes
-        paths:
-          - /api/v1/forum
-        methods:
-          - GET
-        strip_path: false
-      - name: forum-private-bookmarks-route
-        paths:
-          - /api/v1/forum/users/me/bookmarks
-        methods:
-          - GET
-        strip_path: false
-        plugins:
-          - name: mindcare-auth
-            config:
-              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
-      - name: forum-private-routes
-        paths:
-          - /api/v1/forum
-        methods:
-          - POST
-          - PUT
-          - PATCH
-          - DELETE
-        strip_path: false
-        plugins:
-          - name: mindcare-auth
-            config:
-              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
-      - name: forum-docs-routes
-        paths:
-          - /forum
-        strip_path: true
 
 upstreams:
   - name: auth-upstream
@@ -218,21 +186,6 @@ upstreams:
   - name: assessment-upstream
     targets:
       - target: assessment-service:5000
-    healthchecks:
-      active:
-        type: http
-        http_path: /health
-        healthy:
-          interval: 5
-          successes: 2
-        unhealthy:
-          interval: 5
-          http_failures: 2
-          timeouts: 2
-
-  - name: forum-upstream
-    targets:
-      - target: forum-service:8084
     healthchecks:
       active:
         type: http

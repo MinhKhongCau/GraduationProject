@@ -17,13 +17,14 @@ func (s AppointmentStatus) String() string {
 // Appointment - Cuộc hẹn đã đặt
 type Appointment struct {
 	AppointmentID      string            `json:"appointment_id"      gorm:"column:appointment_id;primaryKey;type:uuid"`
-	SlotID             string            `json:"slot_id"             gorm:"column:slot_id;type:uuid;unique"`
+	SlotID             string            `json:"slot_id"             gorm:"column:slot_id;type:uuid;index"`
 	PatientID          string            `json:"patient_id"          gorm:"column:patient_id;type:uuid;not null"`
 	ExpertID           string            `json:"expert_id"           gorm:"column:expert_id;type:uuid;not null"`
 	CancellationReason string            `json:"cancellation_reason" gorm:"column:cancellation_reason"`
 	CancelledBy        *string           `json:"cancelled_by"        gorm:"column:cancelled_by;type:varchar(50)"` // SYSTEM / PATIENT / EXPERT
 	Status             AppointmentStatus `json:"status"              gorm:"column:status;type:smallint;default:0"`
 	StatusLabel        string            `json:"status_label"        gorm:"-"` // Tự động điền bởi AfterFind hook
+	Price              float64           `json:"price"               gorm:"-"` // Giá tiền lấy từ bảng Slot thông qua JOIN
 	MeetingLink        string            `json:"meeting_link"        gorm:"column:meeting_link"`
 	CreatedAt          int64             `json:"created_at"          gorm:"column:created_at"` // Unix ms
 	UpdatedAt          int64             `json:"updated_at"          gorm:"column:updated_at"` // Unix ms

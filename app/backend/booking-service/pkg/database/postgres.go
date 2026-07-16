@@ -171,6 +171,9 @@ func runPreMigrations(db *gorm.DB) {
 	`)
 	db.Exec(`ALTER TABLE "Booking_Appointments" ALTER COLUMN status SET DEFAULT 0`)
 
+	// 2b. Xoá bỏ unique constraint trên slot_id của Booking_Appointments
+	db.Exec(`ALTER TABLE "Booking_Appointments" DROP CONSTRAINT IF EXISTS "uni_Booking_Appointments_slot_id"`)
+
 	// 3. Chuyển các cột int64 (thời gian) đang là timestamp with time zone trên DB cũ sang bigint (Unix ms)
 	timestampColumns := []struct {
 		table string

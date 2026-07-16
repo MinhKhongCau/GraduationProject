@@ -7,6 +7,7 @@ import (
 
 type Usecase interface {
 	CreateAppointment(patientID, expertID, slotID string) (*domain.Appointment, error)
+	GetAppointmentByID(appointmentID string) (*domain.Appointment, error)
 	CancelAppointment(appointmentID, userID, userRole, reason string) error
 	ConfirmPayment(appointmentID string) error
 	HandlePaymentFailure(appointmentID string) error
@@ -36,6 +37,11 @@ func (u *appointmentUsecase) CreateAppointment(patientID, expertID, slotID strin
 	}
 	return appointment, nil
 }
+
+func (u *appointmentUsecase) GetAppointmentByID(appointmentID string) (*domain.Appointment, error) {
+	return u.repo.GetAppointmentByID(appointmentID)
+}
+
 
 func (u *appointmentUsecase) CancelAppointment(appointmentID, userID, userRole, reason string) error {
 	if userRole == "PATIENT" {
