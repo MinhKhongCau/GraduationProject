@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -19,18 +18,15 @@ const (
 
 // RequireAuth enforces that the gateway-injected X-User-Id header is
 // present (SPEC.md §4) — forum-service trusts this header rather than
-// validating a JWT itself. Returns 401 if missing or not a valid int64.
+// validating a JWT itself. X-User-Id is the account's UUID (same as every
+// other MindCare service's accountId/expertId/patientId), not a numeric
+// id — matches the plain c.GetHeader() convention used by booking-service
+// et al. Returns 401 if missing.
 func RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userIDStr := c.GetHeader(HeaderUserID)
-		if userIDStr == "" {
+		userID := c.GetHeader(HeaderUserID)
+		if userID == "" {
 			response.Error(c, http.StatusUnauthorized, "Missing X-User-Id header", "unauthorized")
-			c.Abort()
-			return
-		}
-		userID, err := strconv.ParseInt(userIDStr, 10, 64)
-		if err != nil {
-			response.Error(c, http.StatusUnauthorized, "Invalid X-User-Id header", "unauthorized")
 			c.Abort()
 			return
 		}
@@ -60,14 +56,15 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 	}
 }
 
-// UserID reads the authenticated user id set by RequireAuth. ok is false if
-// RequireAuth didn't run on this route (i.e. a public endpoint).
-func UserID(c *gin.Context) (int64, bool) {
+// UserID reads the authenticated user id (accountId, a UUID string) set by
+// RequireAuth. ok is false if RequireAuth didn't run on this route (i.e. a
+// public endpoint).
+func UserID(c *gin.Context) (string, bool) {
 	v, exists := c.Get(contextUserID)
 	if !exists {
-		return 0, false
+		return "", false
 	}
-	id, ok := v.(int64)
+	id, ok := v.(string)
 	return id, ok
 }
 

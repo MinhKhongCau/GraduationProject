@@ -17,7 +17,7 @@ func NewBookmarkService(bookmarkRepo *dao.PostBookmarkRepository, postRepo *dao.
 	return &BookmarkService{bookmarkRepo: bookmarkRepo, postRepo: postRepo, tagRepo: tagRepo}
 }
 
-func (s *BookmarkService) Bookmark(postID, userID int64) (int, error) {
+func (s *BookmarkService) Bookmark(postID int64, userID string) (int, error) {
 	post, err := s.postRepo.FindByID(postID)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
@@ -39,7 +39,7 @@ func (s *BookmarkService) Bookmark(postID, userID int64) (int, error) {
 	return post.BookmarkCount + 1, nil
 }
 
-func (s *BookmarkService) RemoveBookmark(postID, userID int64) (int, error) {
+func (s *BookmarkService) RemoveBookmark(postID int64, userID string) (int, error) {
 	post, err := s.postRepo.FindByID(postID)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
@@ -64,7 +64,7 @@ func (s *BookmarkService) RemoveBookmark(postID, userID int64) (int, error) {
 // ListMine returns the caller's bookmarked posts, most recently bookmarked
 // first (README.md's GET /users/me/bookmarks), reusing PostListResult's
 // shape since the response mirrors GET /posts.
-func (s *BookmarkService) ListMine(userID int64, page, pageSize int) (*PostListResult, error) {
+func (s *BookmarkService) ListMine(userID string, page, pageSize int) (*PostListResult, error) {
 	ids, total, err := s.bookmarkRepo.FindPostIDsByUser(userID, page, pageSize)
 	if err != nil {
 		return nil, err
