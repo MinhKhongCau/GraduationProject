@@ -112,6 +112,43 @@ services:
           - /redoc
         strip_path: false
 
+  - name: forum-service
+    url: http://forum-upstream
+    routes:
+      - name: forum-public-routes
+        paths:
+          - /api/v1/forum
+        methods:
+          - GET
+        strip_path: false
+      - name: forum-private-bookmarks-route
+        paths:
+          - /api/v1/forum/users/me/bookmarks
+        methods:
+          - GET
+        strip_path: false
+        plugins:
+          - name: mindcare-auth
+            config:
+              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
+      - name: forum-private-routes
+        paths:
+          - /api/v1/forum
+        methods:
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+        strip_path: false
+        plugins:
+          - name: mindcare-auth
+            config:
+              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
+      - name: forum-docs-routes
+        paths:
+          - /forum
+        strip_path: true
+
 upstreams:
   - name: auth-upstream
     targets:
@@ -181,6 +218,21 @@ upstreams:
   - name: assessment-upstream
     targets:
       - target: assessment-service:5000
+    healthchecks:
+      active:
+        type: http
+        http_path: /health
+        healthy:
+          interval: 5
+          successes: 2
+        unhealthy:
+          interval: 5
+          http_failures: 2
+          timeouts: 2
+
+  - name: forum-upstream
+    targets:
+      - target: forum-service:8084
     healthchecks:
       active:
         type: http
