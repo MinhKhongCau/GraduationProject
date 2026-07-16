@@ -54,7 +54,8 @@ Legend: **Full** = real UI wired to a hook/API call (real backend where implemen
 | Assessment list | `/patient/assessment` | Full | *(not in edoc — new for MindCare)* |
 | Take assessment + result | `/patient/assessment/[templateId]` | Full | *(not in edoc — new for MindCare)* |
 | Medical history / health profile | `/patient/medical-history` | Full | *(not in edoc — new for MindCare)* |
-| Messages (chat) | `/patient/messages` | Full UI, **no backend** — Chat Service doesn't exist in `app/backend` yet, mock data only | *(not in edoc)* |
+| Messages (chat) | `/patient/messages` | Full — real-time 1:1 DM + voice messages via `chatroom-service` (Socket.IO) | *(not in edoc)* |
+| Community forum (browse/post/comment/like/bookmark) | `/patient/forum` | Full — real `forum-service` calls; no post edit/delete UI yet | *(not in edoc)* |
 | Settings (profile edit, change password, delete account) | `/patient/settings` | Full — delete-account is disabled (no backend endpoint) | `patient/settings.php` + `edit-user.php` |
 
 ### Expert portal (`/expert/*`)
@@ -65,6 +66,8 @@ Legend: **Full** = real UI wired to a hook/API call (real backend where implemen
 | Weekly schedule / availability | `/expert/schedule` | Full — backed by the `/data` mock (no weekly-schedule endpoint yet) | `admin/schedule.php` (session mgmt was admin-only in edoc; MindCare gives experts self-service availability instead) |
 | My appointments | `/expert/appointments` | Full | `doctor/appointment.php` |
 | My patients | `/expert/patients` | **Stub** | `doctor/patient.php` |
+| Messages (chat) | `/expert/messages` | Full — real-time 1:1 DM + voice messages via `chatroom-service` (Socket.IO) | *(not in edoc)* |
+| Community forum (browse/post/comment/like/bookmark) | `/expert/forum` | Full — real `forum-service` calls; no post edit/delete UI yet | *(not in edoc)* |
 | Clinical records (create/view per patient) | `/expert/clinical-records` | **Stub** | *(not in edoc — new for MindCare)* |
 | Wallet / earnings | `/expert/wallet` | **Stub** | *(not in edoc)* |
 | Settings | `/expert/settings` | **Stub** | `doctor/settings.php` |
