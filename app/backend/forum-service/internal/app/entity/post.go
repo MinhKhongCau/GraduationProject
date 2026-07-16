@@ -13,7 +13,7 @@ const (
 type Post struct {
 	ID            int64
 	CategoryID    int64
-	AuthorID      int64
+	AuthorID      string
 	Title         string
 	Slug          string
 	Summary       string
@@ -34,7 +34,7 @@ func (p *Post) IsDeleted() bool {
 	return p.DeletedAt != nil
 }
 
-func (p *Post) IsVisibleTo(userID int64, isAdmin bool) bool {
+func (p *Post) IsVisibleTo(userID string, isAdmin bool) bool {
 	if p.IsDeleted() {
 		return false
 	}

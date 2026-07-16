@@ -19,25 +19,25 @@ func NewEventPublisher() *EventPublisher {
 
 type PostCreatedEvent struct {
 	PostID      int64     `json:"postId"`
-	AuthorID    int64     `json:"authorId"`
+	AuthorID    string    `json:"authorId"`
 	CategoryID  int64     `json:"categoryId"`
 	Title       string    `json:"title"`
 	PublishedAt time.Time `json:"publishedAt"`
 }
 
 type CommentCreatedEvent struct {
-	CommentID      int64  `json:"commentId"`
-	PostID         int64  `json:"postId"`
-	UserID         int64  `json:"userId"`
-	PostAuthorID   int64  `json:"postAuthorId"`
-	ParentID       *int64 `json:"parentId"`
-	ParentAuthorID *int64 `json:"parentAuthorId"`
+	CommentID      int64   `json:"commentId"`
+	PostID         int64   `json:"postId"`
+	UserID         string  `json:"userId"`
+	PostAuthorID   string  `json:"postAuthorId"`
+	ParentID       *int64  `json:"parentId"`
+	ParentAuthorID *string `json:"parentAuthorId"`
 }
 
 type PostLikedEvent struct {
-	PostID       int64 `json:"postId"`
-	UserID       int64 `json:"userId"`
-	PostAuthorID int64 `json:"postAuthorId"`
+	PostID       int64  `json:"postId"`
+	UserID       string `json:"userId"`
+	PostAuthorID string `json:"postAuthorId"`
 }
 
 func (p *EventPublisher) PostCreated(evt PostCreatedEvent) {

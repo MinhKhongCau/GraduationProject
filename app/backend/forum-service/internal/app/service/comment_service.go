@@ -57,7 +57,7 @@ func (s *CommentService) Tree(postID int64) ([]*entity.Comment, error) {
 	return roots, nil
 }
 
-func (s *CommentService) Create(postID, userID int64, parentID *int64, content string) (*entity.Comment, error) {
+func (s *CommentService) Create(postID int64, userID string, parentID *int64, content string) (*entity.Comment, error) {
 	post, err := s.postRepo.FindByID(postID)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
@@ -94,7 +94,7 @@ func (s *CommentService) Create(postID, userID int64, parentID *int64, content s
 
 	e := row.ToEntity()
 
-	var parentAuthorID *int64
+	var parentAuthorID *string
 	if parent != nil {
 		parentAuthorID = &parent.UserID
 	}
@@ -106,7 +106,7 @@ func (s *CommentService) Create(postID, userID int64, parentID *int64, content s
 	return &e, nil
 }
 
-func (s *CommentService) Edit(id, requesterID int64, isAdmin bool, content string) (*entity.Comment, error) {
+func (s *CommentService) Edit(id int64, requesterID string, isAdmin bool, content string) (*entity.Comment, error) {
 	row, err := s.commentRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
@@ -125,7 +125,7 @@ func (s *CommentService) Edit(id, requesterID int64, isAdmin bool, content strin
 	return &e, nil
 }
 
-func (s *CommentService) SoftDelete(id, requesterID int64, isAdmin bool) error {
+func (s *CommentService) SoftDelete(id int64, requesterID string, isAdmin bool) error {
 	row, err := s.commentRepo.FindByID(id)
 	if err != nil {
 		if errors.Is(err, dao.ErrNotFound) {
