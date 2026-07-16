@@ -72,9 +72,11 @@ func main() {
 	// 3. Khai báo API Endpoints
 	publicAPI := router.Group("/api/v1/public/booking")
 	privateAPI := router.Group("/api/v1/booking")
+	// internalAPI: chỉ service khác trong Docker network gọi được (Kong đã block /internal/* từ internet)
+	internalAPI := router.Group("/internal")
 
 	slotHandler.RegisterRoutes(publicAPI, privateAPI, slotRepo, appointmentRepo, slotUsecase, scheduleRepo, timeoffRepo)
-	apptHandler.RegisterRoutes(publicAPI, privateAPI, appointmentUsecase)
+	apptHandler.RegisterRoutes(publicAPI, privateAPI, internalAPI, appointmentUsecase)
 	timeoffHandler.RegisterRoutes(privateAPI, timeoffUsecase)
 	schedHandler.RegisterRoutes(publicAPI, privateAPI, scheduleUsecase)
 

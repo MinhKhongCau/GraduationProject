@@ -4,7 +4,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o payment-service ./cmd
+RUN CGO_ENABLED=0 GOOS=linux go build -p 2 -o payment-service ./cmd
 
 # ---- Runtime ----
 FROM alpine:3.20 AS runner

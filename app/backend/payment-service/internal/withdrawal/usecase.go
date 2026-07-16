@@ -37,6 +37,12 @@ func NewUsecase(repo Repository, walletUsecase wallet.Usecase) Usecase {
 }
 
 func (u *withdrawalUsecase) LinkBankAccount(ctx context.Context, userID uuid.UUID, bankCode, accountNumber, accountHolderName string) (*entity.BankAccount, error) {
+	// MOCK VALIDATION: Giả lập kiểm tra tài khoản ngân hàng từ VietQR/Napas
+	// Nếu số tài khoản test là 1011223344 thì bắt buộc tên chủ thẻ phải là NGUYEN VAN B
+	if accountNumber == "1011223344" && accountHolderName != "NGUYEN VAN B" {
+		return nil, errors.New("tên chủ tài khoản không khớp với thông tin đăng ký tại ngân hàng " + bankCode)
+	}
+
 	account := &entity.BankAccount{
 		ID:                uuid.New(),
 		UserID:            userID,

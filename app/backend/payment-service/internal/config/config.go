@@ -27,6 +27,9 @@ type Config struct {
 	AuthServiceInternalURL string // http://auth-service:8080
 	InternalClientID       string // "payment-service"
 	InternalClientSecret   string // plain text secret (chỉ trong ENV, không commit)
+
+	// ─── URLs của các service khác (internal Docker network) ─────────────────
+	BookingServiceInternalURL string // http://booking-service:8083
 }
 
 var AppConfig *Config
@@ -55,6 +58,9 @@ func LoadConfig() {
 		AuthServiceInternalURL: getEnvOrDefault("AUTH_SERVICE_INTERNAL_URL", "http://auth-service:8080"),
 		InternalClientID:       getEnvOrDefault("INTERNAL_CLIENT_ID", "payment-service"),
 		InternalClientSecret:   getEnvOrDefault("INTERNAL_CLIENT_SECRET", ""),
+
+		// URLs service khác
+		BookingServiceInternalURL: getEnvOrDefault("BOOKING_SERVICE_INTERNAL_URL", "http://booking-service:8083"),
 	}
 }
 
