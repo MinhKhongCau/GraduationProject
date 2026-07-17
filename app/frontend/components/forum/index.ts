@@ -6,3 +6,4 @@ export * from "./CommentComposer";
 export * from "./LikeButton";
 export * from "./BookmarkButton";
 export * from "./PostForm";
+export * from "./TagInput";
