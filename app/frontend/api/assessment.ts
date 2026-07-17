@@ -6,6 +6,7 @@ import type {
   AssessmentDimension,
   AssessmentSubmitRequest,
   AssessmentSubmitResponse,
+  AssessmentHistoryItem,
 } from "@/types";
 
 export async function getTemplates(): Promise<AssessmentTemplate[]> {
@@ -34,6 +35,11 @@ export async function submitAssessment(
     ASSESSMENT_ENDPOINTS.SUBMIT,
     payload
   );
+  return response.data;
+}
+
+export async function getMyAssessments(): Promise<AssessmentHistoryItem[]> {
+  const response = await assessmentClient.get<AssessmentHistoryItem[]>(ASSESSMENT_ENDPOINTS.SELF);
   return response.data;
 }
 
