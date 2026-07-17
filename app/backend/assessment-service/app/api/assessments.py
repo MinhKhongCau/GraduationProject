@@ -74,7 +74,7 @@ def submit_assessment(
 
     new_result = models.AssessResult(
         template_id=template.template_id,
-        user_id=uuid.UUID(payload.user_id),
+        user_id=uuid.UUID(user_id),
         total_score=total_score,
         dimension_scores=dimension_scores,
         ai_evaluation=ai_eval

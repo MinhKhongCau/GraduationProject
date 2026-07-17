@@ -24,7 +24,9 @@ export const ROUTES = {
     FORUM: "/patient/forum",
     FORUM_POST: (slug: string) => `/patient/forum/${slug}`,
     FORUM_NEW_POST: "/patient/forum/new",
+    FORUM_EDIT_POST: (slug: string) => `/patient/forum/${slug}/edit`,
     FORUM_MY_BOOKMARKS: "/patient/forum/bookmarks",
+    FORUM_MY_POSTS: "/patient/forum/my-posts",
   },
 
   EXPERT: {
@@ -54,5 +56,6 @@ export const ROUTES = {
     DIMENSIONS: "/admin/dimensions",
     OPTION_GROUPS: "/admin/option-groups",
     QUESTIONS: "/admin/questions",
+    FORUM_POSTS: "/admin/forum-posts",
   },
 } as const;

@@ -75,6 +75,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "dimensions", labelKey: "nav.dimensions", label: "Dimensions", href: ROUTES.ADMIN.DIMENSIONS, icon: Layers },
   { id: "option-groups", labelKey: "nav.optionGroups", label: "Option Groups", href: ROUTES.ADMIN.OPTION_GROUPS, icon: ClipboardList },
   { id: "questions", labelKey: "nav.questions", label: "Questions", href: ROUTES.ADMIN.QUESTIONS, icon: FileText },
+  { id: "forum-posts", labelKey: "nav.forumPosts", label: "Forum Posts", href: ROUTES.ADMIN.FORUM_POSTS, icon: MessageCircle },
 ];
 
 export const SETTINGS_NAV_ITEM = {
