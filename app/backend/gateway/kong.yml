@@ -125,12 +125,14 @@ services:
           - /api/v1/forum
         methods:
           - GET
+          - OPTIONS
         strip_path: false
       - name: forum-private-bookmarks-route
         paths:
           - /api/v1/forum/users/me/bookmarks
         methods:
           - GET
+          - OPTIONS
         strip_path: false
         plugins:
           - name: mindcare-auth
@@ -144,6 +146,7 @@ services:
           - PUT
           - PATCH
           - DELETE
+          - OPTIONS
         strip_path: false
         plugins:
           - name: mindcare-auth

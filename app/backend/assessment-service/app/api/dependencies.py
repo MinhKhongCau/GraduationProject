@@ -7,12 +7,10 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models
 
-def get_current_user_id(authorization: str = Header(None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Bạn chưa đăng nhập (Thiếu Token)!")
-    token = authorization.split(" ")[1]
-    extracted_user_id = token 
-    return extracted_user_id
+def get_current_user_id(x_user_id: Optional[str] = Header(None, alias="X-User-Id")):
+    if not x_user_id:
+        raise HTTPException(status_code=401, detail="Bạn chưa đăng nhập (Thiếu X-User-Id)!")
+    return x_user_id
 
 
 def check_admin_role(

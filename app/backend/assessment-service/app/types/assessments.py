@@ -12,7 +12,6 @@ class AnswerSubmit(BaseModel):
 
 class AssessmentSubmit(BaseModel):
     template_id: str
-    user_id: str
     answers: List[AnswerSubmit]
 
 
