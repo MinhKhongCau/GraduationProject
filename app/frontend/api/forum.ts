@@ -5,6 +5,7 @@ import type {
   Tag,
   PostDetail,
   PostListResult,
+  PostStatus,
   Comment,
   LikeResult,
   BookmarkResult,
@@ -48,6 +49,19 @@ export async function createPost(payload: CreatePostRequest): Promise<PostDetail
 /** PUT /posts/{id} — numeric post id, not the slug. */
 export async function updatePost(postId: number, payload: UpdatePostRequest): Promise<PostDetail> {
   const res = await forumClient.put<PostDetail>(FORUM_ENDPOINTS.POST(postId), payload);
+  return res.data;
+}
+
+/** DELETE /posts/{id} — restricted to the post's owner or an admin. */
+export async function deletePost(postId: number): Promise<void> {
+  await forumClient.delete(FORUM_ENDPOINTS.POST(postId));
+}
+
+/** PATCH /posts/{id}/status — restricted to the post's owner or an admin.
+ * Valid transitions: DRAFT->PUBLISHED, DRAFT->ARCHIVED, PUBLISHED->ARCHIVED.
+ * ARCHIVED is terminal — there is no un-archive. */
+export async function changePostStatus(postId: number, status: PostStatus): Promise<PostDetail> {
+  const res = await forumClient.patch<PostDetail>(FORUM_ENDPOINTS.POST_STATUS(postId), { status });
   return res.data;
 }
 
