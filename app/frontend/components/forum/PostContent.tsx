@@ -1,5 +1,10 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import { useForumAuthorName } from "@/hooks";
 import type { PostDetail } from "@/types";
+
+const ContentViewer = dynamic(() => import("@/components/ui/MDXEditor"), { ssr: false });
 
 export interface PostContentProps {
   post: PostDetail;
@@ -27,9 +32,7 @@ export function PostContent({ post }: PostContentProps) {
           ))}
         </div>
       )}
-      {/* forum-service's post content is plain text (no markdown renderer
-       * wired up yet) — whitespace-pre-wrap keeps paragraph breaks readable. */}
-      <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">{post.content}</div>
+      <ContentViewer value={post.content} readOnly />
     </div>
   );
 }

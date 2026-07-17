@@ -4,13 +4,44 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useApiMutation } from "./useApiMutation";
 import { forumApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
-import type { CreateCommentRequest, CreatePostRequest } from "@/types";
+import type { CreateCommentRequest, CreatePostRequest, PostStatus, UpdatePostRequest } from "@/types";
 
 export function useCreatePost() {
   const queryClient = useQueryClient();
   return useApiMutation({
     mutationFn: (payload: CreatePostRequest) => forumApi.createPost(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forum", "posts"] }),
+  });
+}
+
+export function useUpdatePost(postId: number) {
+  const queryClient = useQueryClient();
+  return useApiMutation({
+    mutationFn: (payload: UpdatePostRequest) => forumApi.updatePost(postId, payload),
+    onSuccess: (post) => {
+      queryClient.invalidateQueries({ queryKey: ["forum", "posts"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.forumPost(post.slug) });
+    },
+  });
+}
+
+export function useDeletePost() {
+  const queryClient = useQueryClient();
+  return useApiMutation({
+    mutationFn: (postId: number) => forumApi.deletePost(postId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["forum", "posts"] }),
+  });
+}
+
+export function useChangePostStatus() {
+  const queryClient = useQueryClient();
+  return useApiMutation({
+    mutationFn: ({ postId, status }: { postId: number; status: PostStatus }) =>
+      forumApi.changePostStatus(postId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["forum", "posts"] });
+      queryClient.invalidateQueries({ queryKey: ["forum", "post"] });
+    },
   });
 }
 

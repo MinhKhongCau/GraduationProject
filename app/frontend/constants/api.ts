@@ -76,6 +76,7 @@ export const FORUM_ENDPOINTS = {
   POST_COMMENTS: (postId: number) => `/forum/posts/${postId}/comments`,
   POST_LIKE: (postId: number) => `/forum/posts/${postId}/like`,
   POST_BOOKMARK: (postId: number) => `/forum/posts/${postId}/bookmark`,
+  POST_STATUS: (postId: number) => `/forum/posts/${postId}/status`,
   COMMENT: (commentId: number) => `/forum/comments/${commentId}`,
   TAGS: "/forum/tags",
   TAG_POSTS: (slug: string) => `/forum/tags/${slug}/posts`,
@@ -136,4 +137,5 @@ export const QUERY_KEYS = {
   forumCategories: () => ["forum", "categories"] as const,
   forumTags: () => ["forum", "tags"] as const,
   myBookmarks: () => ["forum", "my-bookmarks"] as const,
+  myPosts: (userId?: string) => ["forum", "my-posts", userId ?? ""] as const,
 };
