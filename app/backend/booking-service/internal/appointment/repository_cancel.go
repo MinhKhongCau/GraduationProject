@@ -16,25 +16,22 @@ func (r *pgRepository) CancelAppointmentByExpert(appointmentID string, reason st
 			return err
 		}
 
-		canceledBy := "EXPERT"
-		if err := tx.Model(&appt).Updates(map[string]interface{}{
-			"status":              domain.AppointmentStatusCancelled,
-			"cancellation_reason": reason,
-			"cancelled_by":        &canceledBy,
-			"updated_at":          time.Now().UnixMilli(),
-		}).Error; err != nil {
+		plan, err := domain.PlanAppointmentCancellation(appt, domain.CancellationActorExpert, reason, time.Now().UnixMilli())
+		if err != nil {
+			return err
+		}
+
+		if err := tx.Model(&appt).Updates(plan.AppointmentUpdates).Error; err != nil {
 			return err
 		}
 
 		// Tráº£ Slot vá» AVAILABLE
-		if err := tx.Model(&domain.ExpertSlot{}).
-			Where("slot_id = ?", appt.SlotID).
-			Updates(map[string]interface{}{
-				"status":            domain.SlotStatusAvailable,
-				"locked_expires_at": nil,
-				"locked_by":         nil,
-			}).Error; err != nil {
-			return err
+		if plan.ShouldReleaseSlot {
+			if err := tx.Model(&domain.ExpertSlot{}).
+				Where("slot_id = ?", appt.SlotID).
+				Updates(plan.SlotUpdates).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -49,31 +46,33 @@ func (r *pgRepository) CancelAppointmentByPatient(appointmentID string, patientI
 			return errors.New("khÃ´ng tÃ¬m tháº¥y cuá»™c háº¹n hoáº·c báº¡n khÃ´ng cÃ³ quyá»n há»§y")
 		}
 
-		if appt.Status == domain.AppointmentStatusCancelled {
-			return errors.New("cuá»™c háº¹n Ä‘Ã£ bá»‹ há»§y trÆ°á»›c Ä‘Ã³")
+		plan, err := domain.PlanAppointmentCancellation(appt, domain.CancellationActorPatient, reason, time.Now().UnixMilli())
+		if err != nil {
+			return mapCancellationDomainError(err)
 		}
 
-		canceledBy := "PATIENT"
-		if err := tx.Model(&appt).Updates(map[string]interface{}{
-			"status":              domain.AppointmentStatusCancelled,
-			"cancellation_reason": reason,
-			"cancelled_by":        &canceledBy,
-			"updated_at":          time.Now().UnixMilli(),
-		}).Error; err != nil {
+		if err := tx.Model(&appt).Updates(plan.AppointmentUpdates).Error; err != nil {
 			return err
 		}
 
 		// Tráº£ Slot vá» AVAILABLE
-		if err := tx.Model(&domain.ExpertSlot{}).
-			Where("slot_id = ?", appt.SlotID).
-			Updates(map[string]interface{}{
-				"status":            domain.SlotStatusAvailable,
-				"locked_expires_at": nil,
-				"locked_by":         nil,
-			}).Error; err != nil {
-			return err
+		if plan.ShouldReleaseSlot {
+			if err := tx.Model(&domain.ExpertSlot{}).
+				Where("slot_id = ?", appt.SlotID).
+				Updates(plan.SlotUpdates).Error; err != nil {
+				return err
+			}
 		}
 
 		return nil
 	})
+}
+
+func mapCancellationDomainError(err error) error {
+	switch {
+	case errors.Is(err, domain.ErrAppointmentAlreadyCancelled):
+		return errors.New("cuá»™c háº¹n Ä‘Ã£ bá»‹ há»§y trÆ°á»›c Ä‘Ã³")
+	default:
+		return err
+	}
 }

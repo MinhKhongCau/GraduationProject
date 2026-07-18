@@ -12,15 +12,11 @@ import (
 // Tráº£ vá» lá»—i náº¿u khÃ´ng cÃ³ dÃ²ng nÃ o Ä‘Æ°á»£c cáº­p nháº­t (slot Ä‘Ã£ bá»‹ ngÆ°á»i khÃ¡c láº¥y)
 // =====================================================================
 func (r *pgRepository) LockSlot(slotID string, patientID string) error {
-	lockedExpiresAt := time.Now().UnixMilli() + 900_000 // KhoÃ¡ 15 phÃºt = 900,000 ms
+	lock := domain.NewSlotLock(patientID, time.Now().UnixMilli())
 
 	result := r.db.Model(&domain.ExpertSlot{}).
 		Where("slot_id = ? AND status = ?", slotID, domain.SlotStatusAvailable).
-		Updates(map[string]interface{}{
-			"status":            domain.SlotStatusLocked,
-			"locked_expires_at": lockedExpiresAt,
-			"locked_by":         patientID,
-		})
+		Updates(lock.Updates())
 
 	if result.Error != nil {
 		return result.Error

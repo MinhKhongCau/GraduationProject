@@ -36,15 +36,10 @@ func (r *pgRepository) CancelExpiredLocks() (int64, error) {
 		}
 
 		// 2. Há»§y cÃ¡c Appointment PENDING_PAYMENT liÃªn quan Ä‘áº¿n slot háº¿t háº¡n
-		canceledBy := "SYSTEM"
+		plan := domain.PlanExpiredLockCleanup(nowMs)
 		result := tx.Model(&domain.Appointment{}).
 			Where("slot_id IN ? AND status = ?", slotIDs, domain.AppointmentStatusPendingPayment).
-			Updates(map[string]interface{}{
-				"status":              domain.AppointmentStatusCancelled,
-				"cancellation_reason": "QuÃ¡ háº¡n thanh toÃ¡n 15 phÃºt",
-				"cancelled_by":        &canceledBy,
-				"updated_at":          nowMs,
-			})
+			Updates(plan.AppointmentUpdates)
 		if result.Error != nil {
 			return result.Error
 		}
@@ -52,11 +47,7 @@ func (r *pgRepository) CancelExpiredLocks() (int64, error) {
 		// 3. Má»Ÿ khÃ³a táº¥t cáº£ slot háº¿t háº¡n, tráº£ vá» tráº¡ng thÃ¡i AVAILABLE
 		result = tx.Model(&domain.ExpertSlot{}).
 			Where("slot_id IN ?", slotIDs).
-			Updates(map[string]interface{}{
-				"status":            domain.SlotStatusAvailable,
-				"locked_expires_at": nil,
-				"locked_by":         nil,
-			})
+			Updates(plan.SlotUpdates)
 		if result.Error != nil {
 			return result.Error
 		}
