@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"booking-service/internal/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/slot"
 	"github.com/gin-gonic/gin"
 )
@@ -9,7 +9,7 @@ import (
 func RegisterRoutes(
 	publicGroup, privateGroup *gin.RouterGroup,
 	repo slot.Repository,
-	appointmentRepo appointment.Repository,
+	appointmentRepo appappointment.Repository,
 	usecase slot.Usecase,
 	scheduleRepo ScheduleProvider,
 	timeoffRepo TimeOffProvider,

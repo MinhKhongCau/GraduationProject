@@ -1,13 +1,13 @@
 package handler
 
 import (
-	"booking-service/internal/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 )
 
 type Handler struct {
-	usecase appointment.Usecase
+	usecase appappointment.Usecase
 }
 
-func NewHandler(usecase appointment.Usecase) *Handler {
+func NewHandler(usecase appappointment.Usecase) *Handler {
 	return &Handler{usecase: usecase}
 }

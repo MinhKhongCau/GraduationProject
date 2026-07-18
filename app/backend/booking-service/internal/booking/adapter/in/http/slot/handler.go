@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"booking-service/internal/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/domain"
 	"booking-service/internal/slot"
 	"time"
@@ -18,7 +18,7 @@ type TimeOffProvider interface {
 
 type Handler struct {
 	repo            slot.Repository
-	appointmentRepo appointment.Repository
+	appointmentRepo appappointment.Repository
 	usecase         slot.Usecase
 	scheduleRepo    ScheduleProvider
 	timeoffRepo     TimeOffProvider
@@ -26,7 +26,7 @@ type Handler struct {
 
 func NewHandler(
 	repo slot.Repository,
-	appointmentRepo appointment.Repository,
+	appointmentRepo appappointment.Repository,
 	usecase slot.Usecase,
 	scheduleRepo ScheduleProvider,
 	timeoffRepo TimeOffProvider,

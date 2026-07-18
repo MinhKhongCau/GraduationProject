@@ -12,11 +12,12 @@ import (
 	"booking-service/pkg/database"
 	"booking-service/pkg/internal_auth"
 
-	"booking-service/internal/appointment"
 	apptHandler "booking-service/internal/booking/adapter/in/http/appointment"
 	schedHandler "booking-service/internal/booking/adapter/in/http/schedule"
 	slotHandler "booking-service/internal/booking/adapter/in/http/slot"
 	timeoffHandler "booking-service/internal/booking/adapter/in/http/timeoff"
+	appointmentpostgres "booking-service/internal/booking/adapter/out/postgres/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/schedule"
 	"booking-service/internal/slot"
 	"booking-service/internal/timeoff"
@@ -60,14 +61,14 @@ func main() {
 	// Repository
 	scheduleRepo := schedule.NewRepository(database.DB)
 	slotRepo := slot.NewRepository(database.DB)
-	appointmentRepo := appointment.NewRepository(database.DB)
+	appointmentRepo := appointmentpostgres.NewRepository(database.DB)
 	timeoffRepo := timeoff.NewRepository(database.DB)
 
 	// Usecase
 	slotUsecase := slot.NewUsecase(slotRepo, appointmentRepo)
 	scheduleUsecase := schedule.NewUsecase(scheduleRepo)
 	timeoffUsecase := timeoff.NewUsecase(timeoffRepo, slotRepo, appointmentRepo)
-	appointmentUsecase := appointment.NewUsecase(appointmentRepo)
+	appointmentUsecase := appappointment.NewUsecase(appointmentRepo)
 
 	// 3. Khai báo API Endpoints
 	publicAPI := router.Group("/api/v1/public/booking")
