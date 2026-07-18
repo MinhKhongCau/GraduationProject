@@ -26,14 +26,14 @@ class ChatRequest(BaseModel):
     message: str
     session_id: str = None
 
-@app.post("/api/chat/stream")
+@app.post("/api/v1/chat/stream")
 async def chat_stream_endpoint(req: ChatRequest):
     """Endpoint chat văn bản thông thường."""
     session_id = req.session_id or str(uuid.uuid4())
     generator = chat_orchestrator_stream(session_id=session_id, user_message=req.message)
     return StreamingResponse(generator, media_type="text/plain")
 
-@app.post("/api/chat/voice")
+@app.post("/api/v1/chat/voice")
 async def chat_voice_endpoint(
     message: str = Form(...), 
     session_id: str = Form(None),
