@@ -10,7 +10,7 @@ import (
 
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
-	"payment-service/internal/payment"
+	apppayment "payment-service/internal/payment/application"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -137,12 +137,12 @@ func TestCreateOrderMapsUsecaseErrors(t *testing.T) {
 		err        error
 		wantStatus int
 	}{
-		{name: "unsupported gateway", err: payment.ErrUnsupportedGateway, wantStatus: http.StatusBadRequest},
-		{name: "invalid request", err: payment.ErrInvalidCreateOrderRequest, wantStatus: http.StatusBadRequest},
-		{name: "invalid booking data", err: payment.ErrInvalidBookingData, wantStatus: http.StatusBadRequest},
-		{name: "ownership", err: payment.ErrAppointmentOwnership, wantStatus: http.StatusForbidden},
-		{name: "booking not found", err: payment.ErrBookingAppointmentNotFound, wantStatus: http.StatusNotFound},
-		{name: "invalid state", err: payment.ErrAppointmentInvalidState, wantStatus: http.StatusConflict},
+		{name: "unsupported gateway", err: apppayment.ErrUnsupportedGateway, wantStatus: http.StatusBadRequest},
+		{name: "invalid request", err: apppayment.ErrInvalidCreateOrderRequest, wantStatus: http.StatusBadRequest},
+		{name: "invalid booking data", err: apppayment.ErrInvalidBookingData, wantStatus: http.StatusBadRequest},
+		{name: "ownership", err: apppayment.ErrAppointmentOwnership, wantStatus: http.StatusForbidden},
+		{name: "booking not found", err: apppayment.ErrBookingAppointmentNotFound, wantStatus: http.StatusNotFound},
+		{name: "invalid state", err: apppayment.ErrAppointmentInvalidState, wantStatus: http.StatusConflict},
 		{name: "unexpected", err: errors.New("database unavailable"), wantStatus: http.StatusInternalServerError},
 	}
 

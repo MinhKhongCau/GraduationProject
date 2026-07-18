@@ -1,4 +1,4 @@
-package gateway
+package vnpay
 
 import (
 	"crypto/hmac"

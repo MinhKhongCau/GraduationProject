@@ -13,18 +13,18 @@ import (
 	"payment-service/pkg/redis"
 	"payment-service/routes"
 
-	"payment-service/internal/payment"
-	paymentGateway "payment-service/internal/payment/gateway"
-	paymentHandler "payment-service/internal/payment/handler"
+	paymentHTTP "payment-service/internal/payment/adapter/in/http"
+	bookingrest "payment-service/internal/payment/adapter/out/bookingrest"
+	"payment-service/internal/payment/adapter/out/outbox"
+	paymentpostgres "payment-service/internal/payment/adapter/out/postgres"
+	"payment-service/internal/payment/adapter/out/vnpay"
+	apppayment "payment-service/internal/payment/application"
 
 	"payment-service/internal/wallet"
 	walletHandler "payment-service/internal/wallet/handler"
 
 	"payment-service/internal/withdrawal"
 	withdrawalHandler "payment-service/internal/withdrawal/handler"
-
-	"payment-service/internal/outbox"
-	bookingClient "payment-service/internal/booking/client"
 
 	_ "payment-service/docs" // Import swagger docs
 
@@ -59,7 +59,7 @@ func main() {
 
 	// 1.3 Khởi tạo BookingServiceClient (REST implementation)
 	// Để chuyển sang gRPC sau này: chỉ đổi dòng này thành bookingClient.NewGrpcBookingClient(...)
-	bookingSvcClient := bookingClient.NewRestBookingClient(
+	bookingSvcClient := bookingrest.NewRestBookingClient(
 		config.AppConfig.BookingServiceInternalURL,
 		tokenManager,
 	)
@@ -74,7 +74,7 @@ func main() {
 	// 4. Khởi tạo các tầng nghiệp vụ
 	// Repositories
 	walletRepo := wallet.NewRepository(database.DB)
-	paymentRepo := payment.NewRepository(database.DB)
+	paymentRepo := paymentpostgres.NewRepository(database.DB)
 	withdrawalRepo := withdrawal.NewRepository(database.DB)
 	outboxRepo := outbox.NewRepository(database.DB)
 
@@ -85,14 +85,15 @@ func main() {
 	vnpHashSecret := os.Getenv("VNP_HASH_SECRET")
 	vnpPaymentURL := os.Getenv("VNP_PAYMENT_URL")
 	vnpReturnURL := os.Getenv("VNP_RETURN_URL")
-	vnpayClient := paymentGateway.NewVNPayClient(vnpTmnCode, vnpHashSecret, vnpPaymentURL, vnpReturnURL)
+	vnpayClient := vnpay.NewVNPayClient(vnpTmnCode, vnpHashSecret, vnpPaymentURL, vnpReturnURL)
 
-	paymentUsecase := payment.NewUsecase(paymentRepo, walletUsecase, vnpayClient, bookingSvcClient)
+	paymentUoW := paymentpostgres.NewUnitOfWork(database.DB, walletUsecase)
+	paymentUsecase := apppayment.NewUsecase(paymentRepo, paymentUoW, vnpayClient, bookingSvcClient)
 	withdrawalUsecase := withdrawal.NewUsecase(withdrawalRepo, walletUsecase)
 
 	// Handlers
 	wHandler := walletHandler.NewHandler(walletUsecase)
-	pHandler := paymentHandler.NewHandler(paymentUsecase)
+	pHandler := paymentHTTP.NewHandler(paymentUsecase)
 	wdHandler := withdrawalHandler.NewHandler(withdrawalUsecase)
 
 	// 5. Khởi chạy Tần số quét (Background Workers)

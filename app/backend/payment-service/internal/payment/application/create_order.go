@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"payment-service/internal/booking/client"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
 	paymentdomain "payment-service/internal/payment/domain"
@@ -27,16 +26,16 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, app
 
 	eligibility, err := u.bookingClient.GetPaymentEligibility(ctx, appointmentIDValue, payerID)
 	if err != nil {
-		if errors.Is(err, client.ErrAppointmentNotFound) {
+		if errors.Is(err, ErrAppointmentNotFound) {
 			return nil, "", fmt.Errorf("%w: %s", ErrBookingAppointmentNotFound, appointmentIDValue)
 		}
-		if errors.Is(err, client.ErrPaymentEligibilityForbidden) {
+		if errors.Is(err, ErrPaymentEligibilityForbidden) {
 			return nil, "", fmt.Errorf("%w: appointment %s", ErrAppointmentOwnership, appointmentIDValue)
 		}
-		if errors.Is(err, client.ErrPaymentEligibilityConflict) {
+		if errors.Is(err, ErrPaymentEligibilityConflict) {
 			return nil, "", fmt.Errorf("%w: appointment %s", ErrAppointmentInvalidState, appointmentIDValue)
 		}
-		if errors.Is(err, client.ErrInvalidBookingPrice) {
+		if errors.Is(err, ErrInvalidBookingPrice) {
 			return nil, "", fmt.Errorf("%w: appointment price is invalid", ErrInvalidBookingData)
 		}
 		return nil, "", fmt.Errorf("failed to verify payment eligibility: %w", err)

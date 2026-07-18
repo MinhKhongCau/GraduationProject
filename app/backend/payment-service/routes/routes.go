@@ -1,7 +1,7 @@
 package routes
 
 import (
-	paymentHandler "payment-service/internal/payment/handler"
+	paymentHandler "payment-service/internal/payment/adapter/in/http"
 	walletHandler "payment-service/internal/wallet/handler"
 	withdrawalHandler "payment-service/internal/withdrawal/handler"
 

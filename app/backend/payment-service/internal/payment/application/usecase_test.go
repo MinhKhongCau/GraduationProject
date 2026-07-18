@@ -14,10 +14,9 @@ import (
 	"testing"
 	"time"
 
-	bookingclient "payment-service/internal/booking/client"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
-	"payment-service/internal/payment/gateway"
+	gateway "payment-service/internal/payment/adapter/out/vnpay"
 
 	"github.com/google/uuid"
 )
@@ -28,7 +27,7 @@ func TestCreateOrderCallsPaymentEligibilityAndDerivesExpertAndAmount(t *testing.
 	appointmentID := uuid.New().String()
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
 	paymentGateway := &fakePaymentGateway{paymentURL: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?ok=1"}
-	booking := &fakeBookingClient{eligibility: &bookingclient.PaymentEligibility{
+	booking := &fakeBookingClient{eligibility: &PaymentEligibility{
 		AppointmentID: appointmentID,
 		ExpertID:      eligibilityExpertID.String(),
 		AmountVND:     250000,
@@ -77,7 +76,7 @@ func TestCreateOrderRejectsEligibilityErrorBeforePersisting(t *testing.T) {
 	payerID := uuid.New()
 	appointmentID := uuid.New().String()
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: bookingclient.ErrPaymentEligibilityConflict})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: ErrPaymentEligibilityConflict})
 
 	_, _, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
 	if !errors.Is(err, ErrAppointmentInvalidState) {
@@ -102,12 +101,12 @@ func TestCreateOrderRejectsMalformedEligibilityResultBeforePersisting(t *testing
 	appointmentID := uuid.New().String()
 	tests := []struct {
 		name        string
-		eligibility bookingclient.PaymentEligibility
+		eligibility PaymentEligibility
 		wantErr     error
 	}{
 		{
 			name: "appointment id mismatch",
-			eligibility: bookingclient.PaymentEligibility{
+			eligibility: PaymentEligibility{
 				AppointmentID: uuid.New().String(),
 				ExpertID:      uuid.New().String(),
 				AmountVND:     100000,
@@ -117,7 +116,7 @@ func TestCreateOrderRejectsMalformedEligibilityResultBeforePersisting(t *testing
 		},
 		{
 			name: "invalid expert id",
-			eligibility: bookingclient.PaymentEligibility{
+			eligibility: PaymentEligibility{
 				AppointmentID: appointmentID,
 				ExpertID:      "not-a-uuid",
 				AmountVND:     100000,
@@ -127,7 +126,7 @@ func TestCreateOrderRejectsMalformedEligibilityResultBeforePersisting(t *testing
 		},
 		{
 			name: "non-positive amount",
-			eligibility: bookingclient.PaymentEligibility{
+			eligibility: PaymentEligibility{
 				AppointmentID: appointmentID,
 				ExpertID:      uuid.New().String(),
 				AmountVND:     0,
@@ -137,7 +136,7 @@ func TestCreateOrderRejectsMalformedEligibilityResultBeforePersisting(t *testing
 		},
 		{
 			name: "expired eligibility",
-			eligibility: bookingclient.PaymentEligibility{
+			eligibility: PaymentEligibility{
 				AppointmentID: appointmentID,
 				ExpertID:      uuid.New().String(),
 				AmountVND:     100000,
@@ -199,7 +198,7 @@ func TestCreateOrderRejectsEmptyAppointmentIDBeforePersisting(t *testing.T) {
 func TestCreateOrderMapsBookingNotFoundBeforePersisting(t *testing.T) {
 	appointmentID := uuid.New().String()
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: bookingclient.ErrAppointmentNotFound})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: ErrAppointmentNotFound})
 
 	_, _, err := usecase.CreateOrder(context.Background(), uuid.New(), appointmentID, "127.0.0.1")
 	if !errors.Is(err, ErrBookingAppointmentNotFound) {
@@ -938,14 +937,14 @@ func (g *fakePaymentGateway) VerifyChecksum(params map[string][]string) bool {
 }
 
 type fakeBookingClient struct {
-	eligibility       *bookingclient.PaymentEligibility
+	eligibility       *PaymentEligibility
 	err               error
 	eligibilityCalls  int
 	lastAppointmentID string
 	lastPayerID       uuid.UUID
 }
 
-func (c *fakeBookingClient) GetPaymentEligibility(ctx context.Context, appointmentID string, payerID uuid.UUID) (*bookingclient.PaymentEligibility, error) {
+func (c *fakeBookingClient) GetPaymentEligibility(ctx context.Context, appointmentID string, payerID uuid.UUID) (*PaymentEligibility, error) {
 	c.eligibilityCalls++
 	c.lastAppointmentID = appointmentID
 	c.lastPayerID = payerID
@@ -955,7 +954,7 @@ func (c *fakeBookingClient) GetPaymentEligibility(ctx context.Context, appointme
 	if c.eligibility != nil {
 		return c.eligibility, nil
 	}
-	return &bookingclient.PaymentEligibility{
+	return &PaymentEligibility{
 		AppointmentID: appointmentID,
 		ExpertID:      uuid.New().String(),
 		AmountVND:     1000,

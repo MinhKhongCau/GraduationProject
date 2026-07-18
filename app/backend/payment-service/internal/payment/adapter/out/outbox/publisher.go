@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"payment-service/internal/booking/client"
+	apppayment "payment-service/internal/payment/application"
 	"payment-service/pkg/rabbitmq"
 	"time"
 )
@@ -20,12 +20,12 @@ import (
 // Nếu dispatch thất bại, event không được đánh dấu published → Worker sẽ retry lần sau.
 type Publisher struct {
 	repo          Repository
-	bookingClient client.BookingServiceClient
+	bookingClient apppayment.BookingServiceClient
 }
 
 // NewPublisher tạo Publisher mới.
 // bookingClient: inject BookingServiceClient để gọi sang Booking Service.
-func NewPublisher(repo Repository, bookingClient client.BookingServiceClient) *Publisher {
+func NewPublisher(repo Repository, bookingClient apppayment.BookingServiceClient) *Publisher {
 	return &Publisher{
 		repo:          repo,
 		bookingClient: bookingClient,

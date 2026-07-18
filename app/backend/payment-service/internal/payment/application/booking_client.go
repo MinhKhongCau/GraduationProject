@@ -1,7 +1,4 @@
-// Package client defines the port Payment Service uses to communicate with
-// Booking Service. REST is the current adapter; a future gRPC adapter should
-// return the same application contract.
-package client
+package application
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package payment
+package paymentpostgres
 
 import (
 	"context"
@@ -12,8 +12,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-type Repository = apppayment.Repository
 
 type pgRepository struct {
 	db *gorm.DB
@@ -29,11 +27,18 @@ type paymentTx struct {
 	walletUsecase wallet.Usecase
 }
 
-func NewRepository(db *gorm.DB) Repository {
+func NewRepository(db *gorm.DB) apppayment.Repository {
 	return &pgRepository{db: db}
 }
 
-func (r *pgRepository) NewUnitOfWork(walletUsecase wallet.Usecase) UnitOfWork {
+func NewUnitOfWork(db *gorm.DB, walletUsecase wallet.Usecase) apppayment.UnitOfWork {
+	return &paymentUnitOfWork{
+		db:            db,
+		walletUsecase: walletUsecase,
+	}
+}
+
+func (r *pgRepository) NewUnitOfWork(walletUsecase wallet.Usecase) apppayment.UnitOfWork {
 	return &paymentUnitOfWork{
 		db:            r.db,
 		walletUsecase: walletUsecase,
