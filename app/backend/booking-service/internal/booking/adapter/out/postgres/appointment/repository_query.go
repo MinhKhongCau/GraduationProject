@@ -1,6 +1,6 @@
 package appointmentpostgres
 
-import "booking-service/internal/domain"
+import "booking-service/internal/booking/domain"
 
 // Láº¥y Appointment theo SlotID (Æ°u tiÃªn láº¥y cuá»™c háº¹n chÆ°a bá»‹ huá»·, náº¿u khÃ´ng thÃ¬ láº¥y cuá»™c háº¹n má»›i nháº¥t)
 func (r *pgRepository) GetAppointmentBySlotID(slotID string) (*domain.Appointment, error) {

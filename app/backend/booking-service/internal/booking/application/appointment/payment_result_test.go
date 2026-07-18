@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 )
 
 func TestPlanPaymentResultSuccessFromPendingConfirmsAppointmentAndOccupiesSlot(t *testing.T) {

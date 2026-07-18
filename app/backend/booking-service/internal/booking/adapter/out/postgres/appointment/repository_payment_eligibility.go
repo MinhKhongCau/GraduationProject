@@ -1,7 +1,7 @@
 package appointmentpostgres
 
 import (
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 	"errors"
 	"fmt"
 

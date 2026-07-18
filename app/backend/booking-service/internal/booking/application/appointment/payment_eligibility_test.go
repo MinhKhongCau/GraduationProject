@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 )
 
 func TestGetPaymentEligibilityValidSnapshot(t *testing.T) {

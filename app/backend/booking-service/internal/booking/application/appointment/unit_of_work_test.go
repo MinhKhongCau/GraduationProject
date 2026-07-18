@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 )
 
 func TestCreateAppointmentUsesUnitOfWorkPath(t *testing.T) {

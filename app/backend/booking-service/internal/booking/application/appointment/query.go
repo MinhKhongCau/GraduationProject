@@ -1,6 +1,6 @@
 package appointment
 
-import "booking-service/internal/domain"
+import "booking-service/internal/booking/domain"
 
 func (u *appointmentUsecase) GetAppointmentByID(appointmentID string) (*domain.Appointment, error) {
 	return u.repo.GetAppointmentByID(appointmentID)

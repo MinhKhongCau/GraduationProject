@@ -3,8 +3,8 @@ package domain
 // TimeTemplate - Cấu hình khung giờ (Ca sáng, Ca chiều)
 // StartTime và EndTime lưu dưới dạng chuỗi "HH:MM" (ví dụ: "08:00", "12:00")
 type TimeTemplate struct {
-	TemplateID string `gorm:"column:template_id;primaryKey;type:uuid"`
-	ShiftName  string `gorm:"column:shift_name"`
+	TemplateID          string `gorm:"column:template_id;primaryKey;type:uuid"`
+	ShiftName           string `gorm:"column:shift_name"`
 	StartTime           string `gorm:"column:start_time;type:varchar(5)"` // "HH:MM", ví dụ: "08:00"
 	EndTime             string `gorm:"column:end_time;type:varchar(5)"`   // "HH:MM", ví dụ: "12:00"
 	SlotDurationMinutes int    `gorm:"column:slot_duration_minutes"`      // Thời lượng mỗi slot (phút)

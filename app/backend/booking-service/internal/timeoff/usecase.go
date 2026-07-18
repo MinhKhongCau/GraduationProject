@@ -2,7 +2,7 @@ package timeoff
 
 import (
 	appappointment "booking-service/internal/booking/application/appointment"
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 	"booking-service/internal/slot"
 	"github.com/google/uuid"
 )
