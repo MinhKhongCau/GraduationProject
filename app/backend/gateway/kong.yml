@@ -157,6 +157,17 @@ services:
           - /forum
         strip_path: true
 
+  - name: chatbot-service
+    url: http://chatbot-upstream
+    routes:
+      - name: chatbot-routes
+        paths:
+          - /api/v1/chat
+        strip_path: false
+        plugins:
+          - name: mindcare-auth
+            config:
+              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
   - name: chatroom-service
     url: http://chatroom-upstream
     routes:
@@ -265,6 +276,9 @@ upstreams:
           http_failures: 2
           timeouts: 2
 
+  - name: chatbot-upstream
+    targets:
+      - target: chatbot-service:8000
   - name: chatroom-upstream
     targets:
       - target: chatroom-service:8085
