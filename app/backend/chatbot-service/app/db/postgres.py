@@ -18,9 +18,10 @@ COLLECTION_NAME = "mental_health_techniques"
 
 # Khởi tạo Embedding Model (Giống với lúc Ingest data)
 def get_embeddings_model():
+    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     return OllamaEmbeddings(
         model="nomic-embed-text",
-        base_url="http://localhost:11434"
+        base_url=ollama_base_url
     )
 
 # Hàm khởi tạo và trả về kết nối Vector Database

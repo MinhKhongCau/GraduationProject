@@ -17,4 +17,4 @@ COPY scripts/ scripts/
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "python scripts/ingest_vector_db.py || true && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

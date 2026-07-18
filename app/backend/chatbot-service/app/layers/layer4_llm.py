@@ -1,10 +1,12 @@
 # app/layers/layer4_llm.py
+import os
 # pyrefly: ignore [missing-import]
 from openai import OpenAI
 
 # Khởi tạo kết nối tới Local LLM (Ollama)
+ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 client = OpenAI(
-    base_url="http://localhost:11434/v1",
+    base_url=f"{ollama_base_url}/v1",
     api_key="ollama"
 )
 MODEL_NAME = "qwen2.5"
