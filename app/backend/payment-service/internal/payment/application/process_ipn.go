@@ -1,13 +1,12 @@
-package payment
+package application
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"payment-service/internal/domain/entity"
-	"strconv"
+	paymentdomain "payment-service/internal/payment/domain"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,21 +38,10 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 		return false, errors.New("invalid order uuid format")
 	}
 
-	vnpAmountStr := ""
-	if len(params["vnp_Amount"]) > 0 {
-		vnpAmountStr = params["vnp_Amount"][0]
-	}
-	if vnpAmountStr == "" {
-		return false, errors.New("missing vnp_Amount")
-	}
-	vnpAmount, err := strconv.ParseInt(vnpAmountStr, 10, 64)
+	vnpAmount, err := paymentdomain.ParseVNPayAmount(params)
 	if err != nil {
-		return false, fmt.Errorf("invalid vnp_Amount: %w", err)
+		return false, err
 	}
-	if vnpAmount <= 0 {
-		return false, errors.New("invalid vnp_Amount: amount must be greater than zero")
-	}
-	vnpAmount = vnpAmount / 100 // VNPay scale * 100
 
 	vnpResponseCode := ""
 	if len(params["vnp_ResponseCode"]) > 0 {
@@ -122,16 +110,12 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			// LÆ°u Outbox event: thÃ´ng bÃ¡o Booking Service xÃ¡c nháº­n lá»‹ch háº¹n.
 			// Chá»‰ emit náº¿u order nÃ y cÃ³ appointment_id.
 			if order.AppointmentID != nil {
-				bookingPayload, _ := json.Marshal(map[string]interface{}{
-					"appointment_id": order.AppointmentID.String(),
-					"order_id":       order.ID.String(),
-					"status":         "SUCCESS",
-				})
+				bookingPayload, _ := paymentdomain.BookingOutboxPayload(order.AppointmentID.String(), order.ID.String(), "SUCCESS")
 				bookingOutbox := &entity.OutboxEvent{
 					AggregateType: "PAYMENT_ORDER",
 					AggregateID:   order.ID,
 					EventType:     "booking.appointment.confirm",
-					Payload:       string(bookingPayload),
+					Payload:       bookingPayload,
 					Published:     false,
 				}
 				if err := u.repo.SaveOutboxEvent(tx, bookingOutbox); err != nil {
@@ -146,16 +130,12 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			}
 
 			if order.AppointmentID != nil {
-				bookingPayload, _ := json.Marshal(map[string]interface{}{
-					"appointment_id": order.AppointmentID.String(),
-					"order_id":       order.ID.String(),
-					"status":         "FAILED",
-				})
+				bookingPayload, _ := paymentdomain.BookingOutboxPayload(order.AppointmentID.String(), order.ID.String(), "FAILED")
 				bookingOutbox := &entity.OutboxEvent{
 					AggregateType: "PAYMENT_ORDER",
 					AggregateID:   order.ID,
 					EventType:     "booking.appointment.fail",
-					Payload:       string(bookingPayload),
+					Payload:       bookingPayload,
 					Published:     false,
 				}
 				if err := u.repo.SaveOutboxEvent(tx, bookingOutbox); err != nil {

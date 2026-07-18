@@ -1,4 +1,4 @@
-package payment
+package application
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"payment-service/internal/booking/client"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
+	paymentdomain "payment-service/internal/payment/domain"
 	"strings"
 	"time"
 
@@ -61,18 +62,16 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, app
 	grossAmount := vo.Money(eligibility.AmountVND)
 
 	// Má»©c hoa há»“ng lÃ  15% - TÃ­nh toÃ¡n Dá»°A TRÃŠN grossAmount Ä‘Ã£ Ä‘Æ°á»£c xÃ¡c thá»±c
-	commissionRate := 0.15
-	commissionAmount := vo.Money(float64(grossAmount) * commissionRate)
-	netAmount := grossAmount.Sub(commissionAmount)
+	commission := paymentdomain.CalculateCommission(grossAmount)
 
 	order := &entity.PaymentOrder{
 		ID:               uuid.New(),
 		PayerID:          payerID,
 		ExpertID:         expertID,
 		GrossAmount:      grossAmount,
-		CommissionRate:   commissionRate,
-		CommissionAmount: commissionAmount,
-		NetAmount:        netAmount,
+		CommissionRate:   commission.Rate,
+		CommissionAmount: commission.Amount,
+		NetAmount:        commission.NetAmount,
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
 		AppointmentID:    &parsedApptID,
