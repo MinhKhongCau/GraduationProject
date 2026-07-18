@@ -12,7 +12,7 @@ func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, internalGroup *g
 	h := NewHandler(usecase)
 
 	// ── Public routes (qua Kong Gateway, không cần user JWT) ────────────────
-	publicGroup.POST("/appointments/webhook", h.Webhook)
+	_ = publicGroup // Public payment webhook intentionally disabled; use internal payment webhook only.
 
 	// ── Private routes (yêu cầu JWT của User từ Kong) ──────────────────────
 	privateGroup.POST("/appointments", h.Create)
@@ -28,7 +28,7 @@ func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, internalGroup *g
 	{
 		// POST /internal/appointments/:id/webhook
 		internalAppt.POST("/:id/webhook", h.InternalPaymentWebhook)
-		
+
 		// GET /internal/appointments/:id
 		internalAppt.GET("/:id", h.InternalGetAppointment)
 	}

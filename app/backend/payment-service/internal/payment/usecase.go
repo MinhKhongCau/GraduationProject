@@ -50,29 +50,29 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid
 		if err != nil {
 			return nil, "", fmt.Errorf("invalid appointment_id format: %w", err)
 		}
-		
+
 		// 1. Xác minh Appointment qua Booking Service
 		appt, err := u.bookingClient.GetAppointment(ctx, *appointmentID)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to verify appointment: %w", err)
 		}
-		
+
 		// 2. Validate Ownership (chỉ người đặt lịch mới được tạo order)
 		if appt.PatientID != payerID.String() {
 			return nil, "", errors.New("unauthorized: appointment does not belong to the payer")
 		}
-		
+
 		// 3. Validate Status (chỉ PENDING_PAYMENT mới được thanh toán)
 		// Trạng thái 0 = PENDING_PAYMENT, 1 = CONFIRMED, 2 = CANCELLED
 		if appt.Status != 0 {
 			return nil, "", errors.New("appointment is not in PENDING_PAYMENT status")
 		}
-		
+
 		// 4. BẢO MẬT: Ghi đè số tiền gửi từ FE bằng giá trị thực tế của lịch khám
 		if appt.Price > 0 {
 			grossAmount = vo.Money(appt.Price)
 		}
-		
+
 		parsedApptID = &parsed
 	}
 
@@ -119,12 +119,14 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid
 }
 
 func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]string) (bool, error) {
-	// 1. Verify Checksum if vnp_SecureHash exists
-	if len(params["vnp_SecureHash"]) > 0 {
-		if !u.vnpayClient.VerifyChecksum(params) {
-			log.Println("❌ VNPay IPN checksum verification failed")
-			return false, errors.New("invalid checksum")
-		}
+	// 1. VNPay IPN must always be authenticated by secure hash.
+	if len(params["vnp_SecureHash"]) == 0 || params["vnp_SecureHash"][0] == "" {
+		log.Println("VNPay IPN missing secure hash")
+		return false, errors.New("missing vnp_SecureHash")
+	}
+	if !u.vnpayClient.VerifyChecksum(params) {
+		log.Println("VNPay IPN checksum verification failed")
+		return false, errors.New("invalid checksum")
 	}
 
 	// 2. Trích xuất thông tin giao dịch
@@ -145,12 +147,24 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 	if len(params["vnp_Amount"]) > 0 {
 		vnpAmountStr = params["vnp_Amount"][0]
 	}
-	vnpAmount, _ := strconv.ParseInt(vnpAmountStr, 10, 64)
+	if vnpAmountStr == "" {
+		return false, errors.New("missing vnp_Amount")
+	}
+	vnpAmount, err := strconv.ParseInt(vnpAmountStr, 10, 64)
+	if err != nil {
+		return false, fmt.Errorf("invalid vnp_Amount: %w", err)
+	}
+	if vnpAmount <= 0 {
+		return false, errors.New("invalid vnp_Amount: amount must be greater than zero")
+	}
 	vnpAmount = vnpAmount / 100 // VNPay scale * 100
 
-	vnpResponseCode := "00"
+	vnpResponseCode := ""
 	if len(params["vnp_ResponseCode"]) > 0 {
 		vnpResponseCode = params["vnp_ResponseCode"][0]
+	}
+	if vnpResponseCode == "" {
+		return false, errors.New("missing vnp_ResponseCode")
 	}
 
 	vnpTxnNo := ""
@@ -161,7 +175,7 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 	// 3. Tiến hành cập nhật Database
 	var alreadyProcessed bool
 	err = u.repo.WithTransaction(func(tx *gorm.DB) error {
-		order, err := u.repo.GetByID(orderID)
+		order, err := u.repo.GetByIDForUpdate(tx, orderID)
 		if err != nil {
 			return err
 		}
@@ -177,8 +191,12 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 
 		// Replay attack check
 		if vnpTxnNo != "" {
-			existing, err := u.repo.GetByGatewayTxnRef(vnpTxnNo)
-			if err == nil && existing.ID != order.ID {
+			existing, err := u.repo.GetByGatewayTxnRefWithTx(tx, vnpTxnNo)
+			if err != nil {
+				if !errors.Is(err, gorm.ErrRecordNotFound) {
+					return err
+				}
+			} else if existing.ID != order.ID {
 				return errors.New("replay attack: transaction reference already processed")
 			}
 		}
@@ -193,30 +211,19 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 				return err
 			}
 
-			// Lưu Outbox event 1: wallet nhận tiền
-			payloadMap := map[string]interface{}{
-				"order_id":          order.ID,
-				"payer_id":          order.PayerID,
-				"expert_id":         order.ExpertID,
-				"gross_amount":      order.GrossAmount.Int64(),
-				"commission_amount": order.CommissionAmount.Int64(),
-				"net_amount":        order.NetAmount.Int64(),
-				"paid_at":           paidAt,
-			}
-			payloadBytes, _ := json.Marshal(payloadMap)
-
-			outbox := &entity.OutboxEvent{
-				AggregateType: "PAYMENT_ORDER",
-				AggregateID:   order.ID,
-				EventType:     "wallet.payment.received",
-				Payload:       string(payloadBytes),
-				Published:     false,
-			}
-			if err := u.repo.SaveOutboxEvent(tx, outbox); err != nil {
-				return err
+			creditKey := fmt.Sprintf("credit_order_%s", order.ID.String())
+			err = u.walletUsecase.CreditPendingWithTx(ctx, tx, order.ExpertID, order.GrossAmount, "PAYMENT_ORDER", order.ID, creditKey)
+			if err != nil {
+				return fmt.Errorf("wallet credit failed: %w", err)
 			}
 
-			// Lưu Outbox event 2: thông báo Booking Service xác nhận lịch hẹn
+			debitKey := fmt.Sprintf("debit_order_%s", order.ID.String())
+			err = u.walletUsecase.DebitPendingWithTx(ctx, tx, order.ExpertID, order.CommissionAmount, "PAYMENT_ORDER", order.ID, debitKey)
+			if err != nil {
+				return fmt.Errorf("wallet commission debit failed: %w", err)
+			}
+
+			// Lưu Outbox event: thông báo Booking Service xác nhận lịch hẹn.
 			// Chỉ emit nếu order này có appointment_id.
 			if order.AppointmentID != nil {
 				bookingPayload, _ := json.Marshal(map[string]interface{}{
@@ -234,19 +241,6 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 				if err := u.repo.SaveOutboxEvent(tx, bookingOutbox); err != nil {
 					return err
 				}
-			}
-
-			// Thao tác với ví: credit gross, sau đó debit commission
-			creditKey := fmt.Sprintf("credit_order_%s", order.ID.String())
-			err = u.walletUsecase.CreditPending(ctx, order.ExpertID, order.GrossAmount, "PAYMENT_ORDER", order.ID, creditKey)
-			if err != nil {
-				return fmt.Errorf("wallet credit failed: %w", err)
-			}
-
-			debitKey := fmt.Sprintf("debit_order_%s", order.ID.String())
-			err = u.walletUsecase.DebitPending(ctx, order.ExpertID, order.CommissionAmount, "PAYMENT_ORDER", order.ID, debitKey)
-			if err != nil {
-				return fmt.Errorf("wallet commission debit failed: %w", err)
 			}
 
 		} else {

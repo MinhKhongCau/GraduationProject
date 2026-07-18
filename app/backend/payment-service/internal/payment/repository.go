@@ -5,12 +5,15 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Repository interface {
 	Create(order *entity.PaymentOrder) error
 	GetByID(orderID uuid.UUID) (*entity.PaymentOrder, error)
+	GetByIDForUpdate(tx *gorm.DB, orderID uuid.UUID) (*entity.PaymentOrder, error)
 	GetByGatewayTxnRef(ref string) (*entity.PaymentOrder, error)
+	GetByGatewayTxnRefWithTx(tx *gorm.DB, ref string) (*entity.PaymentOrder, error)
 	Update(order *entity.PaymentOrder) error
 	UpdateWithTx(tx *gorm.DB, order *entity.PaymentOrder) error
 	SaveOutboxEvent(tx *gorm.DB, event *entity.OutboxEvent) error
@@ -38,9 +41,30 @@ func (r *pgRepository) GetByID(orderID uuid.UUID) (*entity.PaymentOrder, error) 
 	return &order, nil
 }
 
+func (r *pgRepository) GetByIDForUpdate(tx *gorm.DB, orderID uuid.UUID) (*entity.PaymentOrder, error) {
+	var order entity.PaymentOrder
+	err := tx.
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("id = ?", orderID).
+		First(&order).Error
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
 func (r *pgRepository) GetByGatewayTxnRef(ref string) (*entity.PaymentOrder, error) {
 	var order entity.PaymentOrder
 	err := r.db.Where("gateway_txn_ref = ?", ref).First(&order).Error
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (r *pgRepository) GetByGatewayTxnRefWithTx(tx *gorm.DB, ref string) (*entity.PaymentOrder, error) {
+	var order entity.PaymentOrder
+	err := tx.Where("gateway_txn_ref = ?", ref).First(&order).Error
 	if err != nil {
 		return nil, err
 	}
