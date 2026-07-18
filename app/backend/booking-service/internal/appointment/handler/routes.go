@@ -31,5 +31,8 @@ func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, internalGroup *g
 
 		// GET /internal/appointments/:id
 		internalAppt.GET("/:id", h.InternalGetAppointment)
+
+		// POST /internal/appointments/:id/payment-eligibility
+		internalAppt.POST("/:id/payment-eligibility", h.InternalPaymentEligibility)
 	}
 }

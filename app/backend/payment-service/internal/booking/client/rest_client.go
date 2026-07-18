@@ -8,28 +8,40 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"payment-service/pkg/httpclient"
+
+	"github.com/google/uuid"
 )
 
-// restBookingClient là implementation REST của BookingServiceClient.
-// Gọi sang /internal/appointments/:id/confirm|fail của Booking Service
-// thông qua Internal JWT Auth (M2M).
 type restBookingClient struct {
-	baseURL    string // http://booking-service:8083
+	baseURL    string
 	httpClient *httpclient.Client
 }
 
-// webhookPayload là body gửi sang Booking Service.
-// Giữ cùng cấu trúc với WebhookRequest hiện có của booking-service.
 type webhookPayload struct {
 	AppointmentID string `json:"appointment_id"`
-	Status        string `json:"status"` // "SUCCESS" hoặc "FAILED"
+	Status        string `json:"status"`
 }
 
-// NewRestBookingClient tạo REST implementation.
-//
-//	tokenProvider: thường là *internal_auth.TokenManager đã được khởi tạo ở main.go.
-//	baseURL: URL nội bộ của booking-service, e.g. "http://booking-service:8083".
+type paymentEligibilityRequest struct {
+	PayerID string `json:"payer_id"`
+}
+
+type paymentEligibilityResponse struct {
+	AppointmentID string `json:"appointment_id"`
+	ExpertID      string `json:"expert_id"`
+	AmountVND     int64  `json:"amount_vnd"`
+	ExpiresAt     int64  `json:"expires_at"`
+}
+
+type paymentEligibilityAPIResponse struct {
+	Success bool                       `json:"success"`
+	Message string                     `json:"message"`
+	Data    paymentEligibilityResponse `json:"data"`
+	Error   string                     `json:"error"`
+}
+
 func NewRestBookingClient(baseURL string, tokenProvider httpclient.TokenProvider) BookingServiceClient {
 	return &restBookingClient{
 		baseURL: baseURL,
@@ -40,62 +52,71 @@ func NewRestBookingClient(baseURL string, tokenProvider httpclient.TokenProvider
 	}
 }
 
-type APIResponse struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    Appointment `json:"data"`
-}
-
-// GetAppointment gọi internal API để lấy thông tin chi tiết của appointment.
-func (c *restBookingClient) GetAppointment(ctx context.Context, appointmentID string) (*Appointment, error) {
-	url := fmt.Sprintf("%s/internal/appointments/%s", c.baseURL, appointmentID)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+func (c *restBookingClient) GetPaymentEligibility(ctx context.Context, appointmentID string, payerID uuid.UUID) (*PaymentEligibility, error) {
+	endpoint := fmt.Sprintf("%s/internal/appointments/%s/payment-eligibility", c.baseURL, url.PathEscape(appointmentID))
+	body, err := json.Marshal(paymentEligibilityRequest{PayerID: payerID.String()})
 	if err != nil {
-		return nil, fmt.Errorf("booking_client: create get request: %w", err)
+		return nil, fmt.Errorf("booking_client: marshal eligibility request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("booking_client: create eligibility request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(ctx, req)
 	if err != nil {
-		return nil, fmt.Errorf("booking_client: get appointment %s: %w", url, err)
+		return nil, fmt.Errorf("booking_client: get payment eligibility %s: %w", endpoint, err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, ErrAppointmentNotFound
-	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("booking_client: unexpected status %d: %s", resp.StatusCode, string(respBody))
+		return nil, mapPaymentEligibilityStatus(resp)
 	}
 
-	var apiResp APIResponse
+	var apiResp paymentEligibilityAPIResponse
 	if err := json.NewDecoder(resp.Body).Decode(&apiResp); err != nil {
-		return nil, fmt.Errorf("booking_client: decode response: %w", err)
+		return nil, fmt.Errorf("booking_client: decode eligibility response: %w", err)
 	}
 
-	return &apiResp.Data, nil
+	return &PaymentEligibility{
+		AppointmentID: apiResp.Data.AppointmentID,
+		ExpertID:      apiResp.Data.ExpertID,
+		AmountVND:     apiResp.Data.AmountVND,
+		ExpiresAt:     apiResp.Data.ExpiresAt,
+	}, nil
 }
 
-// ConfirmAppointment gọi endpoint internal của Booking Service để xác nhận lịch hẹn.
+func mapPaymentEligibilityStatus(resp *http.Response) error {
+	respBody, _ := io.ReadAll(resp.Body)
+	detail := fmt.Sprintf("booking_client: payment eligibility status %d: %s", resp.StatusCode, string(respBody))
+
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return fmt.Errorf("%w: %s", ErrAppointmentNotFound, detail)
+	case http.StatusForbidden:
+		return fmt.Errorf("%w: %s", ErrPaymentEligibilityForbidden, detail)
+	case http.StatusConflict:
+		return fmt.Errorf("%w: %s", ErrPaymentEligibilityConflict, detail)
+	case http.StatusBadRequest:
+		return fmt.Errorf("%w: %s", ErrInvalidBookingPrice, detail)
+	default:
+		return fmt.Errorf("%s", detail)
+	}
+}
+
 func (c *restBookingClient) ConfirmAppointment(ctx context.Context, appointmentID string) error {
 	return c.callWebhook(ctx, appointmentID, "SUCCESS")
 }
 
-// FailAppointment gọi endpoint internal của Booking Service để hủy lịch hẹn.
 func (c *restBookingClient) FailAppointment(ctx context.Context, appointmentID string) error {
 	return c.callWebhook(ctx, appointmentID, "FAILED")
 }
 
-// callWebhook là phương thức dùng chung gọi POST /internal/appointments/:id/webhook
-// trên Booking Service thông qua internal auth.
-//
-// Gọi endpoint /internal thay vì /public vì:
-//   - /public không yêu cầu xác thực → bất kỳ ai cũng gọi được (kể cả giả mạo).
-//   - /internal được bảo vệ bởi M2M JWT middleware — chỉ services nội bộ được phép.
 func (c *restBookingClient) callWebhook(ctx context.Context, appointmentID, status string) error {
-	url := fmt.Sprintf("%s/internal/appointments/%s/webhook", c.baseURL, appointmentID)
+	endpoint := fmt.Sprintf("%s/internal/appointments/%s/webhook", c.baseURL, url.PathEscape(appointmentID))
 
 	payload := webhookPayload{
 		AppointmentID: appointmentID,
@@ -106,16 +127,15 @@ func (c *restBookingClient) callWebhook(ctx context.Context, appointmentID, stat
 		return fmt.Errorf("booking_client: marshal payload: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("booking_client: create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	// Authorization header sẽ được inject bởi httpclient.Client thông qua TokenProvider
 
 	resp, err := c.httpClient.Do(ctx, req)
 	if err != nil {
-		return fmt.Errorf("booking_client: call %s: %w", url, err)
+		return fmt.Errorf("booking_client: call %s: %w", endpoint, err)
 	}
 	defer resp.Body.Close()
 
@@ -124,6 +144,6 @@ func (c *restBookingClient) callWebhook(ctx context.Context, appointmentID, stat
 		return fmt.Errorf("booking_client: unexpected status %d from booking-service: %s", resp.StatusCode, string(respBody))
 	}
 
-	log.Printf("✅ [booking_client] appointment %s → %s confirmed by booking-service", appointmentID, status)
+	log.Printf("[booking_client] appointment %s -> %s accepted by booking-service", appointmentID, status)
 	return nil
 }

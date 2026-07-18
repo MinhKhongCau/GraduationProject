@@ -56,42 +56,41 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, app
 		return nil, "", fmt.Errorf("%w: invalid appointment_id format: %w", ErrInvalidCreateOrderRequest, err)
 	}
 
-	// Booking is the source of truth for appointment payment authority.
-	appt, err := u.bookingClient.GetAppointment(ctx, appointmentIDValue)
+	eligibility, err := u.bookingClient.GetPaymentEligibility(ctx, appointmentIDValue, payerID)
 	if err != nil {
 		if errors.Is(err, client.ErrAppointmentNotFound) {
 			return nil, "", fmt.Errorf("%w: %s", ErrBookingAppointmentNotFound, appointmentIDValue)
 		}
-		return nil, "", fmt.Errorf("failed to verify appointment: %w", err)
+		if errors.Is(err, client.ErrPaymentEligibilityForbidden) {
+			return nil, "", fmt.Errorf("%w: appointment %s", ErrAppointmentOwnership, appointmentIDValue)
+		}
+		if errors.Is(err, client.ErrPaymentEligibilityConflict) {
+			return nil, "", fmt.Errorf("%w: appointment %s", ErrAppointmentInvalidState, appointmentIDValue)
+		}
+		if errors.Is(err, client.ErrInvalidBookingPrice) {
+			return nil, "", fmt.Errorf("%w: appointment price is invalid", ErrInvalidBookingData)
+		}
+		return nil, "", fmt.Errorf("failed to verify payment eligibility: %w", err)
 	}
 
-	// Only the appointment owner can create the payment order.
-	appointmentPatientID, err := uuid.Parse(strings.TrimSpace(appt.PatientID))
+	if !strings.EqualFold(strings.TrimSpace(eligibility.AppointmentID), appointmentIDValue) {
+		return nil, "", fmt.Errorf("%w: eligibility appointment_id mismatch", ErrInvalidBookingData)
+	}
+	expertID, err := uuid.Parse(strings.TrimSpace(eligibility.ExpertID))
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: invalid appointment patient_id: %w", ErrInvalidBookingData, err)
-	}
-	if appointmentPatientID != payerID {
-		return nil, "", fmt.Errorf("%w: appointment %s", ErrAppointmentOwnership, appointmentIDValue)
-	}
-
-	// Validate status using the booking client contract.
-	if appt.Status != client.AppointmentStatusPendingPayment {
-		return nil, "", fmt.Errorf("%w: got %s", ErrAppointmentInvalidState, appt.Status.String())
-	}
-
-	// Expert and amount always come from the booking appointment.
-	expertID, err := uuid.Parse(strings.TrimSpace(appt.ExpertID))
-	if err != nil {
-		return nil, "", fmt.Errorf("%w: invalid appointment expert_id: %w", ErrInvalidBookingData, err)
+		return nil, "", fmt.Errorf("%w: invalid eligibility expert_id: %w", ErrInvalidBookingData, err)
 	}
 	if expertID == uuid.Nil {
-		return nil, "", fmt.Errorf("%w: missing appointment expert_id", ErrInvalidBookingData)
+		return nil, "", fmt.Errorf("%w: missing eligibility expert_id", ErrInvalidBookingData)
 	}
-	if appt.Price <= 0 {
-		return nil, "", fmt.Errorf("%w: appointment price must be greater than zero", ErrInvalidBookingData)
+	if eligibility.AmountVND <= 0 {
+		return nil, "", fmt.Errorf("%w: eligibility amount_vnd must be greater than zero", ErrInvalidBookingData)
+	}
+	if eligibility.ExpiresAt <= time.Now().UnixMilli() {
+		return nil, "", fmt.Errorf("%w: eligibility has expired", ErrAppointmentInvalidState)
 	}
 
-	grossAmount := vo.Money(appt.Price)
+	grossAmount := vo.Money(eligibility.AmountVND)
 
 	// Mức hoa hồng là 15% - Tính toán DỰA TRÊN grossAmount đã được xác thực
 	commissionRate := 0.15

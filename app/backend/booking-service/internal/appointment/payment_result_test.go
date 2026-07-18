@@ -184,6 +184,10 @@ func (r *fakePaymentResultRepository) GetAppointmentByID(appointmentID string) (
 	return &r.appointment, nil
 }
 
+func (r *fakePaymentResultRepository) GetPaymentEligibilitySnapshot(command GetPaymentEligibilityCommand) (*PaymentEligibilitySnapshot, error) {
+	return &PaymentEligibilitySnapshot{Appointment: r.appointment, Slot: r.slot}, nil
+}
+
 func (r *fakePaymentResultRepository) GetAppointmentBySlotID(slotID string) (*domain.Appointment, error) {
 	return &r.appointment, nil
 }
