@@ -2,23 +2,14 @@ package payment
 
 import (
 	"payment-service/internal/domain/entity"
+	apppayment "payment-service/internal/payment/application"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-type Repository interface {
-	Create(order *entity.PaymentOrder) error
-	GetByID(orderID uuid.UUID) (*entity.PaymentOrder, error)
-	GetByIDForUpdate(tx *gorm.DB, orderID uuid.UUID) (*entity.PaymentOrder, error)
-	GetByGatewayTxnRef(ref string) (*entity.PaymentOrder, error)
-	GetByGatewayTxnRefWithTx(tx *gorm.DB, ref string) (*entity.PaymentOrder, error)
-	Update(order *entity.PaymentOrder) error
-	UpdateWithTx(tx *gorm.DB, order *entity.PaymentOrder) error
-	SaveOutboxEvent(tx *gorm.DB, event *entity.OutboxEvent) error
-	WithTransaction(fn func(tx *gorm.DB) error) error
-}
+type Repository = apppayment.Repository
 
 type pgRepository struct {
 	db *gorm.DB
