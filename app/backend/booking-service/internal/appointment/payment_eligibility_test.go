@@ -32,10 +32,7 @@ func TestGetPaymentEligibilityValidSnapshot(t *testing.T) {
 		},
 	}}
 
-	eligibility, err := buildPaymentEligibility(GetPaymentEligibilityCommand{
-		AppointmentID: appointmentID,
-		PayerID:       payerID,
-	}, repo.snapshot.Appointment, repo.snapshot.Slot, now)
+	eligibility, err := domain.BuildPaymentEligibility(repo.snapshot.Appointment, repo.snapshot.Slot, payerID, now)
 	if err != nil {
 		t.Fatalf("expected valid eligibility, got %v", err)
 	}
@@ -88,62 +85,62 @@ func TestPaymentEligibilityRejectsInvalidBookingStates(t *testing.T) {
 			command: GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: otherPayerID},
 			appt:    baseAppt,
 			slot:    baseSlot,
-			wantErr: ErrPaymentEligibilityForbidden,
+			wantErr: domain.ErrPaymentEligibilityForbidden,
 		},
 		{
 			name:    "appointment not pending payment",
 			command: GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: payerID},
 			appt:    appointmentWithStatus(baseAppt, domain.AppointmentStatusConfirmed),
 			slot:    baseSlot,
-			wantErr: ErrPaymentEligibilityConflict,
+			wantErr: domain.ErrPaymentEligibilityConflict,
 		},
 		{
 			name:    "slot not locked",
 			command: GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: payerID},
 			appt:    baseAppt,
 			slot:    slotWithStatus(baseSlot, domain.SlotStatusAvailable),
-			wantErr: ErrPaymentEligibilityConflict,
+			wantErr: domain.ErrPaymentEligibilityConflict,
 		},
 		{
 			name:    "slot expert mismatch",
 			command: GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: payerID},
 			appt:    baseAppt,
 			slot:    slotWithExpert(baseSlot, "expert-2"),
-			wantErr: ErrPaymentEligibilityConflict,
+			wantErr: domain.ErrPaymentEligibilityConflict,
 		},
 		{
 			name:    "locked by missing",
 			command: GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: payerID},
 			appt:    baseAppt,
 			slot:    slotWithLockedBy(baseSlot, nil),
-			wantErr: ErrPaymentEligibilityConflict,
+			wantErr: domain.ErrPaymentEligibilityConflict,
 		},
 		{
 			name:    "locked by wrong payer",
 			command: GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: payerID},
 			appt:    baseAppt,
 			slot:    slotWithLockedBy(baseSlot, &otherPayerID),
-			wantErr: ErrPaymentEligibilityConflict,
+			wantErr: domain.ErrPaymentEligibilityConflict,
 		},
 		{
 			name:    "expiry missing",
 			command: GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: payerID},
 			appt:    baseAppt,
 			slot:    slotWithExpiry(baseSlot, nil),
-			wantErr: ErrPaymentEligibilityConflict,
+			wantErr: domain.ErrPaymentEligibilityConflict,
 		},
 		{
 			name:    "expired",
 			command: GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: payerID},
 			appt:    baseAppt,
 			slot:    slotWithExpiry(baseSlot, int64Ptr(now)),
-			wantErr: ErrPaymentEligibilityConflict,
+			wantErr: domain.ErrPaymentEligibilityConflict,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := buildPaymentEligibility(tt.command, tt.appt, tt.slot, now)
+			_, err := domain.BuildPaymentEligibility(tt.appt, tt.slot, tt.command.PayerID, now)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("expected %v, got %v", tt.wantErr, err)
 			}
@@ -170,17 +167,17 @@ func TestStrictPriceToVND(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := strictPriceToVND(tt.price)
+			got, err := domain.NewMoneyVNDFromPrice(tt.price)
 			if tt.wantErr {
-				if !errors.Is(err, ErrInvalidBookingPrice) {
-					t.Fatalf("expected ErrInvalidBookingPrice, got %v", err)
+				if !errors.Is(err, domain.ErrInvalidMoneyVND) {
+					t.Fatalf("expected ErrInvalidMoneyVND, got %v", err)
 				}
 				return
 			}
 			if err != nil {
 				t.Fatalf("expected nil error, got %v", err)
 			}
-			if got != tt.want {
+			if int64(got) != tt.want {
 				t.Fatalf("expected %d, got %d", tt.want, got)
 			}
 		})
@@ -203,10 +200,10 @@ func TestAppointmentCreationSlotValidationRejectsExpertMismatchAndNilExpiry(t *t
 		LockedExpiresAt: &expiresAt,
 	}
 
-	if err := validateAppointmentCreationSlot(slotWithExpert(baseSlot, "expert-2"), baseAppt, now); err == nil {
+	if err := domain.ValidateAppointmentCreationSlot(slotWithExpert(baseSlot, "expert-2"), baseAppt, now); err == nil {
 		t.Fatal("expected expert mismatch to be rejected")
 	}
-	if err := validateAppointmentCreationSlot(slotWithExpiry(baseSlot, nil), baseAppt, now); err == nil {
+	if err := domain.ValidateAppointmentCreationSlot(slotWithExpiry(baseSlot, nil), baseAppt, now); err == nil {
 		t.Fatal("expected nil lock expiry to be rejected")
 	}
 }

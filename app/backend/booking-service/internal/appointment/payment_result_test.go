@@ -9,111 +9,111 @@ import (
 
 func TestPlanPaymentResultSuccessFromPendingConfirmsAppointmentAndOccupiesSlot(t *testing.T) {
 	now := int64(12345)
-	transition, err := planPaymentResultTransition(
+	transition, err := domain.PlanPaymentResultTransition(
 		domain.Appointment{Status: domain.AppointmentStatusPendingPayment},
 		domain.ExpertSlot{Status: domain.SlotStatusLocked},
-		PaymentResultSuccess,
+		domain.PaymentResultSuccess,
 		now,
 	)
 	if err != nil {
 		t.Fatalf("expected success transition, got %v", err)
 	}
-	if transition.noop {
+	if transition.Noop {
 		t.Fatal("expected mutation, got no-op")
 	}
-	if transition.appointmentUpdates["status"] != domain.AppointmentStatusConfirmed {
-		t.Fatalf("expected appointment CONFIRMED, got %#v", transition.appointmentUpdates["status"])
+	if transition.AppointmentUpdates["status"] != domain.AppointmentStatusConfirmed {
+		t.Fatalf("expected appointment CONFIRMED, got %#v", transition.AppointmentUpdates["status"])
 	}
-	if transition.appointmentUpdates["confirmed_at"] != now {
-		t.Fatalf("expected confirmed_at %d, got %#v", now, transition.appointmentUpdates["confirmed_at"])
+	if transition.AppointmentUpdates["confirmed_at"] != now {
+		t.Fatalf("expected confirmed_at %d, got %#v", now, transition.AppointmentUpdates["confirmed_at"])
 	}
-	if transition.slotUpdates["status"] != domain.SlotStatusOccupied {
-		t.Fatalf("expected slot OCCUPIED, got %#v", transition.slotUpdates["status"])
+	if transition.SlotUpdates["status"] != domain.SlotStatusOccupied {
+		t.Fatalf("expected slot OCCUPIED, got %#v", transition.SlotUpdates["status"])
 	}
 }
 
 func TestPlanPaymentResultDuplicateSuccessFromConfirmedIsNoop(t *testing.T) {
 	confirmedAt := int64(111)
-	transition, err := planPaymentResultTransition(
+	transition, err := domain.PlanPaymentResultTransition(
 		domain.Appointment{Status: domain.AppointmentStatusConfirmed, ConfirmedAt: &confirmedAt},
 		domain.ExpertSlot{Status: domain.SlotStatusOccupied},
-		PaymentResultSuccess,
+		domain.PaymentResultSuccess,
 		222,
 	)
 	if err != nil {
 		t.Fatalf("expected no-op success, got %v", err)
 	}
-	if !transition.noop {
+	if !transition.Noop {
 		t.Fatal("expected duplicate success to be no-op")
 	}
-	if len(transition.appointmentUpdates) != 0 {
-		t.Fatalf("expected no appointment updates, got %#v", transition.appointmentUpdates)
+	if len(transition.AppointmentUpdates) != 0 {
+		t.Fatalf("expected no appointment updates, got %#v", transition.AppointmentUpdates)
 	}
 }
 
 func TestPlanPaymentResultSuccessFromCancelledConflicts(t *testing.T) {
-	_, err := planPaymentResultTransition(
+	_, err := domain.PlanPaymentResultTransition(
 		domain.Appointment{Status: domain.AppointmentStatusCancelled},
 		domain.ExpertSlot{Status: domain.SlotStatusAvailable},
-		PaymentResultSuccess,
+		domain.PaymentResultSuccess,
 		123,
 	)
-	if !errors.Is(err, ErrPaymentResultConflict) {
+	if !errors.Is(err, domain.ErrPaymentResultConflict) {
 		t.Fatalf("expected conflict, got %v", err)
 	}
 }
 
 func TestPlanPaymentResultFailedFromPendingCancelsAppointmentAndReleasesSlot(t *testing.T) {
 	now := int64(12345)
-	transition, err := planPaymentResultTransition(
+	transition, err := domain.PlanPaymentResultTransition(
 		domain.Appointment{Status: domain.AppointmentStatusPendingPayment},
 		domain.ExpertSlot{Status: domain.SlotStatusLocked},
-		PaymentResultFailed,
+		domain.PaymentResultFailed,
 		now,
 	)
 	if err != nil {
 		t.Fatalf("expected failure transition, got %v", err)
 	}
-	if transition.appointmentUpdates["status"] != domain.AppointmentStatusCancelled {
-		t.Fatalf("expected appointment CANCELLED, got %#v", transition.appointmentUpdates["status"])
+	if transition.AppointmentUpdates["status"] != domain.AppointmentStatusCancelled {
+		t.Fatalf("expected appointment CANCELLED, got %#v", transition.AppointmentUpdates["status"])
 	}
-	if transition.appointmentUpdates["updated_at"] != now {
-		t.Fatalf("expected updated_at %d, got %#v", now, transition.appointmentUpdates["updated_at"])
+	if transition.AppointmentUpdates["updated_at"] != now {
+		t.Fatalf("expected updated_at %d, got %#v", now, transition.AppointmentUpdates["updated_at"])
 	}
-	if transition.appointmentUpdates["cancellation_reason"] != "Payment failed" {
-		t.Fatalf("expected cancellation reason to be set, got %#v", transition.appointmentUpdates["cancellation_reason"])
+	if transition.AppointmentUpdates["cancellation_reason"] != "Payment failed" {
+		t.Fatalf("expected cancellation reason to be set, got %#v", transition.AppointmentUpdates["cancellation_reason"])
 	}
-	if transition.slotUpdates["status"] != domain.SlotStatusAvailable {
-		t.Fatalf("expected slot AVAILABLE, got %#v", transition.slotUpdates["status"])
+	if transition.SlotUpdates["status"] != domain.SlotStatusAvailable {
+		t.Fatalf("expected slot AVAILABLE, got %#v", transition.SlotUpdates["status"])
 	}
-	if transition.slotUpdates["locked_expires_at"] != nil || transition.slotUpdates["locked_by"] != nil {
-		t.Fatalf("expected slot lock metadata to be cleared, got %#v", transition.slotUpdates)
+	if transition.SlotUpdates["locked_expires_at"] != nil || transition.SlotUpdates["locked_by"] != nil {
+		t.Fatalf("expected slot lock metadata to be cleared, got %#v", transition.SlotUpdates)
 	}
 }
 
 func TestPlanPaymentResultDuplicateFailureFromCancelledIsNoop(t *testing.T) {
-	transition, err := planPaymentResultTransition(
+	transition, err := domain.PlanPaymentResultTransition(
 		domain.Appointment{Status: domain.AppointmentStatusCancelled},
 		domain.ExpertSlot{Status: domain.SlotStatusAvailable},
-		PaymentResultFailed,
+		domain.PaymentResultFailed,
 		123,
 	)
 	if err != nil {
 		t.Fatalf("expected no-op failure, got %v", err)
 	}
-	if !transition.noop {
+	if !transition.Noop {
 		t.Fatal("expected duplicate failure to be no-op")
 	}
 }
 
 func TestPlanPaymentResultFailureFromConfirmedConflicts(t *testing.T) {
-	_, err := planPaymentResultTransition(
+	_, err := domain.PlanPaymentResultTransition(
 		domain.Appointment{Status: domain.AppointmentStatusConfirmed},
 		domain.ExpertSlot{Status: domain.SlotStatusOccupied},
-		PaymentResultFailed,
+		domain.PaymentResultFailed,
 		123,
 	)
-	if !errors.Is(err, ErrPaymentResultConflict) {
+	if !errors.Is(err, domain.ErrPaymentResultConflict) {
 		t.Fatalf("expected conflict, got %v", err)
 	}
 }
@@ -158,15 +158,15 @@ func (r *fakePaymentResultRepository) HandlePaymentResult(command HandlePaymentR
 	apptSnapshot := r.appointment
 	slotSnapshot := r.slot
 
-	transition, err := planPaymentResultTransition(r.appointment, r.slot, command.Status, 12345)
+	transition, err := domain.PlanPaymentResultTransition(r.appointment, r.slot, domain.PaymentResultStatus(command.Status), 12345)
 	if err != nil {
 		return err
 	}
-	if transition.noop {
+	if transition.Noop {
 		return nil
 	}
 
-	if status, ok := transition.appointmentUpdates["status"].(domain.AppointmentStatus); ok {
+	if status, ok := transition.AppointmentUpdates["status"].(domain.AppointmentStatus); ok {
 		r.appointment.Status = status
 	}
 	if r.failSlotUpdate {
@@ -174,7 +174,7 @@ func (r *fakePaymentResultRepository) HandlePaymentResult(command HandlePaymentR
 		r.slot = slotSnapshot
 		return errors.New("slot update failed")
 	}
-	if status, ok := transition.slotUpdates["status"].(domain.SlotStatus); ok {
+	if status, ok := transition.SlotUpdates["status"].(domain.SlotStatus); ok {
 		r.slot.Status = status
 	}
 	return nil
