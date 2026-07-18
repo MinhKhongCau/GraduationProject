@@ -59,7 +59,8 @@ jwt:
 #   profile-service   → plain: "profile_internal_secret_2024"
 #   assessment-service → plain: "assessment_internal_secret_2024"
 internal-clients:
-  booking-service:    ${INTERNAL_SECRET_BOOKING:$2a$10$LGepNLvn/DTB9Yepl5SVlOVbWPR.h/tC3XPQAXVVArXYdvsinTkH.}
-  payment-service:    ${INTERNAL_SECRET_PAYMENT:$2a$10$RMrOxu3QFcg.vJNCykUwMeAnNjdHPV2r9oreZuNDa2IRrEHQnPk8q}
-  profile-service:    ${INTERNAL_SECRET_PROFILE:$2a$10$mVZu8ru34TDvKpqwZdFm5ehRWdV3grAaoOpZiclHQUTT4NeNDnswO}
-  assessment-service: ${INTERNAL_SECRET_ASSESSMENT:$2a$10$El5khvnrOleBYhoSpzy.NeDW9v3gtSZuf.Py/1S97GN9SmMjq/GmC}
+  clients:
+    booking-service:    ${INTERNAL_SECRET_BOOKING:$2a$10$LGepNLvn/DTB9Yepl5SVlOVbWPR.h/tC3XPQAXVVArXYdvsinTkH.}
+    payment-service:    ${INTERNAL_SECRET_PAYMENT:$2a$10$RMrOxu3QFcg.vJNCykUwMeAnNjdHPV2r9oreZuNDa2IRrEHQnPk8q}
+    profile-service:    ${INTERNAL_SECRET_PROFILE:$2a$10$mVZu8ru34TDvKpqwZdFm5ehRWdV3grAaoOpZiclHQUTT4NeNDnswO}
+    assessment-service: ${INTERNAL_SECRET_ASSESSMENT:$2a$10$El5khvnrOleBYhoSpzy.NeDW9v3gtSZuf.Py/1S97GN9SmMjq/GmC}

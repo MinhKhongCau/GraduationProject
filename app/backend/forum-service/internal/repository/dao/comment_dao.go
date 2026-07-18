@@ -9,7 +9,7 @@ import (
 type CommentDAO struct {
 	ID        int64        `gorm:"column:id;primaryKey"`
 	PostID    int64        `gorm:"column:post_id"`
-	UserID    int64        `gorm:"column:user_id"`
+	UserID    string       `gorm:"column:user_id"`
 	ParentID  *int64       `gorm:"column:parent_id"`
 	Path      entity.LTree `gorm:"column:path"`
 	Content   string       `gorm:"column:content"`

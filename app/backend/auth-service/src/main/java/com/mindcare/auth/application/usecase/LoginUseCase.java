@@ -29,7 +29,7 @@ public class LoginUseCase {
         String refreshTokenString = jwtUtils.generateRefreshToken(account);
         RefreshToken refreshToken = RefreshToken.builder()
                 .account(account)
-                .tokenHash(refreshTokenString) 
+                .tokenHash(jwtUtils.hashToken(refreshTokenString)) 
                 .expiresAt(System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000L)
                 .build();
         refreshTokenPort.save(refreshToken);

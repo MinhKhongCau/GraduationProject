@@ -50,6 +50,11 @@ services:
       - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
@@ -248,6 +253,17 @@ services:
       - "${PORT_CHATBOT_SERVICE}:8000"
     depends_on:
       postgres-db:
+  # 9. CHATROOM SERVICE (Node.js / Socket.IO)
+  chatroom-service:
+    build:
+      context: ./app/backend/chatroom-service
+      dockerfile: Dockerfile
+    container_name: chatroom-service
+    restart: always
+    ports:
+      - "${PORT_CHATROOM_SERVICE}:${PORT_CHATROOM_SERVICE}"
+    depends_on:
+      redis:
         condition: service_healthy
     networks:
       - app-network
@@ -260,6 +276,13 @@ services:
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
 
   # 9. API GATEWAY (Kong)
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT_CHATROOM_SERVICE}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - REDIS_URL=redis://redis:${REDIS_PORT}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+
+  # 10. API GATEWAY (Kong)
   api-gateway:
     build:
       context: ./app/backend/gateway
@@ -280,6 +303,7 @@ services:
       - booking-service
       - assessment-service
       - chatbot-service
+      - chatroom-service
     networks:
       - app-network
 

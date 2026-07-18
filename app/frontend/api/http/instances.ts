@@ -25,5 +25,11 @@ export const bookingClient = createHttpClient({
 export const assessmentClient = createHttpClient({
   baseURL,
   transformCase: true, // FastAPI/Pydantic returns snake_case.
-  unwrapEnvelope: true, // assessment-service wraps responses in {statusCode, result, message, ...}.
+  unwrapEnvelope: "result", // assessment-service wraps responses in {statusCode, result, message, ...}.
+});
+
+export const forumClient = createHttpClient({
+  baseURL,
+  transformCase: false, // forum-service DTOs are already camelCase (see internal/api/dto/*.go).
+  unwrapEnvelope: "success-data", // forum-service always wraps responses in {success, message, data, error}.
 });

@@ -9,6 +9,7 @@ import (
 )
 
 type Repository interface {
+	GetAppointmentByID(appointmentID string) (*domain.Appointment, error)
 	GetAppointmentBySlotID(slotID string) (*domain.Appointment, error)
 	CancelAppointmentByExpert(appointmentID string, reason string) error
 	CancelAppointmentByPatient(appointmentID string, patientID string, reason string) error
@@ -28,15 +29,33 @@ func NewRepository(db *gorm.DB) Repository {
 	return &pgRepository{db: db}
 }
 
-// Lấy Appointment theo SlotID
+// Lấy Appointment theo SlotID (ưu tiên lấy cuộc hẹn chưa bị huỷ, nếu không thì lấy cuộc hẹn mới nhất)
 func (r *pgRepository) GetAppointmentBySlotID(slotID string) (*domain.Appointment, error) {
 	var appt domain.Appointment
-	err := r.db.Where("slot_id = ?", slotID).First(&appt).Error
+	err := r.db.Where("slot_id = ? AND status != ?", slotID, domain.AppointmentStatusCancelled).Order("created_at DESC").First(&appt).Error
+	if err != nil {
+		err = r.db.Where("slot_id = ?", slotID).Order("created_at DESC").First(&appt).Error
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &appt, nil
+}
+
+// Lấy Appointment theo AppointmentID
+func (r *pgRepository) GetAppointmentByID(appointmentID string) (*domain.Appointment, error) {
+	var appt domain.Appointment
+	err := r.db.Table("Booking_Appointments").
+		Select("\"Booking_Appointments\".*, \"Booking_Expert_Slots\".price").
+		Joins("JOIN \"Booking_Expert_Slots\" ON \"Booking_Appointments\".slot_id = \"Booking_Expert_Slots\".slot_id").
+		Where("\"Booking_Appointments\".appointment_id = ?", appointmentID).
+		First(&appt).Error
 	if err != nil {
 		return nil, err
 	}
 	return &appt, nil
 }
+
 
 // Hủy Appointment do bác sĩ nghỉ phép (TimeOff)
 func (r *pgRepository) CancelAppointmentByExpert(appointmentID string, reason string) error {

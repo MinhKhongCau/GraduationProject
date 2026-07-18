@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { QuestionStep } from "./component/QuestionStep";
 import { ProgressBar } from "./component/ProgressBar";
 import { ResultSummary } from "./component/ResultSummary";
@@ -9,13 +10,12 @@ import { Button, Spinner, Card } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { assessmentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
-import { useAuthContext } from "@/context/AuthContext";
 import { BookOpen, Award, ChevronDown, ChevronUp, FileText, Play } from "lucide-react";
 import type { AnswerSubmit } from "@/types";
 
 export default function AssessmentDetailPage({ params }: { params: Promise<{ templateId: string }> }) {
   const { templateId } = use(params);
-  const { user } = useAuthContext();
+  const queryClient = useQueryClient();
 
   const [isStarted, setIsStarted] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -46,7 +46,10 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
           optionLabel: option?.label ?? "",
         };
       });
-      return assessmentApi.submitAssessment({ templateId, userId: user!.id, answers: answerList });
+      return assessmentApi.submitAssessment({ templateId, answers: answerList });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.assessmentHistory() });
     },
   });
 
