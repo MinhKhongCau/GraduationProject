@@ -64,9 +64,98 @@ func TestInternalPaymentWebhookReturnsNon2xxWhenUsecaseFails(t *testing.T) {
 	}
 }
 
+func TestInternalPaymentEligibilityRequiresPaymentServiceCaller(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	usecase := &fakeAppointmentUsecase{}
+	handler := NewHandler(usecase)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/internal/appointments/"+uuidString()+"/payment-eligibility", bytes.NewBufferString(`{"payer_id":"`+uuidString()+`"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: uuidString()}}
+
+	handler.InternalPaymentEligibility(c)
+
+	if recorder.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if len(usecase.eligibilityCommands) != 0 {
+		t.Fatalf("expected usecase not to be called, got %d calls", len(usecase.eligibilityCommands))
+	}
+}
+
+func TestInternalPaymentEligibilityRejectsInvalidPayer(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	usecase := &fakeAppointmentUsecase{}
+	handler := NewHandler(usecase)
+
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/internal/appointments/"+uuidString()+"/payment-eligibility", bytes.NewBufferString(`{"payer_id":"not-a-uuid"}`))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Params = gin.Params{{Key: "id", Value: uuidString()}}
+	c.Set(internal_auth.ContextKeyCallerID, "payment-service")
+
+	handler.InternalPaymentEligibility(c)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", recorder.Code, recorder.Body.String())
+	}
+	if len(usecase.eligibilityCommands) != 0 {
+		t.Fatalf("expected usecase not to be called, got %d calls", len(usecase.eligibilityCommands))
+	}
+}
+
+func TestInternalPaymentEligibilityMapsTypedErrors(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name       string
+		err        error
+		wantStatus int
+	}{
+		{name: "not found", err: appointment.ErrNotFound, wantStatus: http.StatusNotFound},
+		{name: "forbidden", err: appointment.ErrPaymentEligibilityForbidden, wantStatus: http.StatusForbidden},
+		{name: "conflict", err: appointment.ErrPaymentEligibilityConflict, wantStatus: http.StatusConflict},
+		{name: "invalid price", err: appointment.ErrInvalidBookingPrice, wantStatus: http.StatusBadRequest},
+		{name: "unexpected", err: errors.New("database unavailable"), wantStatus: http.StatusInternalServerError},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			usecase := &fakeAppointmentUsecase{eligibilityErr: tt.err}
+			handler := NewHandler(usecase)
+			appointmentID := uuidString()
+			payerID := uuidString()
+
+			recorder := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(recorder)
+			c.Request = httptest.NewRequest(http.MethodPost, "/internal/appointments/"+appointmentID+"/payment-eligibility", bytes.NewBufferString(`{"payer_id":"`+payerID+`"}`))
+			c.Request.Header.Set("Content-Type", "application/json")
+			c.Params = gin.Params{{Key: "id", Value: appointmentID}}
+			c.Set(internal_auth.ContextKeyCallerID, "payment-service")
+
+			handler.InternalPaymentEligibility(c)
+
+			if recorder.Code != tt.wantStatus {
+				t.Fatalf("expected %d, got %d: %s", tt.wantStatus, recorder.Code, recorder.Body.String())
+			}
+			if len(usecase.eligibilityCommands) != 1 {
+				t.Fatalf("expected one usecase call, got %d", len(usecase.eligibilityCommands))
+			}
+			if usecase.eligibilityCommands[0].AppointmentID != appointmentID {
+				t.Fatalf("expected path appointment id, got %q", usecase.eligibilityCommands[0].AppointmentID)
+			}
+		})
+	}
+}
+
 type fakeAppointmentUsecase struct {
-	commands  []appointment.HandlePaymentResultCommand
-	handleErr error
+	commands            []appointment.HandlePaymentResultCommand
+	eligibilityCommands []appointment.GetPaymentEligibilityCommand
+	handleErr           error
+	eligibilityErr      error
 }
 
 func (u *fakeAppointmentUsecase) CreateAppointment(patientID, expertID, slotID string) (*domain.Appointment, error) {
@@ -75,6 +164,19 @@ func (u *fakeAppointmentUsecase) CreateAppointment(patientID, expertID, slotID s
 
 func (u *fakeAppointmentUsecase) GetAppointmentByID(appointmentID string) (*domain.Appointment, error) {
 	return nil, nil
+}
+
+func (u *fakeAppointmentUsecase) GetPaymentEligibility(command appointment.GetPaymentEligibilityCommand) (appointment.PaymentEligibility, error) {
+	u.eligibilityCommands = append(u.eligibilityCommands, command)
+	if u.eligibilityErr != nil {
+		return appointment.PaymentEligibility{}, u.eligibilityErr
+	}
+	return appointment.PaymentEligibility{
+		AppointmentID: command.AppointmentID,
+		ExpertID:      uuidString(),
+		AmountVND:     200000,
+		ExpiresAt:     9999999999999,
+	}, nil
 }
 
 func (u *fakeAppointmentUsecase) CancelAppointment(appointmentID, userID, userRole, reason string) error {
@@ -100,4 +202,8 @@ func (u *fakeAppointmentUsecase) GetAppointmentsByPatient(patientID string) ([]d
 
 func (u *fakeAppointmentUsecase) GetAppointmentsByExpert(expertID string, fromDate, toDate int64, status *domain.AppointmentStatus) ([]domain.Appointment, error) {
 	return nil, nil
+}
+
+func uuidString() string {
+	return "11111111-1111-1111-1111-111111111111"
 }

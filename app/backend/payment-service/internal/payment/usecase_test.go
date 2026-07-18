@@ -23,18 +23,17 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestCreateOrderWithAppointmentDerivesExpertAndAmountFromBooking(t *testing.T) {
+func TestCreateOrderCallsPaymentEligibilityAndDerivesExpertAndAmount(t *testing.T) {
 	payerID := uuid.New()
-	bookingExpertID := uuid.New()
+	eligibilityExpertID := uuid.New()
 	appointmentID := uuid.New().String()
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
 	paymentGateway := &fakePaymentGateway{paymentURL: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?ok=1"}
-	booking := &fakeBookingClient{appointment: &bookingclient.Appointment{
+	booking := &fakeBookingClient{eligibility: &bookingclient.PaymentEligibility{
 		AppointmentID: appointmentID,
-		PatientID:     payerID.String(),
-		ExpertID:      bookingExpertID.String(),
-		Status:        bookingclient.AppointmentStatusPendingPayment,
-		Price:         250000,
+		ExpertID:      eligibilityExpertID.String(),
+		AmountVND:     250000,
+		ExpiresAt:     time.Now().Add(5 * time.Minute).UnixMilli(),
 	}}
 	usecase := NewUsecase(repo, &fakeWalletUsecase{}, paymentGateway, booking)
 
@@ -43,13 +42,19 @@ func TestCreateOrderWithAppointmentDerivesExpertAndAmountFromBooking(t *testing.
 		t.Fatalf("CreateOrder returned error: %v", err)
 	}
 
-	if booking.getCalls != 1 {
-		t.Fatalf("expected booking lookup once, got %d", booking.getCalls)
+	if booking.eligibilityCalls != 1 {
+		t.Fatalf("expected booking eligibility lookup once, got %d", booking.eligibilityCalls)
+	}
+	if booking.lastAppointmentID != appointmentID {
+		t.Fatalf("expected eligibility appointment_id %s, got %s", appointmentID, booking.lastAppointmentID)
+	}
+	if booking.lastPayerID != payerID {
+		t.Fatalf("expected eligibility payer_id %s, got %s", payerID, booking.lastPayerID)
 	}
 	if repo.createCount != 1 {
 		t.Fatalf("expected one payment order to be persisted, got %d", repo.createCount)
 	}
-	if order.ExpertID != bookingExpertID || repo.order.ExpertID != bookingExpertID {
+	if order.ExpertID != eligibilityExpertID || repo.order.ExpertID != eligibilityExpertID {
 		t.Fatalf("expected stored expert_id to be derived from booking, got order=%s repo=%s", order.ExpertID, repo.order.ExpertID)
 	}
 	if order.GrossAmount != vo.Money(250000) || repo.order.GrossAmount != vo.Money(250000) {
@@ -69,46 +74,15 @@ func TestCreateOrderWithAppointmentDerivesExpertAndAmountFromBooking(t *testing.
 	}
 }
 
-func TestCreateOrderWithAppointmentCanOmitExpertAndAmount(t *testing.T) {
-	payerID := uuid.New()
-	bookingExpertID := uuid.New()
-	appointmentID := uuid.New().String()
-	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{appointment: &bookingclient.Appointment{
-		AppointmentID: appointmentID,
-		PatientID:     payerID.String(),
-		ExpertID:      bookingExpertID.String(),
-		Status:        bookingclient.AppointmentStatusPendingPayment,
-		Price:         120000,
-	}})
-
-	order, _, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
-	if err != nil {
-		t.Fatalf("CreateOrder returned error: %v", err)
-	}
-	if order.ExpertID != bookingExpertID {
-		t.Fatalf("expected expert_id from booking, got %s", order.ExpertID)
-	}
-	if order.GrossAmount != vo.Money(120000) {
-		t.Fatalf("expected amount from booking price, got %d", order.GrossAmount)
-	}
-}
-
-func TestCreateOrderRejectsAppointmentNotOwnedByPayer(t *testing.T) {
+func TestCreateOrderRejectsEligibilityErrorBeforePersisting(t *testing.T) {
 	payerID := uuid.New()
 	appointmentID := uuid.New().String()
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{appointment: &bookingclient.Appointment{
-		AppointmentID: appointmentID,
-		PatientID:     uuid.New().String(),
-		ExpertID:      uuid.New().String(),
-		Status:        bookingclient.AppointmentStatusPendingPayment,
-		Price:         100000,
-	}})
+	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: bookingclient.ErrPaymentEligibilityConflict})
 
 	_, _, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
-	if !errors.Is(err, ErrAppointmentOwnership) {
-		t.Fatalf("expected ErrAppointmentOwnership, got %v", err)
+	if !errors.Is(err, ErrAppointmentInvalidState) {
+		t.Fatalf("expected ErrAppointmentInvalidState, got %v", err)
 	}
 	assertNoPaymentOrderPersisted(t, repo)
 }
@@ -124,42 +98,69 @@ func TestCreateOrderRejectsMissingAppointmentIDBeforePersisting(t *testing.T) {
 	assertNoPaymentOrderPersisted(t, repo)
 }
 
-func TestCreateOrderRejectsInvalidBookingPrice(t *testing.T) {
+func TestCreateOrderRejectsMalformedEligibilityResultBeforePersisting(t *testing.T) {
 	payerID := uuid.New()
 	appointmentID := uuid.New().String()
-	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{appointment: &bookingclient.Appointment{
-		AppointmentID: appointmentID,
-		PatientID:     payerID.String(),
-		ExpertID:      uuid.New().String(),
-		Status:        bookingclient.AppointmentStatusPendingPayment,
-		Price:         0,
-	}})
-
-	_, _, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
-	if !errors.Is(err, ErrInvalidBookingData) {
-		t.Fatalf("expected ErrInvalidBookingData, got %v", err)
+	tests := []struct {
+		name        string
+		eligibility bookingclient.PaymentEligibility
+		wantErr     error
+	}{
+		{
+			name: "appointment id mismatch",
+			eligibility: bookingclient.PaymentEligibility{
+				AppointmentID: uuid.New().String(),
+				ExpertID:      uuid.New().String(),
+				AmountVND:     100000,
+				ExpiresAt:     time.Now().Add(5 * time.Minute).UnixMilli(),
+			},
+			wantErr: ErrInvalidBookingData,
+		},
+		{
+			name: "invalid expert id",
+			eligibility: bookingclient.PaymentEligibility{
+				AppointmentID: appointmentID,
+				ExpertID:      "not-a-uuid",
+				AmountVND:     100000,
+				ExpiresAt:     time.Now().Add(5 * time.Minute).UnixMilli(),
+			},
+			wantErr: ErrInvalidBookingData,
+		},
+		{
+			name: "non-positive amount",
+			eligibility: bookingclient.PaymentEligibility{
+				AppointmentID: appointmentID,
+				ExpertID:      uuid.New().String(),
+				AmountVND:     0,
+				ExpiresAt:     time.Now().Add(5 * time.Minute).UnixMilli(),
+			},
+			wantErr: ErrInvalidBookingData,
+		},
+		{
+			name: "expired eligibility",
+			eligibility: bookingclient.PaymentEligibility{
+				AppointmentID: appointmentID,
+				ExpertID:      uuid.New().String(),
+				AmountVND:     100000,
+				ExpiresAt:     time.Now().Add(-time.Minute).UnixMilli(),
+			},
+			wantErr: ErrAppointmentInvalidState,
+		},
 	}
-	assertNoPaymentOrderPersisted(t, repo)
-}
 
-func TestCreateOrderRejectsNonPendingPaymentAppointment(t *testing.T) {
-	payerID := uuid.New()
-	appointmentID := uuid.New().String()
-	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{appointment: &bookingclient.Appointment{
-		AppointmentID: appointmentID,
-		PatientID:     payerID.String(),
-		ExpertID:      uuid.New().String(),
-		Status:        bookingclient.AppointmentStatusConfirmed,
-		Price:         100000,
-	}})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := newFakePaymentRepo(entity.PaymentOrder{})
+			eligibility := tt.eligibility
+			usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{eligibility: &eligibility})
 
-	_, _, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
-	if !errors.Is(err, ErrAppointmentInvalidState) {
-		t.Fatalf("expected ErrAppointmentInvalidState, got %v", err)
+			_, _, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("expected %v, got %v", tt.wantErr, err)
+			}
+			assertNoPaymentOrderPersisted(t, repo)
+		})
 	}
-	assertNoPaymentOrderPersisted(t, repo)
 }
 
 func TestCreateOrderRejectsMalformedAppointmentIDBeforePersisting(t *testing.T) {
@@ -916,20 +917,29 @@ func (g *fakePaymentGateway) VerifyChecksum(params map[string][]string) bool {
 }
 
 type fakeBookingClient struct {
-	appointment *bookingclient.Appointment
-	err         error
-	getCalls    int
+	eligibility       *bookingclient.PaymentEligibility
+	err               error
+	eligibilityCalls  int
+	lastAppointmentID string
+	lastPayerID       uuid.UUID
 }
 
-func (c *fakeBookingClient) GetAppointment(ctx context.Context, appointmentID string) (*bookingclient.Appointment, error) {
-	c.getCalls++
+func (c *fakeBookingClient) GetPaymentEligibility(ctx context.Context, appointmentID string, payerID uuid.UUID) (*bookingclient.PaymentEligibility, error) {
+	c.eligibilityCalls++
+	c.lastAppointmentID = appointmentID
+	c.lastPayerID = payerID
 	if c.err != nil {
 		return nil, c.err
 	}
-	if c.appointment != nil {
-		return c.appointment, nil
+	if c.eligibility != nil {
+		return c.eligibility, nil
 	}
-	return &bookingclient.Appointment{AppointmentID: appointmentID}, nil
+	return &bookingclient.PaymentEligibility{
+		AppointmentID: appointmentID,
+		ExpertID:      uuid.New().String(),
+		AmountVND:     1000,
+		ExpiresAt:     time.Now().Add(5 * time.Minute).UnixMilli(),
+	}, nil
 }
 
 func (c *fakeBookingClient) ConfirmAppointment(ctx context.Context, appointmentID string) error {

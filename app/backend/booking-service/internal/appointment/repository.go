@@ -12,6 +12,7 @@ import (
 
 type Repository interface {
 	GetAppointmentByID(appointmentID string) (*domain.Appointment, error)
+	GetPaymentEligibilitySnapshot(command GetPaymentEligibilityCommand) (*PaymentEligibilitySnapshot, error)
 	GetAppointmentBySlotID(slotID string) (*domain.Appointment, error)
 	CancelAppointmentByExpert(appointmentID string, reason string) error
 	CancelAppointmentByPatient(appointmentID string, patientID string, reason string) error
@@ -22,6 +23,11 @@ type Repository interface {
 	ConfirmPayment(appointmentID string) error
 	HandlePaymentResult(command HandlePaymentResultCommand) error
 	CancelExpiredLocks() (int64, error)
+}
+
+type PaymentEligibilitySnapshot struct {
+	Appointment domain.Appointment
+	Slot        domain.ExpertSlot
 }
 
 type pgRepository struct {
@@ -57,6 +63,44 @@ func (r *pgRepository) GetAppointmentByID(appointmentID string) (*domain.Appoint
 		return nil, err
 	}
 	return &appt, nil
+}
+
+func (r *pgRepository) GetPaymentEligibilitySnapshot(command GetPaymentEligibilityCommand) (*PaymentEligibilitySnapshot, error) {
+	var snapshot PaymentEligibilitySnapshot
+
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var appt domain.Appointment
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("appointment_id = ?", command.AppointmentID).
+			First(&appt).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrNotFound
+			}
+			return err
+		}
+
+		var slot domain.ExpertSlot
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("slot_id = ?", appt.SlotID).
+			First(&slot).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return fmt.Errorf("%w: slot not found", ErrPaymentEligibilityConflict)
+			}
+			return err
+		}
+
+		snapshot = PaymentEligibilitySnapshot{
+			Appointment: appt,
+			Slot:        slot,
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &snapshot, nil
 }
 
 // Hủy Appointment do bác sĩ nghỉ phép (TimeOff)
@@ -189,19 +233,16 @@ func (r *pgRepository) CreateAppointment(appointment *domain.Appointment) error 
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		// Lấy thông tin slot và kiểm tra lại trạng thái (double-check)
 		var slot domain.ExpertSlot
-		if err := tx.Where("slot_id = ?", appointment.SlotID).First(&slot).Error; err != nil {
+		if err := tx.
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("slot_id = ?", appointment.SlotID).
+			First(&slot).Error; err != nil {
 			return errors.New("không tìm thấy slot: " + err.Error())
 		}
 
-		// Đảm bảo slot đang được giữ bởi đúng bệnh nhân này
-		if slot.Status != domain.SlotStatusLocked || slot.LockedBy == nil || *slot.LockedBy != appointment.PatientID {
-			return errors.New("slot không được giữ bởi bạn, vui lòng thực hiện lại từ đầu")
-		}
-
-		// Đảm bảo lock chưa hết hạn
 		nowMs := time.Now().UnixMilli()
-		if slot.LockedExpiresAt != nil && *slot.LockedExpiresAt < nowMs {
-			return errors.New("phiên giữ chỗ đã hết hạn 15 phút, vui lòng chọn lại")
+		if err := validateAppointmentCreationSlot(slot, appointment, nowMs); err != nil {
+			return err
 		}
 
 		// Tạo cuộc hẹn với trạng thái PENDING_PAYMENT
@@ -213,6 +254,22 @@ func (r *pgRepository) CreateAppointment(appointment *domain.Appointment) error 
 
 		return nil
 	})
+}
+
+func validateAppointmentCreationSlot(slot domain.ExpertSlot, appointment *domain.Appointment, nowMs int64) error {
+	if slot.Status != domain.SlotStatusLocked || slot.LockedBy == nil || !sameID(*slot.LockedBy, appointment.PatientID) {
+		return errors.New("slot không được giữ bởi bạn, vui lòng thực hiện lại từ đầu")
+	}
+	if !sameID(slot.ExpertID, appointment.ExpertID) {
+		return errors.New("slot expert does not match appointment expert")
+	}
+	if slot.LockedExpiresAt == nil {
+		return errors.New("phiên giữ chỗ đã hết hạn 15 phút, vui lòng chọn lại")
+	}
+	if *slot.LockedExpiresAt <= nowMs {
+		return errors.New("phiên giữ chỗ đã hết hạn 15 phút, vui lòng chọn lại")
+	}
+	return nil
 }
 
 // =====================================================================
