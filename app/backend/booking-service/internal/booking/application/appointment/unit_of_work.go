@@ -2,8 +2,14 @@ package appointment
 
 import (
 	"context"
+	"errors"
 
 	"booking-service/internal/domain"
+)
+
+var (
+	ErrTxRecordNotFound = errors.New("record not found")
+	errTxRecordNotFound = ErrTxRecordNotFound
 )
 
 type UnitOfWork interface {

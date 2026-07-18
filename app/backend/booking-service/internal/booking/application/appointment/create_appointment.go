@@ -25,11 +25,17 @@ func (u *appointmentUsecase) CreateAppointment(patientID, expertID, slotID strin
 }
 
 func (u *appointmentUsecase) createAppointmentWithUOW(ctx context.Context, appointment *domain.Appointment) error {
-	if u.uow == nil {
-		return u.repo.CreateAppointment(appointment)
+	return CreateAppointmentWithUnitOfWork(ctx, u.repo, u.uow, appointment)
+}
+
+// CreateAppointmentWithUnitOfWork exists temporarily so the old postgres adapter
+// can preserve its compatibility CreateAppointment method until that adapter moves.
+func CreateAppointmentWithUnitOfWork(ctx context.Context, repo Repository, uow UnitOfWork, appointment *domain.Appointment) error {
+	if uow == nil {
+		return repo.CreateAppointment(appointment)
 	}
 
-	return u.uow.WithinTx(ctx, func(tx Tx) error {
+	return uow.WithinTx(ctx, func(tx Tx) error {
 		slot, err := tx.LoadSlotForUpdate(ctx, appointment.SlotID)
 		if err != nil {
 			return errors.New("khÃ´ng tÃ¬m tháº¥y slot: " + err.Error())
@@ -48,4 +54,17 @@ func (u *appointmentUsecase) createAppointmentWithUOW(ctx context.Context, appoi
 
 		return nil
 	})
+}
+
+func mapAppointmentCreationSlotError(err error) error {
+	switch {
+	case errors.Is(err, domain.ErrAppointmentCreationSlotNotLockedByPatient):
+		return errors.New("slot khÃ´ng Ä‘Æ°á»£c giá»¯ bá»Ÿi báº¡n, vui lÃ²ng thá»±c hiá»‡n láº¡i tá»« Ä‘áº§u")
+	case errors.Is(err, domain.ErrAppointmentCreationSlotExpertMismatch):
+		return errors.New("slot expert does not match appointment expert")
+	case errors.Is(err, domain.ErrAppointmentCreationSlotLockExpired):
+		return errors.New("phiÃªn giá»¯ chá»— Ä‘Ã£ háº¿t háº¡n 15 phÃºt, vui lÃ²ng chá»n láº¡i")
+	default:
+		return err
+	}
 }
