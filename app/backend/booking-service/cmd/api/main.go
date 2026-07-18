@@ -14,12 +14,12 @@ import (
 
 	"booking-service/internal/appointment"
 	apptHandler "booking-service/internal/booking/adapter/in/http/appointment"
+	schedHandler "booking-service/internal/booking/adapter/in/http/schedule"
 	slotHandler "booking-service/internal/booking/adapter/in/http/slot"
+	timeoffHandler "booking-service/internal/booking/adapter/in/http/timeoff"
 	"booking-service/internal/schedule"
-	schedHandler "booking-service/internal/schedule/handler"
 	"booking-service/internal/slot"
 	"booking-service/internal/timeoff"
-	timeoffHandler "booking-service/internal/timeoff/handler"
 
 	_ "booking-service/docs" // Ignore error if it doesn't exist yet
 	swaggerFiles "github.com/swaggo/files"
