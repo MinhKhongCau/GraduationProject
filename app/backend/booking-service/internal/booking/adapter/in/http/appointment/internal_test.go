@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"booking-service/internal/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/domain"
 	"booking-service/pkg/internal_auth"
 
@@ -59,7 +59,7 @@ func TestInternalPaymentWebhookReturnsNon2xxWhenUsecaseFails(t *testing.T) {
 	if usecase.commands[0].AppointmentID != "appt-1" {
 		t.Fatalf("expected path appointment id to win, got %q", usecase.commands[0].AppointmentID)
 	}
-	if usecase.commands[0].Status != appointment.PaymentResultFailed {
+	if usecase.commands[0].Status != appappointment.PaymentResultFailed {
 		t.Fatalf("expected FAILED command, got %q", usecase.commands[0].Status)
 	}
 }
@@ -115,10 +115,10 @@ func TestInternalPaymentEligibilityMapsTypedErrors(t *testing.T) {
 		err        error
 		wantStatus int
 	}{
-		{name: "not found", err: appointment.ErrNotFound, wantStatus: http.StatusNotFound},
-		{name: "forbidden", err: appointment.ErrPaymentEligibilityForbidden, wantStatus: http.StatusForbidden},
-		{name: "conflict", err: appointment.ErrPaymentEligibilityConflict, wantStatus: http.StatusConflict},
-		{name: "invalid price", err: appointment.ErrInvalidBookingPrice, wantStatus: http.StatusBadRequest},
+		{name: "not found", err: appappointment.ErrNotFound, wantStatus: http.StatusNotFound},
+		{name: "forbidden", err: appappointment.ErrPaymentEligibilityForbidden, wantStatus: http.StatusForbidden},
+		{name: "conflict", err: appappointment.ErrPaymentEligibilityConflict, wantStatus: http.StatusConflict},
+		{name: "invalid price", err: appappointment.ErrInvalidBookingPrice, wantStatus: http.StatusBadRequest},
 		{name: "unexpected", err: errors.New("database unavailable"), wantStatus: http.StatusInternalServerError},
 	}
 
@@ -152,8 +152,8 @@ func TestInternalPaymentEligibilityMapsTypedErrors(t *testing.T) {
 }
 
 type fakeAppointmentUsecase struct {
-	commands            []appointment.HandlePaymentResultCommand
-	eligibilityCommands []appointment.GetPaymentEligibilityCommand
+	commands            []appappointment.HandlePaymentResultCommand
+	eligibilityCommands []appappointment.GetPaymentEligibilityCommand
 	handleErr           error
 	eligibilityErr      error
 }
@@ -166,12 +166,12 @@ func (u *fakeAppointmentUsecase) GetAppointmentByID(appointmentID string) (*doma
 	return nil, nil
 }
 
-func (u *fakeAppointmentUsecase) GetPaymentEligibility(command appointment.GetPaymentEligibilityCommand) (appointment.PaymentEligibility, error) {
+func (u *fakeAppointmentUsecase) GetPaymentEligibility(command appappointment.GetPaymentEligibilityCommand) (appappointment.PaymentEligibility, error) {
 	u.eligibilityCommands = append(u.eligibilityCommands, command)
 	if u.eligibilityErr != nil {
-		return appointment.PaymentEligibility{}, u.eligibilityErr
+		return appappointment.PaymentEligibility{}, u.eligibilityErr
 	}
-	return appointment.PaymentEligibility{
+	return appappointment.PaymentEligibility{
 		AppointmentID: command.AppointmentID,
 		ExpertID:      uuidString(),
 		AmountVND:     200000,
@@ -184,14 +184,14 @@ func (u *fakeAppointmentUsecase) CancelAppointment(appointmentID, userID, userRo
 }
 
 func (u *fakeAppointmentUsecase) ConfirmPayment(appointmentID string) error {
-	return u.HandlePaymentResult(appointment.HandlePaymentResultCommand{AppointmentID: appointmentID, Status: appointment.PaymentResultSuccess})
+	return u.HandlePaymentResult(appappointment.HandlePaymentResultCommand{AppointmentID: appointmentID, Status: appappointment.PaymentResultSuccess})
 }
 
 func (u *fakeAppointmentUsecase) HandlePaymentFailure(appointmentID string) error {
-	return u.HandlePaymentResult(appointment.HandlePaymentResultCommand{AppointmentID: appointmentID, Status: appointment.PaymentResultFailed})
+	return u.HandlePaymentResult(appappointment.HandlePaymentResultCommand{AppointmentID: appointmentID, Status: appappointment.PaymentResultFailed})
 }
 
-func (u *fakeAppointmentUsecase) HandlePaymentResult(command appointment.HandlePaymentResultCommand) error {
+func (u *fakeAppointmentUsecase) HandlePaymentResult(command appappointment.HandlePaymentResultCommand) error {
 	u.commands = append(u.commands, command)
 	return u.handleErr
 }

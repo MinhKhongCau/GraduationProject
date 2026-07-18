@@ -1,7 +1,7 @@
 package timeoff
 
 import (
-	"booking-service/internal/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/domain"
 	"booking-service/internal/slot"
 	"github.com/google/uuid"
@@ -18,10 +18,10 @@ type Usecase interface {
 type timeoffUsecase struct {
 	repo            Repository
 	slotRepo        slot.Repository
-	appointmentRepo appointment.Repository
+	appointmentRepo appappointment.Repository
 }
 
-func NewUsecase(repo Repository, slotRepo slot.Repository, appointmentRepo appointment.Repository) Usecase {
+func NewUsecase(repo Repository, slotRepo slot.Repository, appointmentRepo appappointment.Repository) Usecase {
 	return &timeoffUsecase{
 		repo:            repo,
 		slotRepo:        slotRepo,

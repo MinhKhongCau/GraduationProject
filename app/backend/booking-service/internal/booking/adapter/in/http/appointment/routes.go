@@ -1,14 +1,14 @@
 package handler
 
 import (
-	"booking-service/internal/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/pkg/internal_auth"
 	"github.com/gin-gonic/gin"
 )
 
 // RegisterRoutes đăng ký toàn bộ routes của appointment module.
 // Nhận thêm router *gin.Engine để có thể mount /internal group ở root level.
-func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, internalGroup *gin.RouterGroup, usecase appointment.Usecase) {
+func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, internalGroup *gin.RouterGroup, usecase appappointment.Usecase) {
 	h := NewHandler(usecase)
 
 	// ── Public routes (qua Kong Gateway, không cần user JWT) ────────────────

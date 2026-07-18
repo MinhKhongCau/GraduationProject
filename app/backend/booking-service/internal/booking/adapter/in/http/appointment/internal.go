@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"booking-service/internal/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/domain"
 	"booking-service/pkg/internal_auth"
 	"booking-service/pkg/response"
@@ -61,13 +61,13 @@ func (h *Handler) InternalPaymentWebhook(c *gin.Context) {
 	// (Payment Service gửi cả 2: path param và body — lấy path param làm chuẩn)
 	req.AppointmentID = appointmentID
 
-	status, err := appointment.ParsePaymentResultStatus(req.Status)
+	status, err := appappointment.ParsePaymentResultStatus(req.Status)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, "Invalid payment result status", err.Error())
 		return
 	}
 
-	if err := h.usecase.HandlePaymentResult(appointment.HandlePaymentResultCommand{
+	if err := h.usecase.HandlePaymentResult(appappointment.HandlePaymentResultCommand{
 		AppointmentID: req.AppointmentID,
 		Status:        status,
 	}); err != nil {
@@ -75,7 +75,7 @@ func (h *Handler) InternalPaymentWebhook(c *gin.Context) {
 		return
 	}
 
-	if status == appointment.PaymentResultSuccess {
+	if status == appappointment.PaymentResultSuccess {
 		response.Success(c, "Appointment confirmed successfully", gin.H{
 			"appointment_id": req.AppointmentID,
 			"status":         domain.AppointmentStatusConfirmed,
@@ -155,7 +155,7 @@ func (h *Handler) InternalPaymentEligibility(c *gin.Context) {
 		return
 	}
 
-	eligibility, err := h.usecase.GetPaymentEligibility(appointment.GetPaymentEligibilityCommand{
+	eligibility, err := h.usecase.GetPaymentEligibility(appappointment.GetPaymentEligibilityCommand{
 		AppointmentID: appointmentID,
 		PayerID:       payerID,
 	})
@@ -179,13 +179,13 @@ func isPaymentServiceCaller(c *gin.Context) bool {
 
 func respondPaymentEligibilityError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, appointment.ErrNotFound):
+	case errors.Is(err, appappointment.ErrNotFound):
 		response.Error(c, http.StatusNotFound, "Appointment not found", err.Error())
-	case errors.Is(err, appointment.ErrPaymentEligibilityForbidden):
+	case errors.Is(err, appappointment.ErrPaymentEligibilityForbidden):
 		response.Error(c, http.StatusForbidden, "Appointment does not belong to payer", err.Error())
-	case errors.Is(err, appointment.ErrPaymentEligibilityConflict):
+	case errors.Is(err, appappointment.ErrPaymentEligibilityConflict):
 		response.Error(c, http.StatusConflict, "Appointment is not eligible for payment", err.Error())
-	case errors.Is(err, appointment.ErrInvalidBookingPrice):
+	case errors.Is(err, appappointment.ErrInvalidBookingPrice):
 		response.Error(c, http.StatusBadRequest, "Invalid booking price", err.Error())
 	default:
 		response.Error(c, http.StatusInternalServerError, "Payment eligibility check failed", err.Error())
@@ -194,11 +194,11 @@ func respondPaymentEligibilityError(c *gin.Context, err error) {
 
 func respondPaymentResultError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, appointment.ErrInvalidPaymentResultStatus):
+	case errors.Is(err, appappointment.ErrInvalidPaymentResultStatus):
 		response.Error(c, http.StatusBadRequest, "Invalid payment result status", err.Error())
-	case errors.Is(err, appointment.ErrNotFound):
+	case errors.Is(err, appappointment.ErrNotFound):
 		response.Error(c, http.StatusNotFound, "Appointment not found", err.Error())
-	case errors.Is(err, appointment.ErrInvalidStatus), errors.Is(err, appointment.ErrPaymentResultConflict):
+	case errors.Is(err, appappointment.ErrInvalidStatus), errors.Is(err, appappointment.ErrPaymentResultConflict):
 		response.Error(c, http.StatusConflict, "Payment result conflicts with booking state", err.Error())
 	default:
 		response.Error(c, http.StatusInternalServerError, "Payment result update failed", err.Error())
