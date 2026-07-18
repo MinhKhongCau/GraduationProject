@@ -9,7 +9,7 @@ import (
 
 type ScheduleProvider interface {
 	GetAvailabilities(expertID string) ([]domain.Availability, error)
-	GetTimeTemplates() ([]domain.TimeTemplate, error)
+	GetAllTimeTemplates() ([]domain.TimeTemplate, error)
 }
 
 type TimeOffProvider interface {

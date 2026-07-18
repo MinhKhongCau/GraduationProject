@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"booking-service/internal/slot"
 	"booking-service/pkg/response"
+	"errors"
 	"net/http"
 	"time"
 
@@ -56,7 +58,7 @@ func (h *Handler) Generate(c *gin.Context) {
 		return
 	}
 
-	templates, err := h.scheduleRepo.GetTimeTemplates()
+	templates, err := h.scheduleRepo.GetAllTimeTemplates()
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve time templates", err.Error())
 		return
@@ -69,25 +71,26 @@ func (h *Handler) Generate(c *gin.Context) {
 	}
 
 	// Generate slots
-	generatedSlots, err := h.usecase.GenerateSlotsForNextDays(expertID, req.DaysToGenerate, avails, templates, timeOffs)
+	result, err := h.usecase.GenerateSlotsForNextDays(expertID, req.DaysToGenerate, avails, templates, timeOffs)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Slot generation algorithm error", err.Error())
+		switch {
+		case errors.Is(err, slot.ErrInvalidGeneration):
+			response.Error(c, http.StatusBadRequest, "Invalid slot generation configuration", err.Error())
+		case errors.Is(err, slot.ErrSlotOverlap):
+			response.Error(c, http.StatusConflict, "Expert slot schedule overlaps", err.Error())
+		default:
+			response.Error(c, http.StatusInternalServerError, "Slot generation failed", "Internal server error")
+		}
 		return
 	}
 
-	if len(generatedSlots) == 0 {
+	if result.Candidates == 0 {
 		response.Success(c, "No slots were generated (expert may be on leave or availability has not been configured)", nil)
-		return
-	}
-
-	// Bulk Insert + ON CONFLICT DO NOTHING (Idempotent)
-	if err := h.repo.BulkInsertSlots(generatedSlots); err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to save slots to database", err.Error())
 		return
 	}
 
 	response.Success(c, "Slots generated successfully!", gin.H{
 		"expert_id":     expertID,
-		"slots_created": len(generatedSlots),
+		"slots_created": result.Inserted,
 	})
 }

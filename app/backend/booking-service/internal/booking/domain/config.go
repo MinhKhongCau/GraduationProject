@@ -15,13 +15,14 @@ func (TimeTemplate) TableName() string { return "Booking_Config_Time_Templates" 
 
 // Availability - Cấu hình lịch rảnh (Thứ 2,4,6 làm Ca sáng)
 type Availability struct {
-	AvailabilityID string `json:"availability_id" gorm:"column:availability_id;primaryKey;type:uuid"`
-	ExpertID       string `json:"expert_id" gorm:"column:expert_id;type:uuid;not null"`
-	TemplateID     string `json:"template_id" gorm:"column:template_id;type:uuid;not null"`
-	DayOfWeek      int    `json:"day_of_week" gorm:"column:day_of_week"` // 1=Mon...7=Sun
-	IsEnabled      bool   `json:"is_enabled" gorm:"column:is_enabled"`
-	EffectiveFrom  int64  `json:"effective_from" gorm:"column:effective_from"`   // Unix ms
-	EffectiveUntil *int64 `json:"effective_until" gorm:"column:effective_until"` // Unix ms, nullable
+	AvailabilityID string   `json:"availability_id" gorm:"column:availability_id;primaryKey;type:uuid"`
+	ExpertID       string   `json:"expert_id" gorm:"column:expert_id;type:uuid;not null"`
+	TemplateID     string   `json:"template_id" gorm:"column:template_id;type:uuid;not null"`
+	DayOfWeek      int      `json:"day_of_week" gorm:"column:day_of_week"` // 1=Mon...7=Sun
+	IsEnabled      bool     `json:"is_enabled" gorm:"column:is_enabled"`
+	EffectiveFrom  int64    `json:"effective_from" gorm:"column:effective_from"`   // Unix ms
+	EffectiveUntil *int64   `json:"effective_until" gorm:"column:effective_until"` // Unix ms, nullable
+	Price          *float64 `json:"price" gorm:"column:price;type:decimal(12,2)"`
 }
 
 func (Availability) TableName() string { return "Booking_Config_Availability" }

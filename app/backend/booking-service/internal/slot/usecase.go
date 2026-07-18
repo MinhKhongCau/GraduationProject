@@ -3,21 +3,29 @@ package slot
 import (
 	"booking-service/internal/booking/domain"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-// Usecase defines the slot generation logic
+const GenerationLeadTime = 5 * time.Minute
+
+var generationLocation = time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60)
+
+type Clock interface{ Now() time.Time }
+type realClock struct{}
+
+func (realClock) Now() time.Time { return time.Now() }
+
+type GenerationResult struct {
+	Candidates int
+	Inserted   int64
+}
+
 type Usecase interface {
-	GenerateSlotsForNextDays(
-		expertID string,
-		daysToGenerate int,
-		availabilities []domain.Availability,
-		timeTemplates []domain.TimeTemplate,
-		timeOffs []domain.ExpertTimeOff,
-	) ([]domain.ExpertSlot, error)
+	GenerateSlotsForNextDays(expertID string, daysToGenerate int, availabilities []domain.Availability, timeTemplates []domain.TimeTemplate, timeOffs []domain.ExpertTimeOff) (GenerationResult, error)
 	LockSlot(slotID, patientID string) error
 	GetDates(expertID string, startDate, endDate time.Time) ([]string, error)
 	GetTimes(expertID string, date string) ([]SlotTimeResult, error)
@@ -25,7 +33,9 @@ type Usecase interface {
 
 type slotUsecase struct {
 	repo            Repository
-	appointmentRepo appointmentRepository // We'll need to define this or import appointment.Repository
+	appointmentRepo appointmentRepository
+	clock           Clock
+	generationMu    sync.Mutex
 }
 
 type appointmentRepository interface {
@@ -33,23 +43,16 @@ type appointmentRepository interface {
 }
 
 func NewUsecase(repo Repository, appointmentRepo appointmentRepository) Usecase {
-	return &slotUsecase{
-		repo:            repo,
-		appointmentRepo: appointmentRepo,
-	}
+	return NewUsecaseWithClock(repo, appointmentRepo, realClock{})
 }
 
-// nowMs trả về Unix timestamp hiện tại theo milliseconds (13 chữ số)
-func nowMs() int64 {
-	return time.Now().UnixMilli()
+func NewUsecaseWithClock(repo Repository, appointmentRepo appointmentRepository, clock Clock) Usecase {
+	return &slotUsecase{repo: repo, appointmentRepo: appointmentRepo, clock: clock}
 }
 
 func (u *slotUsecase) LockSlot(slotID, patientID string) error {
-	// Call appointmentRepo's LockSlot which has the atomic query
-	err := u.appointmentRepo.LockSlot(slotID, patientID)
-	if err != nil {
-		// Map to sentinel error
-		return ErrSlotAlreadyLocked // assuming it failed due to conflict
+	if err := u.appointmentRepo.LockSlot(slotID, patientID); err != nil {
+		return ErrSlotAlreadyLocked
 	}
 	return nil
 }
@@ -58,160 +61,168 @@ func (u *slotUsecase) GetDates(expertID string, startDate, endDate time.Time) ([
 	return u.repo.GetAvailableDates(expertID, startDate, endDate)
 }
 
-func (u *slotUsecase) GetTimes(expertID string, date string) ([]SlotTimeResult, error) {
+func (u *slotUsecase) GetTimes(expertID, date string) ([]SlotTimeResult, error) {
 	return u.repo.GetAvailableTimes(date, expertID)
 }
 
-// =====================================================================
-// HÀM 1: CẮT CA LÀM VIỆC
-// Đọc chuỗi "HH:MM" từ TimeTemplate, kết hợp ngày mục tiêu để tạo
-// ra StartTime/EndTime dưới dạng Unix timestamp 13 số (milliseconds).
-// =====================================================================
-func (u *slotUsecase) SliceShiftIntoSlots(expertID string, availabilityID string, targetDate time.Time, tplStartStr, tplEndStr string, durationMinutes int) ([]domain.ExpertSlot, error) {
+func (u *slotUsecase) GenerateSlotsForNextDays(expertID string, daysToGenerate int, availabilities []domain.Availability, templates []domain.TimeTemplate, timeOffs []domain.ExpertTimeOff) (GenerationResult, error) {
+	if daysToGenerate <= 0 {
+		return GenerationResult{}, fmt.Errorf("%w: days_to_generate must be positive", ErrInvalidGeneration)
+	}
+	u.generationMu.Lock()
+	defer u.generationMu.Unlock()
+
+	now := u.clock.Now().In(generationLocation)
+	cutoff := now.Add(GenerationLeadTime)
+	templateByID := make(map[string]domain.TimeTemplate, len(templates))
+	for _, template := range templates {
+		templateByID[template.TemplateID] = template
+	}
+
+	var candidates []domain.ExpertSlot
+	for dayOffset := 0; dayOffset < daysToGenerate; dayOffset++ {
+		targetDate := now.AddDate(0, 0, dayOffset)
+		weekday := dayOfWeek(targetDate)
+		for _, availability := range availabilities {
+			if availability.DayOfWeek != weekday || !domain.AvailabilityAppliesOnDate(availability, targetDate, generationLocation) {
+				continue
+			}
+			template, ok := templateByID[availability.TemplateID]
+			if !ok {
+				return GenerationResult{}, fmt.Errorf("%w: template %s not found", ErrInvalidGeneration, availability.TemplateID)
+			}
+			if !template.IsActive {
+				continue
+			}
+			price, err := domain.ValidateAvailability(availability, template)
+			if err != nil {
+				return GenerationResult{}, fmt.Errorf("%w: %v", ErrInvalidGeneration, err)
+			}
+			slots, err := sliceShiftIntoSlots(expertID, availability.AvailabilityID, targetDate, template, float64(price), cutoff)
+			if err != nil {
+				return GenerationResult{}, fmt.Errorf("%w: %v", ErrInvalidGeneration, err)
+			}
+			for _, candidate := range slots {
+				if !overlapsAnyTimeOff(candidate, timeOffs) {
+					candidates = append(candidates, candidate)
+				}
+			}
+		}
+	}
+
+	sortSlots(candidates)
+	if err := rejectCandidateOverlaps(candidates); err != nil {
+		return GenerationResult{}, err
+	}
+	result := GenerationResult{Candidates: len(candidates)}
+	if len(candidates) == 0 {
+		return result, nil
+	}
+
+	existing, err := u.repo.GetOverlappingSlots(expertID, candidates[0].StartTime, maxEnd(candidates))
+	if err != nil {
+		return GenerationResult{}, err
+	}
+	toInsert, err := removeExactDuplicatesAndRejectOverlaps(candidates, existing)
+	if err != nil {
+		return GenerationResult{}, err
+	}
+	inserted, err := u.repo.BulkInsertSlots(toInsert)
+	if err != nil {
+		return GenerationResult{}, err
+	}
+	result.Inserted = inserted
+	return result, nil
+}
+
+func sliceShiftIntoSlots(expertID, availabilityID string, targetDate time.Time, template domain.TimeTemplate, price float64, cutoff time.Time) ([]domain.ExpertSlot, error) {
+	if err := domain.ValidateTimeTemplate(template); err != nil {
+		return nil, err
+	}
+	if _, err := domain.NewMoneyVNDFromPrice(price); err != nil {
+		return nil, err
+	}
+	startClock, _ := domain.ParseClockTime(template.StartTime)
+	endClock, _ := domain.ParseClockTime(template.EndTime)
+	localDate := targetDate.In(generationLocation)
+	shiftStart := time.Date(localDate.Year(), localDate.Month(), localDate.Day(), startClock.Hour, startClock.Minute, 0, 0, generationLocation)
+	shiftEnd := time.Date(localDate.Year(), localDate.Month(), localDate.Day(), endClock.Hour, endClock.Minute, 0, 0, generationLocation)
+	nowMs := cutoff.Add(-GenerationLeadTime).UnixMilli()
+	dateOnly := time.Date(localDate.Year(), localDate.Month(), localDate.Day(), 0, 0, 0, 0, generationLocation)
 	var slots []domain.ExpertSlot
-
-	// 1. Lấy Ngày-Tháng-Năm từ targetDate (ví dụ: 2026-07-05)
-	year, month, day := targetDate.Date()
-	loc := targetDate.Location()
-
-	// 2. Parse chuỗi "HH:MM" sang giờ/phút
-	var startHour, startMin, endHour, endMin int
-	if _, err := fmt.Sscanf(tplStartStr, "%d:%d", &startHour, &startMin); err != nil {
-		return nil, fmt.Errorf("định dạng start_time không hợp lệ '%s': %w", tplStartStr, err)
-	}
-	if _, err := fmt.Sscanf(tplEndStr, "%d:%d", &endHour, &endMin); err != nil {
-		return nil, fmt.Errorf("định dạng end_time không hợp lệ '%s': %w", tplEndStr, err)
-	}
-
-	// 3. LẮP GHÉP: Ép giờ của Template vào Ngày của vòng lặp
-	// Kết quả: 2026-07-05 08:00:00 +07:00
-	shiftStart := time.Date(year, month, day, startHour, startMin, 0, 0, loc)
-	shiftEnd := time.Date(year, month, day, endHour, endMin, 0, 0, loc)
-
-	currentTime := shiftStart
-	nowMs := time.Now().UnixMilli()
-
-	for currentTime.Before(shiftEnd) {
-		slotEndTime := currentTime.Add(time.Duration(durationMinutes) * time.Minute)
-		if slotEndTime.After(shiftEnd) {
+	for start := shiftStart; start.Before(shiftEnd); start = start.Add(time.Duration(template.SlotDurationMinutes) * time.Minute) {
+		end := start.Add(time.Duration(template.SlotDurationMinutes) * time.Minute)
+		if end.After(shiftEnd) {
 			break
 		}
-
-		// Chỉ lưu ngày (không giờ) vào DateSlot - GORM sẽ lưu kiểu DATE
-		dateOnly := time.Date(year, month, day, 0, 0, 0, 0, loc)
-
-		slot := domain.ExpertSlot{
-			SlotID:         uuid.New().String(),
-			ExpertID:       expertID,
-			AvailabilityID: &availabilityID,
-			DateSlot:       dateOnly,
-			StartTime:      currentTime.UnixMilli(), // Unix timestamp 13 số (ms)
-			EndTime:        slotEndTime.UnixMilli(), // Unix timestamp 13 số (ms)
-			Status:         domain.SlotStatusAvailable,
-			CreatedAt:      nowMs,
-			UpdatedAt:      nowMs,
+		if !start.After(cutoff) {
+			continue
 		}
-
-		slots = append(slots, slot)
-		currentTime = slotEndTime
+		availability := availabilityID
+		slots = append(slots, domain.ExpertSlot{SlotID: uuid.New().String(), ExpertID: expertID, AvailabilityID: &availability, DateSlot: dateOnly, StartTime: start.UnixMilli(), EndTime: end.UnixMilli(), Status: domain.SlotStatusAvailable, Price: price, CreatedAt: nowMs, UpdatedAt: nowMs})
 	}
-
 	return slots, nil
 }
 
-// =====================================================================
-// HÀM 2: GOROUTINES SINH LỊCH SONG SONG CHO NHIỀU NGÀY
-// =====================================================================
-func (u *slotUsecase) GenerateSlotsForNextDays(
-	expertID string,
-	daysToGenerate int,
-	availabilities []domain.Availability,
-	timeTemplates []domain.TimeTemplate,
-	timeOffs []domain.ExpertTimeOff,
-) ([]domain.ExpertSlot, error) {
-
-	var allGeneratedSlots []domain.ExpertSlot
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-
-	now := time.Now()
-
-	for i := 0; i < daysToGenerate; i++ {
-		targetDate := now.AddDate(0, 0, i)
-		wg.Add(1)
-
-		go func(date time.Time) {
-			defer wg.Done()
-
-			// Bỏ qua ngày nghỉ đột xuất
-			if isTimeOff(date, timeOffs) {
-				return
-			}
-
-			dayOfWeek := getDayOfWeek(date)
-
-			for _, avail := range availabilities {
-				if avail.DayOfWeek == dayOfWeek && avail.IsEnabled {
-					template := findTemplateByID(avail.TemplateID, timeTemplates)
-					if template != nil && template.IsActive {
-
-						// Cắt lịch (đọc chuỗi "HH:MM" từ template)
-						slots, err := u.SliceShiftIntoSlots(expertID, avail.AvailabilityID, date, template.StartTime, template.EndTime, template.SlotDurationMinutes)
-
-						if err == nil {
-							mu.Lock()
-							allGeneratedSlots = append(allGeneratedSlots, slots...)
-							mu.Unlock()
-						} else {
-							fmt.Printf("❌ LỖI CẮT LỊCH NGÀY %v: %v\n", date.Format("2006-01-02"), err)
-						}
-					}
-				}
-			}
-		}(targetDate)
-	}
-
-	wg.Wait()
-	return allGeneratedSlots, nil
-}
-
-// =====================================================================
-// HÀM HELPERS
-// =====================================================================
-
-// getDayOfWeek trả về thứ trong tuần: 1=Thứ 2, ..., 7=Chủ Nhật
-func getDayOfWeek(date time.Time) int {
-	d := int(date.Weekday())
-	if d == 0 {
-		return 7 // Chủ Nhật
-	}
-	return d
-}
-
-// isTimeOff kiểm tra một ngày có nằm trong khoảng thời gian nghỉ không
-// So sánh trực tiếp với Unix timestamp 13 số (ms) đã lưu trong DB
-func isTimeOff(date time.Time, timeOffs []domain.ExpertTimeOff) bool {
-	// Tính mốc bắt đầu và kết thúc của ngày đó (ms)
-	year, month, day := date.Date()
-	loc := date.Location()
-	dayStartMs := time.Date(year, month, day, 0, 0, 0, 0, loc).UnixMilli()
-	dayEndMs := time.Date(year, month, day, 23, 59, 59, 999_000_000, loc).UnixMilli()
-
-	for _, to := range timeOffs {
-		// Kiểm tra xem ngày có overlap với khoảng thời gian nghỉ không
-		if to.StartDatetime <= dayEndMs && to.EndDatetime >= dayStartMs {
+func overlapsAnyTimeOff(slot domain.ExpertSlot, timeOffs []domain.ExpertTimeOff) bool {
+	for _, timeOff := range timeOffs {
+		if domain.IntervalsOverlap(slot.StartTime, slot.EndTime, timeOff.StartDatetime, timeOff.EndDatetime) {
 			return true
 		}
 	}
 	return false
 }
 
-// findTemplateByID tìm TimeTemplate theo ID
-func findTemplateByID(id string, templates []domain.TimeTemplate) *domain.TimeTemplate {
-	for _, t := range templates {
-		if t.TemplateID == id {
-			return &t
+func rejectCandidateOverlaps(slots []domain.ExpertSlot) error {
+	for i := 1; i < len(slots); i++ {
+		if domain.IntervalsOverlap(slots[i-1].StartTime, slots[i-1].EndTime, slots[i].StartTime, slots[i].EndTime) {
+			return fmt.Errorf("%w: candidates %d-%d and %d-%d", ErrSlotOverlap, slots[i-1].StartTime, slots[i-1].EndTime, slots[i].StartTime, slots[i].EndTime)
 		}
 	}
 	return nil
+}
+
+func removeExactDuplicatesAndRejectOverlaps(candidates, existing []domain.ExpertSlot) ([]domain.ExpertSlot, error) {
+	filtered := make([]domain.ExpertSlot, 0, len(candidates))
+	for _, candidate := range candidates {
+		exact := false
+		for _, persisted := range existing {
+			if candidate.StartTime == persisted.StartTime && candidate.EndTime == persisted.EndTime {
+				exact = true
+				break
+			}
+			if domain.IntervalsOverlap(candidate.StartTime, candidate.EndTime, persisted.StartTime, persisted.EndTime) {
+				return nil, fmt.Errorf("%w: candidate %d-%d conflicts with existing slot %s", ErrSlotOverlap, candidate.StartTime, candidate.EndTime, persisted.SlotID)
+			}
+		}
+		if !exact {
+			filtered = append(filtered, candidate)
+		}
+	}
+	return filtered, nil
+}
+
+func sortSlots(slots []domain.ExpertSlot) {
+	sort.Slice(slots, func(i, j int) bool {
+		if slots[i].StartTime == slots[j].StartTime {
+			return slots[i].EndTime < slots[j].EndTime
+		}
+		return slots[i].StartTime < slots[j].StartTime
+	})
+}
+func maxEnd(slots []domain.ExpertSlot) int64 {
+	maximum := slots[0].EndTime
+	for _, slot := range slots[1:] {
+		if slot.EndTime > maximum {
+			maximum = slot.EndTime
+		}
+	}
+	return maximum
+}
+func dayOfWeek(date time.Time) int {
+	day := int(date.Weekday())
+	if day == 0 {
+		return 7
+	}
+	return day
 }

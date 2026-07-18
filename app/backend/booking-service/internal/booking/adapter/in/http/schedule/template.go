@@ -45,7 +45,7 @@ func (h *Handler) CreateTemplate(c *gin.Context) {
 
 	template, err := h.usecase.CreateTimeTemplate(req.ShiftName, req.StartTime, req.EndTime, req.SlotDurationMinutes)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to save shift template", err.Error())
+		writeScheduleError(c, err, "Failed to save shift template")
 		return
 	}
 
@@ -110,7 +110,7 @@ func (h *Handler) UpdateTemplate(c *gin.Context) {
 		// 	response.Error(c, http.StatusNotFound, "Template not found", err.Error())
 		// 	return
 		// }
-		response.Error(c, http.StatusInternalServerError, "Failed to update template", err.Error())
+		writeScheduleError(c, err, "Failed to update template")
 		return
 	}
 
