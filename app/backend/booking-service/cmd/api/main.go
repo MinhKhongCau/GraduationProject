@@ -14,16 +14,16 @@ import (
 
 	"booking-service/internal/appointment"
 	apptHandler "booking-service/internal/booking/adapter/in/http/appointment"
+	slotHandler "booking-service/internal/booking/adapter/in/http/slot"
 	"booking-service/internal/schedule"
 	schedHandler "booking-service/internal/schedule/handler"
 	"booking-service/internal/slot"
-	slotHandler "booking-service/internal/slot/handler"
 	"booking-service/internal/timeoff"
 	timeoffHandler "booking-service/internal/timeoff/handler"
 
+	_ "booking-service/docs" // Ignore error if it doesn't exist yet
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "booking-service/docs" // Ignore error if it doesn't exist yet
 )
 
 // @title Booking Service API
@@ -62,7 +62,7 @@ func main() {
 	slotRepo := slot.NewRepository(database.DB)
 	appointmentRepo := appointment.NewRepository(database.DB)
 	timeoffRepo := timeoff.NewRepository(database.DB)
-	
+
 	// Usecase
 	slotUsecase := slot.NewUsecase(slotRepo, appointmentRepo)
 	scheduleUsecase := schedule.NewUsecase(scheduleRepo)
