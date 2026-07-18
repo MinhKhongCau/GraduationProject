@@ -4,10 +4,9 @@ import (
 	"context"
 	"payment-service/internal/booking/client"
 	"payment-service/internal/domain/entity"
-	"payment-service/internal/wallet"
+	"payment-service/internal/domain/vo"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Usecase interface {
@@ -24,26 +23,34 @@ type PaymentGateway interface {
 type Repository interface {
 	Create(order *entity.PaymentOrder) error
 	GetByID(orderID uuid.UUID) (*entity.PaymentOrder, error)
-	GetByIDForUpdate(tx *gorm.DB, orderID uuid.UUID) (*entity.PaymentOrder, error)
 	GetByGatewayTxnRef(ref string) (*entity.PaymentOrder, error)
-	GetByGatewayTxnRefWithTx(tx *gorm.DB, ref string) (*entity.PaymentOrder, error)
 	Update(order *entity.PaymentOrder) error
-	UpdateWithTx(tx *gorm.DB, order *entity.PaymentOrder) error
-	SaveOutboxEvent(tx *gorm.DB, event *entity.OutboxEvent) error
-	WithTransaction(fn func(tx *gorm.DB) error) error
+}
+
+type UnitOfWork interface {
+	WithinTx(ctx context.Context, fn func(tx Tx) error) error
+}
+
+type Tx interface {
+	GetOrderForUpdate(ctx context.Context, orderID uuid.UUID) (*entity.PaymentOrder, error)
+	GetGatewayTxnRef(ctx context.Context, ref string) (*entity.PaymentOrder, error)
+	UpdateOrder(ctx context.Context, order *entity.PaymentOrder) error
+	SaveOutboxEvent(ctx context.Context, event *entity.OutboxEvent) error
+	CreditWalletPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refID uuid.UUID, idempotencyKey string) error
+	DebitWalletPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refID uuid.UUID, idempotencyKey string) error
 }
 
 type paymentUsecase struct {
 	repo          Repository
-	walletUsecase wallet.Usecase
+	uow           UnitOfWork
 	vnpayClient   PaymentGateway
 	bookingClient client.BookingServiceClient
 }
 
-func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient PaymentGateway, bookingClient client.BookingServiceClient) Usecase {
+func NewUsecase(repo Repository, uow UnitOfWork, vnpayClient PaymentGateway, bookingClient client.BookingServiceClient) Usecase {
 	return &paymentUsecase{
 		repo:          repo,
-		walletUsecase: walletUsecase,
+		uow:           uow,
 		vnpayClient:   vnpayClient,
 		bookingClient: bookingClient,
 	}

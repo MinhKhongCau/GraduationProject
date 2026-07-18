@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]string) (bool, error) {
@@ -58,8 +57,8 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 
 	// 3. Tiáº¿n hÃ nh cáº­p nháº­t Database
 	var alreadyProcessed bool
-	err = u.repo.WithTransaction(func(tx *gorm.DB) error {
-		order, err := u.repo.GetByIDForUpdate(tx, orderID)
+	err = u.uow.WithinTx(ctx, func(tx Tx) error {
+		order, err := tx.GetOrderForUpdate(ctx, orderID)
 		if err != nil {
 			return err
 		}
@@ -75,9 +74,9 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 
 		// Replay attack check
 		if vnpTxnNo != "" {
-			existing, err := u.repo.GetByGatewayTxnRefWithTx(tx, vnpTxnNo)
+			existing, err := tx.GetGatewayTxnRef(ctx, vnpTxnNo)
 			if err != nil {
-				if !errors.Is(err, gorm.ErrRecordNotFound) {
+				if !errors.Is(err, ErrTxRecordNotFound) {
 					return err
 				}
 			} else if existing.ID != order.ID {
@@ -91,18 +90,18 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			order.PaidAt = &paidAt
 			order.GatewayTxnRef = vnpTxnNo
 
-			if err := u.repo.UpdateWithTx(tx, order); err != nil {
+			if err := tx.UpdateOrder(ctx, order); err != nil {
 				return err
 			}
 
 			creditKey := fmt.Sprintf("credit_order_%s", order.ID.String())
-			err = u.walletUsecase.CreditPendingWithTx(ctx, tx, order.ExpertID, order.GrossAmount, "PAYMENT_ORDER", order.ID, creditKey)
+			err = tx.CreditWalletPending(ctx, order.ExpertID, order.GrossAmount, order.ID, creditKey)
 			if err != nil {
 				return fmt.Errorf("wallet credit failed: %w", err)
 			}
 
 			debitKey := fmt.Sprintf("debit_order_%s", order.ID.String())
-			err = u.walletUsecase.DebitPendingWithTx(ctx, tx, order.ExpertID, order.CommissionAmount, "PAYMENT_ORDER", order.ID, debitKey)
+			err = tx.DebitWalletPending(ctx, order.ExpertID, order.CommissionAmount, order.ID, debitKey)
 			if err != nil {
 				return fmt.Errorf("wallet commission debit failed: %w", err)
 			}
@@ -118,14 +117,14 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 					Payload:       bookingPayload,
 					Published:     false,
 				}
-				if err := u.repo.SaveOutboxEvent(tx, bookingOutbox); err != nil {
+				if err := tx.SaveOutboxEvent(ctx, bookingOutbox); err != nil {
 					return err
 				}
 			}
 
 		} else {
 			order.Status = entity.OrderStatusFailed
-			if err := u.repo.UpdateWithTx(tx, order); err != nil {
+			if err := tx.UpdateOrder(ctx, order); err != nil {
 				return err
 			}
 
@@ -138,7 +137,7 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 					Payload:       bookingPayload,
 					Published:     false,
 				}
-				if err := u.repo.SaveOutboxEvent(tx, bookingOutbox); err != nil {
+				if err := tx.SaveOutboxEvent(ctx, bookingOutbox); err != nil {
 					return err
 				}
 			}

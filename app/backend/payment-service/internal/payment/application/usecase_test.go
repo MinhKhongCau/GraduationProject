@@ -20,7 +20,6 @@ import (
 	"payment-service/internal/payment/gateway"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 func TestCreateOrderCallsPaymentEligibilityAndDerivesExpertAndAmount(t *testing.T) {
@@ -35,7 +34,7 @@ func TestCreateOrderCallsPaymentEligibilityAndDerivesExpertAndAmount(t *testing.
 		AmountVND:     250000,
 		ExpiresAt:     time.Now().Add(5 * time.Minute).UnixMilli(),
 	}}
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, paymentGateway, booking)
+	usecase := NewUsecase(repo, repo, paymentGateway, booking)
 
 	order, paymentURL, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
 	if err != nil {
@@ -78,7 +77,7 @@ func TestCreateOrderRejectsEligibilityErrorBeforePersisting(t *testing.T) {
 	payerID := uuid.New()
 	appointmentID := uuid.New().String()
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: bookingclient.ErrPaymentEligibilityConflict})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: bookingclient.ErrPaymentEligibilityConflict})
 
 	_, _, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
 	if !errors.Is(err, ErrAppointmentInvalidState) {
@@ -89,7 +88,7 @@ func TestCreateOrderRejectsEligibilityErrorBeforePersisting(t *testing.T) {
 
 func TestCreateOrderRejectsMissingAppointmentIDBeforePersisting(t *testing.T) {
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	_, _, err := usecase.CreateOrder(context.Background(), uuid.New(), "   ", "127.0.0.1")
 	if !errors.Is(err, ErrInvalidCreateOrderRequest) {
@@ -152,7 +151,7 @@ func TestCreateOrderRejectsMalformedEligibilityResultBeforePersisting(t *testing
 		t.Run(tt.name, func(t *testing.T) {
 			repo := newFakePaymentRepo(entity.PaymentOrder{})
 			eligibility := tt.eligibility
-			usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{eligibility: &eligibility})
+			usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{eligibility: &eligibility})
 
 			_, _, err := usecase.CreateOrder(context.Background(), payerID, appointmentID, "127.0.0.1")
 			if !errors.Is(err, tt.wantErr) {
@@ -165,7 +164,7 @@ func TestCreateOrderRejectsMalformedEligibilityResultBeforePersisting(t *testing
 
 func TestCreateOrderRejectsMalformedAppointmentIDBeforePersisting(t *testing.T) {
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	_, _, err := usecase.CreateOrder(context.Background(), uuid.New(), "not-a-uuid", "127.0.0.1")
 	if !errors.Is(err, ErrInvalidCreateOrderRequest) {
@@ -186,7 +185,7 @@ func TestCreateOrderRejectsEmptyAppointmentIDBeforePersisting(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := newFakePaymentRepo(entity.PaymentOrder{})
-			usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+			usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 			_, _, err := usecase.CreateOrder(context.Background(), uuid.New(), tt.appointmentID, "127.0.0.1")
 			if !errors.Is(err, ErrInvalidCreateOrderRequest) {
@@ -200,7 +199,7 @@ func TestCreateOrderRejectsEmptyAppointmentIDBeforePersisting(t *testing.T) {
 func TestCreateOrderMapsBookingNotFoundBeforePersisting(t *testing.T) {
 	appointmentID := uuid.New().String()
 	repo := newFakePaymentRepo(entity.PaymentOrder{})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: bookingclient.ErrAppointmentNotFound})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{err: bookingclient.ErrAppointmentNotFound})
 
 	_, _, err := usecase.CreateOrder(context.Background(), uuid.New(), appointmentID, "127.0.0.1")
 	if !errors.Is(err, ErrBookingAppointmentNotFound) {
@@ -225,9 +224,11 @@ func TestProcessIPNConcurrentRequestsOnlyProcessPendingOrderOnce(t *testing.T) {
 		Status:           entity.OrderStatusPending,
 	})
 
+	walletUsecase := &fakeWalletUsecase{delay: 50 * time.Millisecond}
+	repo.addParticipant(walletUsecase)
 	usecase := NewUsecase(
 		repo,
-		&fakeWalletUsecase{delay: 50 * time.Millisecond},
+		repo,
 		gateway.NewVNPayClient("", "", "", ""),
 		&fakeBookingClient{},
 	)
@@ -299,7 +300,7 @@ func TestProcessIPNCommitsPaymentWalletAndBookingOutboxAtomically(t *testing.T) 
 	walletUsecase := &fakeWalletUsecase{}
 	repo.addParticipant(walletUsecase)
 
-	usecase := NewUsecase(repo, walletUsecase, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), signedSuccessIPNParams(orderID))
 	if err != nil {
@@ -338,7 +339,7 @@ func TestProcessIPNRollsBackWhenWalletCreditFails(t *testing.T) {
 	walletUsecase := &fakeWalletUsecase{creditErr: errors.New("credit failed")}
 	repo.addParticipant(walletUsecase)
 
-	usecase := NewUsecase(repo, walletUsecase, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), signedSuccessIPNParams(orderID))
 	if err == nil {
@@ -368,7 +369,7 @@ func TestProcessIPNRollsBackCreditWhenWalletDebitFails(t *testing.T) {
 	walletUsecase := &fakeWalletUsecase{debitErr: errors.New("debit failed")}
 	repo.addParticipant(walletUsecase)
 
-	usecase := NewUsecase(repo, walletUsecase, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), signedSuccessIPNParams(orderID))
 	if err == nil {
@@ -397,7 +398,7 @@ func TestProcessIPNAbortsWhenGatewayTxnLookupReturnsDatabaseError(t *testing.T) 
 
 	usecase := NewUsecase(
 		repo,
-		&fakeWalletUsecase{},
+		repo,
 		gateway.NewVNPayClient("", "", "", ""),
 		&fakeBookingClient{},
 	)
@@ -438,7 +439,7 @@ func TestProcessIPNRejectsMissingSecureHash(t *testing.T) {
 		Status:           entity.OrderStatusPending,
 	})
 
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	_, err := usecase.ProcessIPN(context.Background(), map[string][]string{
 		"vnp_TxnRef":       {orderID.String()},
@@ -467,7 +468,7 @@ func TestProcessIPNRejectsInvalidSecureHash(t *testing.T) {
 		Status:           entity.OrderStatusPending,
 	})
 
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	_, err := usecase.ProcessIPN(context.Background(), map[string][]string{
 		"vnp_TxnRef":       {orderID.String()},
@@ -509,7 +510,7 @@ func TestProcessIPNRejectsMalformedAmount(t *testing.T) {
 				Status:           entity.OrderStatusPending,
 			})
 
-			usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+			usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 			params := map[string][]string{
 				"vnp_TxnRef":       {orderID.String()},
 				"vnp_ResponseCode": {"00"},
@@ -545,7 +546,7 @@ func TestProcessIPNFailedPaymentWithAppointmentCreatesBookingFailOutbox(t *testi
 		Status:           entity.OrderStatusPending,
 		AppointmentID:    &appointmentID,
 	})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), signedFailedIPNParams(orderID))
 	if err != nil {
@@ -573,7 +574,7 @@ func TestProcessIPNFailedPaymentWithoutAppointmentCreatesNoBookingEvent(t *testi
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
 	})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	if _, err := usecase.ProcessIPN(context.Background(), signedFailedIPNParams(orderID)); err != nil {
 		t.Fatalf("ProcessIPN returned error: %v", err)
@@ -598,7 +599,7 @@ func TestProcessIPNInvalidChecksumCreatesNoFailureEvent(t *testing.T) {
 		Status:           entity.OrderStatusPending,
 		AppointmentID:    &appointmentID,
 	})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	params := signedFailedIPNParams(orderID)
 	params["vnp_SecureHash"] = []string{"invalid"}
@@ -625,7 +626,7 @@ func TestProcessIPNAmountMismatchCreatesNoFailureEvent(t *testing.T) {
 		Status:           entity.OrderStatusPending,
 		AppointmentID:    &appointmentID,
 	})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
 	params := signedFailedIPNParams(orderID)
 	params["vnp_Amount"] = []string{"99900"}
@@ -653,7 +654,7 @@ func TestProcessIPNDuplicateFailedPaymentDoesNotCreateDuplicateFailureEvent(t *t
 		Status:           entity.OrderStatusPending,
 		AppointmentID:    &appointmentID,
 	})
-	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 	params := signedFailedIPNParams(orderID)
 
 	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), params)
@@ -683,10 +684,14 @@ type fakePaymentRepo struct {
 	successTransitions int
 	gatewayLookupErr   error
 	participants       []fakeTxParticipant
+	walletUsecase      *fakeWalletUsecase
 }
 
 func newFakePaymentRepo(order entity.PaymentOrder) *fakePaymentRepo {
-	return &fakePaymentRepo{order: order}
+	return &fakePaymentRepo{
+		order:         order,
+		walletUsecase: &fakeWalletUsecase{},
+	}
 }
 
 type fakeTxParticipant interface {
@@ -697,6 +702,9 @@ type fakeTxParticipant interface {
 
 func (r *fakePaymentRepo) addParticipant(participant fakeTxParticipant) {
 	r.participants = append(r.participants, participant)
+	if walletUsecase, ok := participant.(*fakeWalletUsecase); ok {
+		r.walletUsecase = walletUsecase
+	}
 }
 
 func (r *fakePaymentRepo) Create(order *entity.PaymentOrder) error {
@@ -711,47 +719,60 @@ func (r *fakePaymentRepo) GetByID(orderID uuid.UUID) (*entity.PaymentOrder, erro
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.order.ID != orderID {
-		return nil, gorm.ErrRecordNotFound
+		return nil, ErrTxRecordNotFound
 	}
 	order := r.order
 	return &order, nil
 }
 
-func (r *fakePaymentRepo) GetByIDForUpdate(tx *gorm.DB, orderID uuid.UUID) (*entity.PaymentOrder, error) {
+func (r *fakePaymentRepo) GetOrderForUpdate(ctx context.Context, orderID uuid.UUID) (*entity.PaymentOrder, error) {
 	r.rowLock.Lock()
 	r.mu.Lock()
 	r.rowLockHeld = true
 	defer r.mu.Unlock()
 
 	if r.order.ID != orderID {
-		return nil, gorm.ErrRecordNotFound
+		return nil, ErrTxRecordNotFound
 	}
 	order := r.order
 	return &order, nil
 }
 
 func (r *fakePaymentRepo) GetByGatewayTxnRef(ref string) (*entity.PaymentOrder, error) {
-	return r.GetByGatewayTxnRefWithTx(nil, ref)
-}
-
-func (r *fakePaymentRepo) GetByGatewayTxnRefWithTx(tx *gorm.DB, ref string) (*entity.PaymentOrder, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.gatewayLookupErr != nil {
 		return nil, r.gatewayLookupErr
 	}
 	if r.order.GatewayTxnRef != ref {
-		return nil, gorm.ErrRecordNotFound
+		return nil, ErrTxRecordNotFound
+	}
+	order := r.order
+	return &order, nil
+}
+
+func (r *fakePaymentRepo) GetGatewayTxnRef(ctx context.Context, ref string) (*entity.PaymentOrder, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.gatewayLookupErr != nil {
+		return nil, r.gatewayLookupErr
+	}
+	if r.order.GatewayTxnRef != ref {
+		return nil, ErrTxRecordNotFound
 	}
 	order := r.order
 	return &order, nil
 }
 
 func (r *fakePaymentRepo) Update(order *entity.PaymentOrder) error {
-	return r.UpdateWithTx(nil, order)
+	return r.updateOrder(order)
 }
 
-func (r *fakePaymentRepo) UpdateWithTx(tx *gorm.DB, order *entity.PaymentOrder) error {
+func (r *fakePaymentRepo) UpdateOrder(ctx context.Context, order *entity.PaymentOrder) error {
+	return r.updateOrder(order)
+}
+
+func (r *fakePaymentRepo) updateOrder(order *entity.PaymentOrder) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.order.Status == entity.OrderStatusPending && order.Status == entity.OrderStatusSuccess {
@@ -761,14 +782,22 @@ func (r *fakePaymentRepo) UpdateWithTx(tx *gorm.DB, order *entity.PaymentOrder) 
 	return nil
 }
 
-func (r *fakePaymentRepo) SaveOutboxEvent(tx *gorm.DB, event *entity.OutboxEvent) error {
+func (r *fakePaymentRepo) SaveOutboxEvent(ctx context.Context, event *entity.OutboxEvent) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.outboxEvents = append(r.outboxEvents, *event)
 	return nil
 }
 
-func (r *fakePaymentRepo) WithTransaction(fn func(tx *gorm.DB) error) error {
+func (r *fakePaymentRepo) CreditWalletPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refID uuid.UUID, idempotencyKey string) error {
+	return r.walletUsecase.CreditPending(ctx, userID, amount, "PAYMENT_ORDER", refID, idempotencyKey)
+}
+
+func (r *fakePaymentRepo) DebitWalletPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refID uuid.UUID, idempotencyKey string) error {
+	return r.walletUsecase.DebitPending(ctx, userID, amount, "PAYMENT_ORDER", refID, idempotencyKey)
+}
+
+func (r *fakePaymentRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) error {
 	r.mu.Lock()
 	orderSnapshot := r.order
 	createCountSnapshot := r.createCount
@@ -779,7 +808,7 @@ func (r *fakePaymentRepo) WithTransaction(fn func(tx *gorm.DB) error) error {
 	}
 	r.mu.Unlock()
 
-	err := fn(nil)
+	err := fn(r)
 
 	r.mu.Lock()
 	if err != nil {
@@ -829,10 +858,6 @@ func (u *fakeWalletUsecase) GetTransactionHistory(ctx context.Context, userID uu
 }
 
 func (u *fakeWalletUsecase) CreditPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
-	return u.CreditPendingWithTx(ctx, nil, userID, amount, refType, refID, idempotencyKey)
-}
-
-func (u *fakeWalletUsecase) CreditPendingWithTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
 	if u.delay > 0 {
 		time.Sleep(u.delay)
 	}
@@ -859,10 +884,6 @@ func (u *fakeWalletUsecase) DebitAvailable(ctx context.Context, userID uuid.UUID
 }
 
 func (u *fakeWalletUsecase) DebitPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
-	return u.DebitPendingWithTx(ctx, nil, userID, amount, refType, refID, idempotencyKey)
-}
-
-func (u *fakeWalletUsecase) DebitPendingWithTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, amount vo.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
 	if u.debitErr != nil {
 		return u.debitErr
 	}
