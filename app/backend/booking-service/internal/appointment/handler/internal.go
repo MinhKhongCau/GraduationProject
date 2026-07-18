@@ -2,6 +2,7 @@ package handler
 
 import (
 	"booking-service/internal/domain"
+	"booking-service/pkg/internal_auth"
 	"booking-service/pkg/response"
 	"net/http"
 
@@ -24,6 +25,11 @@ import (
 //	@Failure      500   {object}  map[string]interface{}
 //	@Router       /internal/appointments/{id}/webhook [post]
 func (h *Handler) InternalPaymentWebhook(c *gin.Context) {
+	if !isPaymentServiceCaller(c) {
+		response.Error(c, http.StatusForbidden, "Forbidden", "caller is not allowed to update payment result")
+		return
+	}
+
 	appointmentID := c.Param("id")
 	if appointmentID == "" {
 		response.Error(c, http.StatusBadRequest, "appointment_id is required", "missing path param :id")
@@ -76,6 +82,11 @@ func (h *Handler) InternalPaymentWebhook(c *gin.Context) {
 //	@Failure      500   {object}  map[string]interface{}
 //	@Router       /internal/appointments/{id} [get]
 func (h *Handler) InternalGetAppointment(c *gin.Context) {
+	if !isPaymentServiceCaller(c) {
+		response.Error(c, http.StatusForbidden, "Forbidden", "caller is not allowed to read payment appointment data")
+		return
+	}
+
 	appointmentID := c.Param("id")
 	if appointmentID == "" {
 		response.Error(c, http.StatusBadRequest, "appointment_id is required", "missing path param :id")
@@ -89,4 +100,9 @@ func (h *Handler) InternalGetAppointment(c *gin.Context) {
 	}
 
 	response.Success(c, "Get appointment successfully", appt)
+}
+
+func isPaymentServiceCaller(c *gin.Context) bool {
+	callerID, ok := internal_auth.GetCallerID(c)
+	return ok && callerID == "payment-service"
 }
