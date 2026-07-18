@@ -1,6 +1,7 @@
 package appointment
 
 import (
+	appointmentpostgres "booking-service/internal/booking/adapter/out/postgres/appointment"
 	appappointment "booking-service/internal/booking/application/appointment"
 
 	"gorm.io/gorm"
@@ -8,10 +9,6 @@ import (
 
 type Repository = appappointment.Repository
 
-type pgRepository struct {
-	db *gorm.DB
-}
-
 func NewRepository(db *gorm.DB) Repository {
-	return &pgRepository{db: db}
+	return appointmentpostgres.NewRepository(db)
 }

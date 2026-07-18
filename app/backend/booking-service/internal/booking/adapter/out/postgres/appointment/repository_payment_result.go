@@ -1,4 +1,4 @@
-package appointment
+package appointmentpostgres
 
 import appappointment "booking-service/internal/booking/application/appointment"
 

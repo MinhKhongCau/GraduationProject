@@ -1,7 +1,6 @@
-package appointment
+package appointmentpostgres
 
 import (
-	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/domain"
 	"errors"
 	"fmt"
@@ -9,8 +8,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
-
-type PaymentEligibilitySnapshot = appappointment.PaymentEligibilitySnapshot
 
 func (r *pgRepository) GetPaymentEligibilitySnapshot(command GetPaymentEligibilityCommand) (*PaymentEligibilitySnapshot, error) {
 	var snapshot PaymentEligibilitySnapshot
