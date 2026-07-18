@@ -59,114 +59,48 @@ func (r *pgRepository) HandlePaymentResult(command HandlePaymentResultCommand) e
 }
 
 func (r *pgRepository) applyPaymentSuccess(tx *gorm.DB, appt *domain.Appointment, slot *domain.ExpertSlot, nowMs int64) error {
-	transition, err := planPaymentResultTransition(*appt, *slot, PaymentResultSuccess, nowMs)
+	transition, err := domain.PlanPaymentResultTransition(*appt, *slot, domain.PaymentResultSuccess, nowMs)
 	if err != nil {
-		return err
+		return mapPaymentResultDomainError(err)
 	}
 	return r.persistPaymentResultTransition(tx, appt, transition)
 }
 
 func (r *pgRepository) applyPaymentFailure(tx *gorm.DB, appt *domain.Appointment, slot *domain.ExpertSlot, nowMs int64) error {
-	transition, err := planPaymentResultTransition(*appt, *slot, PaymentResultFailed, nowMs)
+	transition, err := domain.PlanPaymentResultTransition(*appt, *slot, domain.PaymentResultFailed, nowMs)
 	if err != nil {
-		return err
+		return mapPaymentResultDomainError(err)
 	}
 	return r.persistPaymentResultTransition(tx, appt, transition)
 }
 
-type paymentResultTransition struct {
-	appointmentUpdates map[string]interface{}
-	slotUpdates        map[string]interface{}
-	expectedSlotStatus domain.SlotStatus
-	noop               bool
-}
-
-func planPaymentResultTransition(appt domain.Appointment, slot domain.ExpertSlot, status PaymentResultStatus, nowMs int64) (*paymentResultTransition, error) {
-	switch status {
-	case PaymentResultSuccess:
-		return planPaymentSuccess(appt, slot, nowMs)
-	case PaymentResultFailed:
-		return planPaymentFailure(appt, slot, nowMs)
+func mapPaymentResultDomainError(err error) error {
+	switch {
+	case errors.Is(err, domain.ErrInvalidPaymentResultStatus):
+		return fmt.Errorf("%w: %v", ErrInvalidPaymentResultStatus, err)
+	case errors.Is(err, domain.ErrPaymentResultConflict):
+		return fmt.Errorf("%w: %v", ErrPaymentResultConflict, err)
 	default:
-		return nil, ErrInvalidPaymentResultStatus
+		return err
 	}
 }
 
-func planPaymentSuccess(appt domain.Appointment, slot domain.ExpertSlot, nowMs int64) (*paymentResultTransition, error) {
-	switch appt.Status {
-	case domain.AppointmentStatusPendingPayment:
-		if slot.Status != domain.SlotStatusLocked {
-			return nil, fmt.Errorf("%w: success requires LOCKED slot, got %s", ErrPaymentResultConflict, slot.Status.String())
-		}
-		confirmedAt := nowMs
-		return &paymentResultTransition{
-			appointmentUpdates: map[string]interface{}{
-				"status":       domain.AppointmentStatusConfirmed,
-				"updated_at":   nowMs,
-				"confirmed_at": confirmedAt,
-			},
-			slotUpdates: map[string]interface{}{
-				"status":            domain.SlotStatusOccupied,
-				"locked_expires_at": nil,
-				"locked_by":         nil,
-			},
-			expectedSlotStatus: domain.SlotStatusLocked,
-		}, nil
-	case domain.AppointmentStatusConfirmed:
-		return &paymentResultTransition{noop: true}, nil
-	case domain.AppointmentStatusCancelled:
-		return nil, fmt.Errorf("%w: cancelled appointment cannot be confirmed", ErrPaymentResultConflict)
-	default:
-		return nil, fmt.Errorf("%w: unsupported appointment status %d", ErrPaymentResultConflict, appt.Status)
-	}
-}
-
-func planPaymentFailure(appt domain.Appointment, slot domain.ExpertSlot, nowMs int64) (*paymentResultTransition, error) {
-	switch appt.Status {
-	case domain.AppointmentStatusPendingPayment:
-		if slot.Status != domain.SlotStatusLocked {
-			return nil, fmt.Errorf("%w: failure requires LOCKED slot, got %s", ErrPaymentResultConflict, slot.Status.String())
-		}
-		cancelledBy := "PAYMENT"
-		return &paymentResultTransition{
-			appointmentUpdates: map[string]interface{}{
-				"status":              domain.AppointmentStatusCancelled,
-				"cancellation_reason": "Payment failed",
-				"cancelled_by":        &cancelledBy,
-				"updated_at":          nowMs,
-			},
-			slotUpdates: map[string]interface{}{
-				"status":            domain.SlotStatusAvailable,
-				"locked_expires_at": nil,
-				"locked_by":         nil,
-			},
-			expectedSlotStatus: domain.SlotStatusLocked,
-		}, nil
-	case domain.AppointmentStatusCancelled:
-		return &paymentResultTransition{noop: true}, nil
-	case domain.AppointmentStatusConfirmed:
-		return nil, fmt.Errorf("%w: confirmed appointment cannot be cancelled by payment failure", ErrPaymentResultConflict)
-	default:
-		return nil, fmt.Errorf("%w: unsupported appointment status %d", ErrPaymentResultConflict, appt.Status)
-	}
-}
-
-func (r *pgRepository) persistPaymentResultTransition(tx *gorm.DB, appt *domain.Appointment, transition *paymentResultTransition) error {
-	if transition.noop {
+func (r *pgRepository) persistPaymentResultTransition(tx *gorm.DB, appt *domain.Appointment, transition *domain.PaymentResultTransition) error {
+	if transition.Noop {
 		return nil
 	}
-	if err := tx.Model(appt).Updates(transition.appointmentUpdates).Error; err != nil {
+	if err := tx.Model(appt).Updates(transition.AppointmentUpdates).Error; err != nil {
 		return err
 	}
 
 	result := tx.Model(&domain.ExpertSlot{}).
-		Where("slot_id = ? AND status = ?", appt.SlotID, transition.expectedSlotStatus).
-		Updates(transition.slotUpdates)
+		Where("slot_id = ? AND status = ?", appt.SlotID, transition.ExpectedSlotStatus).
+		Updates(transition.SlotUpdates)
 	if result.Error != nil {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return fmt.Errorf("%w: slot is no longer %s", ErrPaymentResultConflict, transition.expectedSlotStatus.String())
+		return fmt.Errorf("%w: slot is no longer %s", ErrPaymentResultConflict, transition.ExpectedSlotStatus.String())
 	}
 	return nil
 }

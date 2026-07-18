@@ -25,8 +25,8 @@ func (r *pgRepository) CreateAppointment(appointment *domain.Appointment) error 
 		}
 
 		nowMs := time.Now().UnixMilli()
-		if err := validateAppointmentCreationSlot(slot, appointment, nowMs); err != nil {
-			return err
+		if err := domain.ValidateAppointmentCreationSlot(slot, appointment, nowMs); err != nil {
+			return mapAppointmentCreationSlotError(err)
 		}
 
 		// Táº¡o cuá»™c háº¹n vá»›i tráº¡ng thÃ¡i PENDING_PAYMENT
@@ -40,18 +40,15 @@ func (r *pgRepository) CreateAppointment(appointment *domain.Appointment) error 
 	})
 }
 
-func validateAppointmentCreationSlot(slot domain.ExpertSlot, appointment *domain.Appointment, nowMs int64) error {
-	if slot.Status != domain.SlotStatusLocked || slot.LockedBy == nil || !sameID(*slot.LockedBy, appointment.PatientID) {
+func mapAppointmentCreationSlotError(err error) error {
+	switch {
+	case errors.Is(err, domain.ErrAppointmentCreationSlotNotLockedByPatient):
 		return errors.New("slot khÃ´ng Ä‘Æ°á»£c giá»¯ bá»Ÿi báº¡n, vui lÃ²ng thá»±c hiá»‡n láº¡i tá»« Ä‘áº§u")
-	}
-	if !sameID(slot.ExpertID, appointment.ExpertID) {
+	case errors.Is(err, domain.ErrAppointmentCreationSlotExpertMismatch):
 		return errors.New("slot expert does not match appointment expert")
-	}
-	if slot.LockedExpiresAt == nil {
+	case errors.Is(err, domain.ErrAppointmentCreationSlotLockExpired):
 		return errors.New("phiÃªn giá»¯ chá»— Ä‘Ã£ háº¿t háº¡n 15 phÃºt, vui lÃ²ng chá»n láº¡i")
+	default:
+		return err
 	}
-	if *slot.LockedExpiresAt <= nowMs {
-		return errors.New("phiÃªn giá»¯ chá»— Ä‘Ã£ háº¿t háº¡n 15 phÃºt, vui lÃ²ng chá»n láº¡i")
-	}
-	return nil
 }
