@@ -1,18 +1,8 @@
 package appointment
 
-import "booking-service/internal/domain"
+import appappointment "booking-service/internal/booking/application/appointment"
 
-type Usecase interface {
-	CreateAppointment(patientID, expertID, slotID string) (*domain.Appointment, error)
-	GetAppointmentByID(appointmentID string) (*domain.Appointment, error)
-	GetPaymentEligibility(command GetPaymentEligibilityCommand) (PaymentEligibility, error)
-	CancelAppointment(appointmentID, userID, userRole, reason string) error
-	ConfirmPayment(appointmentID string) error
-	HandlePaymentFailure(appointmentID string) error
-	HandlePaymentResult(command HandlePaymentResultCommand) error
-	GetAppointmentsByPatient(patientID string) ([]domain.Appointment, error)
-	GetAppointmentsByExpert(expertID string, fromDate, toDate int64, status *domain.AppointmentStatus) ([]domain.Appointment, error)
-}
+type Usecase = appappointment.Usecase
 
 type appointmentUsecase struct {
 	repo Repository

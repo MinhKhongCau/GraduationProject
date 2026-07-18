@@ -1,6 +1,7 @@
 package appointment
 
 import (
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/domain"
 	"errors"
 	"fmt"
@@ -9,10 +10,7 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type PaymentEligibilitySnapshot struct {
-	Appointment domain.Appointment
-	Slot        domain.ExpertSlot
-}
+type PaymentEligibilitySnapshot = appappointment.PaymentEligibilitySnapshot
 
 func (r *pgRepository) GetPaymentEligibilitySnapshot(command GetPaymentEligibilityCommand) (*PaymentEligibilitySnapshot, error) {
 	var snapshot PaymentEligibilitySnapshot
