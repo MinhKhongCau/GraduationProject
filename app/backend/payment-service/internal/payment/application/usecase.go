@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"payment-service/internal/booking/client"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
 
@@ -44,10 +43,10 @@ type paymentUsecase struct {
 	repo          Repository
 	uow           UnitOfWork
 	vnpayClient   PaymentGateway
-	bookingClient client.BookingServiceClient
+	bookingClient BookingServiceClient
 }
 
-func NewUsecase(repo Repository, uow UnitOfWork, vnpayClient PaymentGateway, bookingClient client.BookingServiceClient) Usecase {
+func NewUsecase(repo Repository, uow UnitOfWork, vnpayClient PaymentGateway, bookingClient BookingServiceClient) Usecase {
 	return &paymentUsecase{
 		repo:          repo,
 		uow:           uow,

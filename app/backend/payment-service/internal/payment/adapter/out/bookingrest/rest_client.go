@@ -1,4 +1,4 @@
-package client
+package bookingrest
 
 import (
 	"bytes"
@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	apppayment "payment-service/internal/payment/application"
 	"payment-service/pkg/httpclient"
 
 	"github.com/google/uuid"
@@ -42,7 +43,7 @@ type paymentEligibilityAPIResponse struct {
 	Error   string                     `json:"error"`
 }
 
-func NewRestBookingClient(baseURL string, tokenProvider httpclient.TokenProvider) BookingServiceClient {
+func NewRestBookingClient(baseURL string, tokenProvider httpclient.TokenProvider) apppayment.BookingServiceClient {
 	return &restBookingClient{
 		baseURL: baseURL,
 		httpClient: httpclient.New(httpclient.Options{
@@ -52,7 +53,7 @@ func NewRestBookingClient(baseURL string, tokenProvider httpclient.TokenProvider
 	}
 }
 
-func (c *restBookingClient) GetPaymentEligibility(ctx context.Context, appointmentID string, payerID uuid.UUID) (*PaymentEligibility, error) {
+func (c *restBookingClient) GetPaymentEligibility(ctx context.Context, appointmentID string, payerID uuid.UUID) (*apppayment.PaymentEligibility, error) {
 	endpoint := fmt.Sprintf("%s/internal/appointments/%s/payment-eligibility", c.baseURL, url.PathEscape(appointmentID))
 	body, err := json.Marshal(paymentEligibilityRequest{PayerID: payerID.String()})
 	if err != nil {
@@ -81,7 +82,7 @@ func (c *restBookingClient) GetPaymentEligibility(ctx context.Context, appointme
 		return nil, fmt.Errorf("booking_client: decode eligibility response: %w", err)
 	}
 
-	return &PaymentEligibility{
+	return &apppayment.PaymentEligibility{
 		AppointmentID: apiResp.Data.AppointmentID,
 		ExpertID:      apiResp.Data.ExpertID,
 		AmountVND:     apiResp.Data.AmountVND,
@@ -95,13 +96,13 @@ func mapPaymentEligibilityStatus(resp *http.Response) error {
 
 	switch resp.StatusCode {
 	case http.StatusNotFound:
-		return fmt.Errorf("%w: %s", ErrAppointmentNotFound, detail)
+		return fmt.Errorf("%w: %s", apppayment.ErrAppointmentNotFound, detail)
 	case http.StatusForbidden:
-		return fmt.Errorf("%w: %s", ErrPaymentEligibilityForbidden, detail)
+		return fmt.Errorf("%w: %s", apppayment.ErrPaymentEligibilityForbidden, detail)
 	case http.StatusConflict:
-		return fmt.Errorf("%w: %s", ErrPaymentEligibilityConflict, detail)
+		return fmt.Errorf("%w: %s", apppayment.ErrPaymentEligibilityConflict, detail)
 	case http.StatusBadRequest:
-		return fmt.Errorf("%w: %s", ErrInvalidBookingPrice, detail)
+		return fmt.Errorf("%w: %s", apppayment.ErrInvalidBookingPrice, detail)
 	default:
 		return fmt.Errorf("%s", detail)
 	}

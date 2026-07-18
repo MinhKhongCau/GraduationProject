@@ -3,7 +3,7 @@ package handler
 import (
 	"errors"
 	"net/http"
-	"payment-service/internal/payment"
+	apppayment "payment-service/internal/payment/application"
 	"payment-service/pkg/response"
 	"strings"
 
@@ -93,15 +93,15 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 
 func createOrderErrorResponse(err error) (int, string) {
 	switch {
-	case errors.Is(err, payment.ErrUnsupportedGateway),
-		errors.Is(err, payment.ErrInvalidCreateOrderRequest),
-		errors.Is(err, payment.ErrInvalidBookingData):
+	case errors.Is(err, apppayment.ErrUnsupportedGateway),
+		errors.Is(err, apppayment.ErrInvalidCreateOrderRequest),
+		errors.Is(err, apppayment.ErrInvalidBookingData):
 		return http.StatusBadRequest, "Invalid payment order request"
-	case errors.Is(err, payment.ErrAppointmentOwnership):
+	case errors.Is(err, apppayment.ErrAppointmentOwnership):
 		return http.StatusForbidden, "Appointment does not belong to payer"
-	case errors.Is(err, payment.ErrBookingAppointmentNotFound):
+	case errors.Is(err, apppayment.ErrBookingAppointmentNotFound):
 		return http.StatusNotFound, "Appointment not found"
-	case errors.Is(err, payment.ErrAppointmentInvalidState):
+	case errors.Is(err, apppayment.ErrAppointmentInvalidState):
 		return http.StatusConflict, "Appointment is not payable"
 	default:
 		return http.StatusInternalServerError, "Failed to create payment order"
