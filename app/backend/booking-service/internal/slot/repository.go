@@ -12,7 +12,8 @@ type Repository interface {
 	GetAvailableDates(expertID string, startDate, endDate time.Time) ([]string, error)
 	GetAvailableTimes(date string, expertID string) ([]SlotTimeResult, error)
 	GetSlotsByExpert(expertID string, fromDate, toDate int64) ([]domain.ExpertSlot, error)
-	BulkInsertSlots(slots []domain.ExpertSlot) error
+	GetOverlappingSlots(expertID string, startMs, endMs int64) ([]domain.ExpertSlot, error)
+	BulkInsertSlots(slots []domain.ExpertSlot) (int64, error)
 }
 
 type pgRepository struct {
@@ -86,13 +87,20 @@ func (r *pgRepository) GetSlotsByExpert(expertID string, fromDate, toDate int64)
 
 // 4. LƯU HÀNG LOẠT (BULK INSERT) với cơ chế chống trùng lịch (Idempotency)
 // Sử dụng ON CONFLICT DO NOTHING: nếu slot (expert_id, start_time) đã tồn tại thì bỏ qua, không báo lỗi
-func (r *pgRepository) BulkInsertSlots(slots []domain.ExpertSlot) error {
+func (r *pgRepository) GetOverlappingSlots(expertID string, startMs, endMs int64) ([]domain.ExpertSlot, error) {
+	var slots []domain.ExpertSlot
+	err := r.db.Where("expert_id = ? AND start_time < ? AND end_time > ?", expertID, endMs, startMs).Order("start_time ASC").Find(&slots).Error
+	return slots, err
+}
+
+func (r *pgRepository) BulkInsertSlots(slots []domain.ExpertSlot) (int64, error) {
 	if len(slots) == 0 {
-		return nil
+		return 0, nil
 	}
 
 	// CreateInBatches + OnConflict DoNothing: chia nhỏ 100 dòng/lần và bỏ qua khi trùng
-	return r.db.
+	result := r.db.
 		Clauses(clause.OnConflict{DoNothing: true}).
-		CreateInBatches(slots, 100).Error
+		CreateInBatches(slots, 100)
+	return result.RowsAffected, result.Error
 }

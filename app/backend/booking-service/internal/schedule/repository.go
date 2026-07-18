@@ -2,17 +2,25 @@ package schedule
 
 import (
 	"booking-service/internal/booking/domain"
+	"errors"
 	"gorm.io/gorm"
 )
 
 type Repository interface {
 	GetAvailabilities(expertID string) ([]domain.Availability, error)
 	GetTimeTemplates() ([]domain.TimeTemplate, error)
+	GetAllTimeTemplates() ([]domain.TimeTemplate, error)
+	GetTimeTemplateByID(templateID string) (*domain.TimeTemplate, error)
+	GetAvailabilityByID(availID, expertID string) (*domain.Availability, error)
+	GetEnabledAvailabilities(expertID string) ([]domain.Availability, error)
+	GetEnabledAvailabilitiesByTemplate(templateID string) ([]domain.Availability, error)
 	CreateTimeTemplate(template *domain.TimeTemplate) error
 	CreateAvailability(avail *domain.Availability) error
 	UpdateAvailability(availID string, expertID string, updates map[string]interface{}) error
 	UpdateTemplate(templateID string, updates map[string]interface{}) error
 }
+
+var ErrNotFound = errors.New("schedule record not found")
 
 type pgRepository struct {
 	db *gorm.DB
@@ -35,6 +43,46 @@ func (r *pgRepository) GetTimeTemplates() ([]domain.TimeTemplate, error) {
 	var templates []domain.TimeTemplate
 	err := r.db.Where("is_active = ?", true).Find(&templates).Error
 	return templates, err
+}
+
+func (r *pgRepository) GetAllTimeTemplates() ([]domain.TimeTemplate, error) {
+	var templates []domain.TimeTemplate
+	err := r.db.Find(&templates).Error
+	return templates, err
+}
+
+func (r *pgRepository) GetTimeTemplateByID(templateID string) (*domain.TimeTemplate, error) {
+	var template domain.TimeTemplate
+	if err := r.db.Where("template_id = ?", templateID).First(&template).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &template, nil
+}
+
+func (r *pgRepository) GetAvailabilityByID(availID, expertID string) (*domain.Availability, error) {
+	var availability domain.Availability
+	if err := r.db.Where("availability_id = ? AND expert_id = ?", availID, expertID).First(&availability).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &availability, nil
+}
+
+func (r *pgRepository) GetEnabledAvailabilities(expertID string) ([]domain.Availability, error) {
+	var availabilities []domain.Availability
+	err := r.db.Where("expert_id = ? AND is_enabled = ?", expertID, true).Find(&availabilities).Error
+	return availabilities, err
+}
+
+func (r *pgRepository) GetEnabledAvailabilitiesByTemplate(templateID string) ([]domain.Availability, error) {
+	var availabilities []domain.Availability
+	err := r.db.Where("template_id = ? AND is_enabled = ?", templateID, true).Find(&availabilities).Error
+	return availabilities, err
 }
 
 // CreateTimeTemplate lưu ca làm việc mẫu mới

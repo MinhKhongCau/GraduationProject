@@ -1,17 +1,20 @@
 package handler
 
 import (
+	"booking-service/internal/schedule"
 	"booking-service/pkg/response"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type CreateAvailabilityRequest struct {
-	TemplateID     string `json:"template_id" binding:"required"`
-	DayOfWeek      int    `json:"day_of_week" binding:"required,min=1,max=7"` // 1=Mon...7=Sun
-	EffectiveFrom  int64  `json:"effective_from" binding:"required"`          // Unix ms
-	EffectiveUntil *int64 `json:"effective_until"`
+	TemplateID     string  `json:"template_id" binding:"required"`
+	DayOfWeek      int     `json:"day_of_week" binding:"required,min=1,max=7"` // 1=Mon...7=Sun
+	EffectiveFrom  int64   `json:"effective_from" binding:"required"`          // Unix ms
+	EffectiveUntil *int64  `json:"effective_until"`
+	Price          float64 `json:"price" binding:"required"`
 }
 
 // CreateAvailability - POST /api/v1/booking/availabilities
@@ -48,9 +51,9 @@ func (h *Handler) CreateAvailability(c *gin.Context) {
 		return
 	}
 
-	avail, err := h.usecase.CreateAvailability(expertID, req.TemplateID, req.DayOfWeek, req.EffectiveFrom, req.EffectiveUntil)
+	avail, err := h.usecase.CreateAvailability(expertID, req.TemplateID, req.DayOfWeek, req.EffectiveFrom, req.EffectiveUntil, req.Price)
 	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to save availability configuration", err.Error())
+		writeScheduleError(c, err, "Failed to save availability configuration")
 		return
 	}
 
@@ -92,11 +95,12 @@ func (h *Handler) GetAvailabilities(c *gin.Context) {
 }
 
 type UpdateAvailabilityRequest struct {
-	TemplateID     *string `json:"template_id"`
-	DayOfWeek      *int    `json:"day_of_week"`
-	IsEnabled      *bool   `json:"is_enabled"`
-	EffectiveFrom  *int64  `json:"effective_from"`
-	EffectiveUntil *int64  `json:"effective_until"`
+	TemplateID     *string  `json:"template_id"`
+	DayOfWeek      *int     `json:"day_of_week"`
+	IsEnabled      *bool    `json:"is_enabled"`
+	EffectiveFrom  *int64   `json:"effective_from"`
+	EffectiveUntil *int64   `json:"effective_until"`
+	Price          *float64 `json:"price"`
 }
 
 // UpdateAvailability - PATCH /api/v1/booking/availabilities/:id
@@ -146,6 +150,9 @@ func (h *Handler) UpdateAvailability(c *gin.Context) {
 	if req.EffectiveUntil != nil {
 		updates["effective_until"] = *req.EffectiveUntil
 	}
+	if req.Price != nil {
+		updates["price"] = *req.Price
+	}
 
 	if len(updates) == 0 {
 		response.Error(c, http.StatusBadRequest, "No updates provided", "Empty payload")
@@ -153,9 +160,22 @@ func (h *Handler) UpdateAvailability(c *gin.Context) {
 	}
 
 	if err := h.usecase.UpdateAvailability(availID, expertID, updates); err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to update availability", err.Error())
+		writeScheduleError(c, err, "Failed to update availability")
 		return
 	}
 
 	response.Success(c, "Availability updated successfully", gin.H{"id": availID, "updates": updates})
+}
+
+func writeScheduleError(c *gin.Context, err error, fallback string) {
+	switch {
+	case errors.Is(err, schedule.ErrInvalidSchedule):
+		response.Error(c, http.StatusBadRequest, "Invalid schedule configuration", err.Error())
+	case errors.Is(err, schedule.ErrScheduleOverlap):
+		response.Error(c, http.StatusConflict, "Schedule configuration overlaps", err.Error())
+	case errors.Is(err, schedule.ErrScheduleNotFound):
+		response.Error(c, http.StatusNotFound, "Schedule configuration not found", err.Error())
+	default:
+		response.Error(c, http.StatusInternalServerError, fallback, "Internal server error")
+	}
 }
