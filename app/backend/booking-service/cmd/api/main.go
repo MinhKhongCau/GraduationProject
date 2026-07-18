@@ -13,7 +13,7 @@ import (
 	"booking-service/pkg/internal_auth"
 
 	"booking-service/internal/appointment"
-	apptHandler "booking-service/internal/appointment/handler"
+	apptHandler "booking-service/internal/booking/adapter/in/http/appointment"
 	"booking-service/internal/schedule"
 	schedHandler "booking-service/internal/schedule/handler"
 	"booking-service/internal/slot"
