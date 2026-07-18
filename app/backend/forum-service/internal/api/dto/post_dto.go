@@ -36,7 +36,7 @@ type PostResponse struct {
 	Summary       string    `json:"summary"`
 	ThumbnailURL  string    `json:"thumbnailUrl"`
 	CategoryID    int64     `json:"categoryId"`
-	AuthorID      int64     `json:"authorId"`
+	AuthorID      string    `json:"authorId"`
 	Status        string    `json:"status"`
 	ViewCount     int       `json:"viewCount"`
 	LikeCount     int       `json:"likeCount"`

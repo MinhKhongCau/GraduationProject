@@ -45,6 +45,10 @@ jobs:
             context: ./app/backend/forum-service
             dockerfile: ./app/backend/forum-service/Dockerfile
             image-tag: forum-service-dev
+          - service-name: chatroom-service
+            context: ./app/backend/chatroom-service
+            dockerfile: ./app/backend/chatroom-service/Dockerfile
+            image-tag: chatroom-service-dev
 
     steps:
       - name: Checkout Code

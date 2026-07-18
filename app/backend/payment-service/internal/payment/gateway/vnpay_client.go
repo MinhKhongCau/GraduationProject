@@ -74,7 +74,8 @@ func (c *VNPayClient) GeneratePaymentURL(txnRef string, amount int64, ipAddr, de
 	}
 
 	queryString := queryBuilder.String()
-	queryString = strings.ReplaceAll(queryString, "+", "%20")
+	// Do NOT replace "+" with "%20" because VNPay's backend expects space to be "+" (standard URLEncoder.encode behavior)
+	// queryString = strings.ReplaceAll(queryString, "+", "%20")
 
 	// Compute secure hash
 	mac := hmac.New(sha512.New, []byte(c.hashSecret))
@@ -120,7 +121,8 @@ func (c *VNPayClient) VerifyChecksum(params map[string][]string) bool {
 	}
 
 	queryString := queryBuilder.String()
-	queryString = strings.ReplaceAll(queryString, "+", "%20")
+	// Do NOT replace "+" with "%20" to match GeneratePaymentURL change
+	// queryString = strings.ReplaceAll(queryString, "+", "%20")
 
 	mac := hmac.New(sha512.New, []byte(c.hashSecret))
 	mac.Write([]byte(queryString))

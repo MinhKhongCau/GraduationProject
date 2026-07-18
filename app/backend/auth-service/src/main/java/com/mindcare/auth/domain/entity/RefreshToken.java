@@ -29,7 +29,7 @@ public class RefreshToken {
     @Column(name = "token_hash", length = 255)
     private String tokenHash;
 
-    @Column(name = "user_agent", length = 500)
+    @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
     @Column(name = "ip_address", length = 45)

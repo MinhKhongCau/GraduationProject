@@ -48,14 +48,16 @@ export interface CreateHttpClientOptions {
   /** false for auth-service, which already returns camelCase JSON. */
   transformCase: boolean;
   /**
-   * true for services that wrap every response as
-   * { statusCode, timestamp, method, path, result, message } — unwraps
-   * `result` into response.data so call sites see the raw payload.
+   * "result" — assessment-service wraps every response as
+   * { statusCode, timestamp, method, path, result, message }; unwraps
+   * `result` into response.data.
+   * "success-data" — forum-service always wraps responses as
+   * { success, message, data, error }; unwraps `data` into response.data.
    */
-  unwrapEnvelope?: boolean;
+  unwrapEnvelope?: "result" | "success-data";
 }
 
-function isEnvelope(data: unknown): data is { result: unknown; statusCode: unknown } {
+function isResultEnvelope(data: unknown): data is { result: unknown; statusCode: unknown } {
   return (
     !!data &&
     typeof data === "object" &&
@@ -65,10 +67,20 @@ function isEnvelope(data: unknown): data is { result: unknown; statusCode: unkno
   );
 }
 
+function isSuccessDataEnvelope(data: unknown): data is { success: boolean; data: unknown; message: string } {
+  return (
+    !!data &&
+    typeof data === "object" &&
+    "success" in data &&
+    "data" in data &&
+    "message" in data
+  );
+}
+
 export function createHttpClient({
   baseURL,
   transformCase,
-  unwrapEnvelope = false,
+  unwrapEnvelope,
 }: CreateHttpClientOptions): AxiosInstance {
   const instance = axios.create({ baseURL, timeout: 15000 });
 
@@ -89,8 +101,11 @@ export function createHttpClient({
       if (transformCase && response.data !== undefined) {
         response.data = toCamelCase(response.data);
       }
-      if (unwrapEnvelope && isEnvelope(response.data)) {
+      if (unwrapEnvelope === "result" && isResultEnvelope(response.data)) {
         response.data = response.data.result;
+      }
+      if (unwrapEnvelope === "success-data" && isSuccessDataEnvelope(response.data)) {
+        response.data = response.data.data;
       }
       return response;
     },

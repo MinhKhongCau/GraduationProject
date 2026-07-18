@@ -55,6 +55,7 @@ export const ASSESSMENT_ENDPOINTS = {
   TEMPLATE: (slug: string) => `/assessments/templates/${slug}`,
   QUESTIONS: (templateId: string) => `/assessments/templates/${templateId}/questions`,
   SUBMIT: "/assessments/submit",
+  SELF: "/assessments/self",
   DIMENSIONS: "/assessments/dimensions",
   DIMENSION: (slug: string) => `/assessments/dimensions/${slug}`,
   DIMENSION_QUESTIONS_BULK: (slug: string) => `/assessments/dimensions/${slug}/questions/bulk`,
@@ -62,6 +63,24 @@ export const ASSESSMENT_ENDPOINTS = {
   OPTION_GROUP: (slug: string) => `/assessments/option-groups/${slug}`,
   QUESTION: (slug: string) => `/assessments/questions/${slug}`,
   BULK_QUESTIONS: "/assessments/questions/bulk",
+};
+
+export const FORUM_ENDPOINTS = {
+  CATEGORIES: "/forum/categories",
+  CATEGORY: (slug: string) => `/forum/categories/${slug}`,
+  POSTS: "/forum/posts",
+  /** GET treats :id as the SLUG; every other verb (POST/PUT/DELETE/PATCH,
+   * and the comment/like/bookmark sub-routes) treats it as the numeric
+   * post ID — a Gin radix-tree quirk, see forum-service's router.go. */
+  POST: (slugOrId: string | number) => `/forum/posts/${slugOrId}`,
+  POST_COMMENTS: (postId: number) => `/forum/posts/${postId}/comments`,
+  POST_LIKE: (postId: number) => `/forum/posts/${postId}/like`,
+  POST_BOOKMARK: (postId: number) => `/forum/posts/${postId}/bookmark`,
+  POST_STATUS: (postId: number) => `/forum/posts/${postId}/status`,
+  COMMENT: (commentId: number) => `/forum/comments/${commentId}`,
+  TAGS: "/forum/tags",
+  TAG_POSTS: (slug: string) => `/forum/tags/${slug}/posts`,
+  MY_BOOKMARKS: "/forum/users/me/bookmarks",
 };
 
 /** Documented only — no service implements clinical records yet, uses /data fallback. */
@@ -110,5 +129,13 @@ export const QUERY_KEYS = {
   assessmentOptionGroups: () => ["assessment", "optionGroups"] as const,
   assessmentOptionGroup: (slug: string) => ["assessment", "optionGroup", slug] as const,
   assessmentQuestion: (slug: string) => ["assessment", "question", slug] as const,
+  assessmentHistory: () => ["assessment", "history"] as const,
   myMedicalRecordHistory: () => ["clinical-records", "my-history"] as const,
+  forumPosts: (params?: Record<string, unknown>) => ["forum", "posts", params ?? {}] as const,
+  forumPost: (slug: string) => ["forum", "post", slug] as const,
+  forumComments: (postId: number) => ["forum", "comments", postId] as const,
+  forumCategories: () => ["forum", "categories"] as const,
+  forumTags: () => ["forum", "tags"] as const,
+  myBookmarks: () => ["forum", "my-bookmarks"] as const,
+  myPosts: (userId?: string) => ["forum", "my-posts", userId ?? ""] as const,
 };

@@ -13,7 +13,7 @@ func NewPostBookmarkRepository(db *gorm.DB) *PostBookmarkRepository {
 	return &PostBookmarkRepository{db: db}
 }
 
-func (r *PostBookmarkRepository) Create(postID, userID int64) (bool, error) {
+func (r *PostBookmarkRepository) Create(postID int64, userID string) (bool, error) {
 	result := r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&PostBookmarkDAO{PostID: postID, UserID: userID})
 	if result.Error != nil {
 		return false, result.Error
@@ -21,7 +21,7 @@ func (r *PostBookmarkRepository) Create(postID, userID int64) (bool, error) {
 	return result.RowsAffected > 0, nil
 }
 
-func (r *PostBookmarkRepository) Delete(postID, userID int64) (bool, error) {
+func (r *PostBookmarkRepository) Delete(postID int64, userID string) (bool, error) {
 	result := r.db.Where("post_id = ? AND user_id = ?", postID, userID).Delete(&PostBookmarkDAO{})
 	if result.Error != nil {
 		return false, result.Error
@@ -31,7 +31,7 @@ func (r *PostBookmarkRepository) Delete(postID, userID int64) (bool, error) {
 
 // FindPostIDsByUser returns the ids of posts the user has bookmarked, most
 // recently bookmarked first — used by GET /users/me/bookmarks.
-func (r *PostBookmarkRepository) FindPostIDsByUser(userID int64, page, pageSize int) ([]int64, int64, error) {
+func (r *PostBookmarkRepository) FindPostIDsByUser(userID string, page, pageSize int) ([]int64, int64, error) {
 	var total int64
 	if err := r.db.Model(&PostBookmarkDAO{}).Where("user_id = ?", userID).Count(&total).Error; err != nil {
 		return nil, 0, err

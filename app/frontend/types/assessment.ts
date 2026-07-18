@@ -41,7 +41,6 @@ export interface AnswerSubmit {
 
 export interface AssessmentSubmitRequest {
   templateId: string; // holds template slug
-  userId: string;
   answers: AnswerSubmit[];
 }
 
@@ -50,4 +49,14 @@ export interface AssessmentSubmitResponse {
   totalScore: number;
   dimensionScores: Record<string, number>;
   aiEvaluation: string;
+}
+
+export interface AssessmentHistoryItem {
+  resultId: string;
+  templateCode: string;
+  templateTitle: string;
+  totalScore: number;
+  dimensionScores: Record<string, number>;
+  aiEvaluation?: string;
+  createdAt: string;
 }
