@@ -1,7 +1,7 @@
 package appointment
 
 import (
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 	"context"
 	"errors"
 	"time"

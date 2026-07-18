@@ -2,8 +2,8 @@
 package database
 
 import (
+	"booking-service/internal/booking/domain"
 	"booking-service/internal/config"
-	"booking-service/internal/domain"
 	"fmt"
 	"log"
 

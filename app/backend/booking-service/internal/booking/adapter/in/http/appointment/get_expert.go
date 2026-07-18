@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 	"booking-service/pkg/response"
 	"net/http"
 	"strconv"

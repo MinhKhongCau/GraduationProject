@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 )
 
 type GetPaymentEligibilityCommand struct {

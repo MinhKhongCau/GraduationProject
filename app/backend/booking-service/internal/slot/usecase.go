@@ -1,7 +1,7 @@
 package slot
 
 import (
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 	"fmt"
 	"sync"
 	"time"

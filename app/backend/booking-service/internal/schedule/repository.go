@@ -1,7 +1,7 @@
 package schedule
 
 import (
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 	"gorm.io/gorm"
 )
 

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

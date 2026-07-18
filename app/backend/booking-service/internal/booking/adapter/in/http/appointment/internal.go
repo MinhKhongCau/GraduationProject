@@ -2,7 +2,7 @@ package handler
 
 import (
 	appappointment "booking-service/internal/booking/application/appointment"
-	"booking-service/internal/domain"
+	"booking-service/internal/booking/domain"
 	"booking-service/pkg/internal_auth"
 	"booking-service/pkg/response"
 	"errors"
