@@ -1,8 +1,9 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
-	"payment-service/internal/domain/vo"
+	"payment-service/internal/payment"
 	"payment-service/pkg/response"
 	"strings"
 
@@ -11,13 +12,8 @@ import (
 )
 
 type CreateOrderRequest struct {
-	PayerID        string  `json:"payer_id"` // Trở thành optional, ưu tiên lấy từ Header X-User-Id
-	ExpertID       string  `json:"expert_id" binding:"required"`
-	Amount         int64   `json:"amount" binding:"required,gt=0"`
-	Gateway        string  `json:"gateway" binding:"required"` // VNPAY | MOMO | MOCK
-	// AppointmentID liên kết order này với lịch hẹn. Optional — nếu không cung cấp
-	// thì đây là order nạp tiền ví trực tiếp, không liên quan đến booking.
-	AppointmentID  *string `json:"appointment_id,omitempty"`
+	// Booking appointment ID to pay with VNPay.
+	AppointmentID string `json:"appointment_id" binding:"required"`
 }
 
 type CreateOrderResponse struct {
@@ -29,18 +25,23 @@ type CreateOrderResponse struct {
 	Status           string    `json:"status"`
 }
 
-// CreateOrder handles POST /api/v1/payments/orders
+// CreateOrder handles POST /api/v1/payments/orders.
 // @Summary      [PATIENT/SYSTEM] Create a new payment order
-// @Description  Create a payment order for an appointment. Returns the payment URL (e.g. VNPay checkout). Requires PATIENT role or internal call from Booking Service.
+// @Description  Create a VNPay payment order for a booking appointment. Payer comes from X-User-Id; expert and amount come from Booking Service.
 // @Tags         Payment Orders
 // @Accept       json
 // @Produce      json
-// @Param        body  body      CreateOrderRequest  true  "Thông tin khởi tạo giao dịch thanh toán"
+// @Param        body  body      CreateOrderRequest  true  "Appointment payment order payload"
 // @Success      200   {object}  response.Response{data=CreateOrderResponse}
 // @Failure      400   {object}  response.Response
+// @Failure      401   {object}  response.Response
+// @Failure      403   {object}  response.Response
+// @Failure      404   {object}  response.Response
+// @Failure      409   {object}  response.Response
 // @Failure      500   {object}  response.Response
+// @Security     BearerAuth
 // @Router       /payments/orders [post]
-// @Param        X-User-Id  header  string  false  "User ID (automatically populated by API Gateway from token)"
+// @Param        X-User-Id  header  string  true  "User ID populated by API Gateway from token"
 func (h *Handler) CreateOrder(c *gin.Context) {
 	var req CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -48,47 +49,33 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	// Ưu tiên lấy Payer ID từ header X-User-Id (do Gateway giải mã từ JWT token)
-	// để tăng tính bảo mật (tránh lỗi IDOR) và tiện lợi cho Client.
-	// Nếu không có header này (system-to-system call nội bộ), ta mới lấy từ Body.
-	finalPayerID := c.GetHeader("X-User-Id")
-	if finalPayerID == "" {
-		finalPayerID = req.PayerID
-	}
-
-	if finalPayerID == "" {
-		response.Error(c, http.StatusBadRequest, "Missing Payer ID", "Payer ID must be provided in X-User-Id header or in request body")
+	payerID := strings.TrimSpace(c.GetHeader("X-User-Id"))
+	if payerID == "" {
+		response.Error(c, http.StatusUnauthorized, "Missing authenticated payer", "X-User-Id header is required")
 		return
 	}
 
-	payerUUID, err := uuid.Parse(finalPayerID)
+	payerUUID, err := uuid.Parse(payerID)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid Payer ID format", err.Error())
+		response.Error(c, http.StatusUnauthorized, "Invalid authenticated payer", err.Error())
 		return
 	}
 
-	expertUUID, err := uuid.Parse(req.ExpertID)
+	appointmentID := strings.TrimSpace(req.AppointmentID)
+	if appointmentID == "" {
+		response.Error(c, http.StatusBadRequest, "Invalid payment order request", "appointment_id is required")
+		return
+	}
+
+	order, payURL, err := h.usecase.CreateOrder(
+		c.Request.Context(),
+		payerUUID,
+		appointmentID,
+		c.ClientIP(),
+	)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid Expert ID format", err.Error())
-		return
-	}
-
-	gatewayName := strings.ToUpper(req.Gateway)
-	if gatewayName != "VNPAY" && gatewayName != "MOMO" && gatewayName != "MOCK" {
-		response.Error(c, http.StatusBadRequest, "Unsupported gateway type", "Gateway must be VNPAY, MOMO, or MOCK")
-		return
-	}
-
-	// Parse appointment_id (optional)
-	var appointmentID *string
-	if req.AppointmentID != nil && *req.AppointmentID != "" {
-		appointmentID = req.AppointmentID
-	}
-
-	ipAddr := c.ClientIP()
-	order, payURL, err := h.usecase.CreateOrder(c.Request.Context(), payerUUID, expertUUID, vo.Money(req.Amount), gatewayName, ipAddr, appointmentID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to create payment order", err.Error())
+		status, message := createOrderErrorResponse(err)
+		response.Error(c, status, message, err.Error())
 		return
 	}
 
@@ -102,4 +89,21 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	}
 
 	response.Success(c, "Payment order created successfully", res)
+}
+
+func createOrderErrorResponse(err error) (int, string) {
+	switch {
+	case errors.Is(err, payment.ErrUnsupportedGateway),
+		errors.Is(err, payment.ErrInvalidCreateOrderRequest),
+		errors.Is(err, payment.ErrInvalidBookingData):
+		return http.StatusBadRequest, "Invalid payment order request"
+	case errors.Is(err, payment.ErrAppointmentOwnership):
+		return http.StatusForbidden, "Appointment does not belong to payer"
+	case errors.Is(err, payment.ErrBookingAppointmentNotFound):
+		return http.StatusNotFound, "Appointment not found"
+	case errors.Is(err, payment.ErrAppointmentInvalidState):
+		return http.StatusConflict, "Appointment is not payable"
+	default:
+		return http.StatusInternalServerError, "Failed to create payment order"
+	}
 }
