@@ -1,15 +1,15 @@
 package appointment
 
-import "errors"
+import appappointment "booking-service/internal/booking/application/appointment"
 
 var (
-	ErrNotFound                    = errors.New("appointment not found")
-	ErrInvalidStatus               = errors.New("invalid appointment status for this operation")
-	ErrCannotCancel                = errors.New("appointment cannot be cancelled")
-	ErrUnauthorized                = errors.New("unauthorized access to appointment")
-	ErrInvalidPaymentResultStatus  = errors.New("invalid payment result status")
-	ErrPaymentResultConflict       = errors.New("payment result conflicts with current appointment state")
-	ErrPaymentEligibilityForbidden = errors.New("appointment does not belong to payer")
-	ErrPaymentEligibilityConflict  = errors.New("appointment is not eligible for payment")
-	ErrInvalidBookingPrice         = errors.New("invalid booking price")
+	ErrNotFound                    = appappointment.ErrNotFound
+	ErrInvalidStatus               = appappointment.ErrInvalidStatus
+	ErrCannotCancel                = appappointment.ErrCannotCancel
+	ErrUnauthorized                = appappointment.ErrUnauthorized
+	ErrInvalidPaymentResultStatus  = appappointment.ErrInvalidPaymentResultStatus
+	ErrPaymentResultConflict       = appappointment.ErrPaymentResultConflict
+	ErrPaymentEligibilityForbidden = appappointment.ErrPaymentEligibilityForbidden
+	ErrPaymentEligibilityConflict  = appappointment.ErrPaymentEligibilityConflict
+	ErrInvalidBookingPrice         = appappointment.ErrInvalidBookingPrice
 )

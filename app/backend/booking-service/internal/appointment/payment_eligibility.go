@@ -1,6 +1,7 @@
 package appointment
 
 import (
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/domain"
 	"context"
 	"errors"
@@ -9,17 +10,9 @@ import (
 	"time"
 )
 
-type GetPaymentEligibilityCommand struct {
-	AppointmentID string
-	PayerID       string
-}
+type GetPaymentEligibilityCommand = appappointment.GetPaymentEligibilityCommand
 
-type PaymentEligibility struct {
-	AppointmentID string
-	ExpertID      string
-	AmountVND     int64
-	ExpiresAt     int64
-}
+type PaymentEligibility = appappointment.PaymentEligibility
 
 func (u *appointmentUsecase) GetPaymentEligibility(command GetPaymentEligibilityCommand) (PaymentEligibility, error) {
 	command.AppointmentID = strings.TrimSpace(command.AppointmentID)

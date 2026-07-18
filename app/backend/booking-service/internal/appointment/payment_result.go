@@ -7,20 +7,18 @@ import (
 	"strings"
 	"time"
 
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/domain"
 )
 
-type PaymentResultStatus string
+type PaymentResultStatus = appappointment.PaymentResultStatus
 
 const (
-	PaymentResultSuccess PaymentResultStatus = "SUCCESS"
-	PaymentResultFailed  PaymentResultStatus = "FAILED"
+	PaymentResultSuccess = appappointment.PaymentResultSuccess
+	PaymentResultFailed  = appappointment.PaymentResultFailed
 )
 
-type HandlePaymentResultCommand struct {
-	AppointmentID string
-	Status        PaymentResultStatus
-}
+type HandlePaymentResultCommand = appappointment.HandlePaymentResultCommand
 
 func ParsePaymentResultStatus(status string) (PaymentResultStatus, error) {
 	switch PaymentResultStatus(strings.TrimSpace(status)) {
