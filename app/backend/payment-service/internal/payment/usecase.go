@@ -248,6 +248,24 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			if err := u.repo.UpdateWithTx(tx, order); err != nil {
 				return err
 			}
+
+			if order.AppointmentID != nil {
+				bookingPayload, _ := json.Marshal(map[string]interface{}{
+					"appointment_id": order.AppointmentID.String(),
+					"order_id":       order.ID.String(),
+					"status":         "FAILED",
+				})
+				bookingOutbox := &entity.OutboxEvent{
+					AggregateType: "PAYMENT_ORDER",
+					AggregateID:   order.ID,
+					EventType:     "booking.appointment.fail",
+					Payload:       string(bookingPayload),
+					Published:     false,
+				}
+				if err := u.repo.SaveOutboxEvent(tx, bookingOutbox); err != nil {
+					return err
+				}
+			}
 		}
 
 		return nil

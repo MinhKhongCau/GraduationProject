@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"booking-service/internal/appointment"
 	"booking-service/internal/domain"
 	"booking-service/pkg/internal_auth"
 	"booking-service/pkg/response"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -46,20 +48,26 @@ func (h *Handler) InternalPaymentWebhook(c *gin.Context) {
 	// (Payment Service gửi cả 2: path param và body — lấy path param làm chuẩn)
 	req.AppointmentID = appointmentID
 
-	if req.Status == "SUCCESS" {
-		// Idempotency check: nếu appointment đã CONFIRMED rồi thì không làm gì cả.
-		// Logic này nằm trong usecase.ConfirmPayment → repository.
-		if err := h.usecase.ConfirmPayment(req.AppointmentID); err != nil {
-			response.Error(c, http.StatusInternalServerError, "Payment confirmation failed", err.Error())
-			return
-		}
+	status, err := appointment.ParsePaymentResultStatus(req.Status)
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid payment result status", err.Error())
+		return
+	}
+
+	if err := h.usecase.HandlePaymentResult(appointment.HandlePaymentResultCommand{
+		AppointmentID: req.AppointmentID,
+		Status:        status,
+	}); err != nil {
+		respondPaymentResultError(c, err)
+		return
+	}
+
+	if status == appointment.PaymentResultSuccess {
 		response.Success(c, "Appointment confirmed successfully", gin.H{
 			"appointment_id": req.AppointmentID,
 			"status":         domain.AppointmentStatusConfirmed,
 		})
 	} else {
-		// FAILED: hủy lịch hẹn, giải phóng slot
-		_ = h.usecase.HandlePaymentFailure(req.AppointmentID)
 		response.Success(c, "Appointment cancelled due to payment failure", gin.H{
 			"appointment_id": req.AppointmentID,
 			"status":         domain.AppointmentStatusCancelled,
@@ -105,4 +113,17 @@ func (h *Handler) InternalGetAppointment(c *gin.Context) {
 func isPaymentServiceCaller(c *gin.Context) bool {
 	callerID, ok := internal_auth.GetCallerID(c)
 	return ok && callerID == "payment-service"
+}
+
+func respondPaymentResultError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, appointment.ErrInvalidPaymentResultStatus):
+		response.Error(c, http.StatusBadRequest, "Invalid payment result status", err.Error())
+	case errors.Is(err, appointment.ErrNotFound):
+		response.Error(c, http.StatusNotFound, "Appointment not found", err.Error())
+	case errors.Is(err, appointment.ErrInvalidStatus), errors.Is(err, appointment.ErrPaymentResultConflict):
+		response.Error(c, http.StatusConflict, "Payment result conflicts with booking state", err.Error())
+	default:
+		response.Error(c, http.StatusInternalServerError, "Payment result update failed", err.Error())
+	}
 }
