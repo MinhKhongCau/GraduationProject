@@ -7,14 +7,40 @@
 //   - Tương lai: grpc_client.go implement bằng gRPC — chỉ cần thêm file, đổi 1 dòng main.go.
 package client
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var ErrAppointmentNotFound = errors.New("booking appointment not found")
+
+type AppointmentStatus int
+
+const (
+	AppointmentStatusPendingPayment AppointmentStatus = 0
+	AppointmentStatusConfirmed      AppointmentStatus = 1
+	AppointmentStatusCancelled      AppointmentStatus = 2
+)
+
+func (s AppointmentStatus) String() string {
+	switch s {
+	case AppointmentStatusPendingPayment:
+		return "PENDING_PAYMENT"
+	case AppointmentStatusConfirmed:
+		return "CONFIRMED"
+	case AppointmentStatusCancelled:
+		return "CANCELLED"
+	default:
+		return "UNKNOWN"
+	}
+}
 
 type Appointment struct {
-	AppointmentID string  `json:"appointment_id"`
-	PatientID     string  `json:"patient_id"`
-	ExpertID      string  `json:"expert_id"`
-	Status        int     `json:"status"`
-	Price         float64 `json:"price"` // Giá thực tế của lịch khám
+	AppointmentID string            `json:"appointment_id"`
+	PatientID     string            `json:"patient_id"`
+	ExpertID      string            `json:"expert_id"`
+	Status        AppointmentStatus `json:"status"`
+	Price         float64           `json:"price"` // Giá thực tế của lịch khám
 }
 
 // BookingServiceClient là port để giao tiếp với Booking Service.

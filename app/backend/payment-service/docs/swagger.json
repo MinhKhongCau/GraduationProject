@@ -104,7 +104,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a payment order for an appointment. Returns the payment URL (e.g. VNPay checkout). Requires PATIENT role or internal call from Booking Service.",
+                "description": "Create a VNPay payment order for a booking appointment. Payer comes from X-User-Id; expert and amount come from Booking Service.",
                 "consumes": [
                     "application/json"
                 ],
@@ -117,13 +117,20 @@
                 "summary": "[PATIENT/SYSTEM] Create a new payment order",
                 "parameters": [
                     {
-                        "description": "Thông tin khởi tạo giao dịch thanh toán",
+                        "description": "Appointment payment order payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/handler.CreateOrderRequest"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID populated by API Gateway from token",
+                        "name": "X-User-Id",
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -147,6 +154,30 @@
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/response.Response"
                         }
@@ -553,27 +584,11 @@
         "handler.CreateOrderRequest": {
             "type": "object",
             "required": [
-                "amount",
-                "expert_id",
-                "gateway",
-                "payer_id"
+                "appointment_id"
             ],
             "properties": {
-                "amount": {
-                    "type": "integer"
-                },
                 "appointment_id": {
-                    "description": "AppointmentID liên kết order này với lịch hẹn. Optional — nếu không cung cấp\nthì đây là order nạp tiền ví trực tiếp, không liên quan đến booking.",
-                    "type": "string"
-                },
-                "expert_id": {
-                    "type": "string"
-                },
-                "gateway": {
-                    "description": "VNPAY | MOMO | MOCK",
-                    "type": "string"
-                },
-                "payer_id": {
+                    "description": "Booking appointment ID to pay with VNPay.",
                     "type": "string"
                 }
             }

@@ -63,7 +63,7 @@ func (c *restBookingClient) GetAppointment(ctx context.Context, appointmentID st
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		return nil, fmt.Errorf("booking_client: appointment not found")
+		return nil, ErrAppointmentNotFound
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)

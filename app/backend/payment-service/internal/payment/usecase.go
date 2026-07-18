@@ -9,9 +9,9 @@ import (
 	"payment-service/internal/booking/client"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
-	"payment-service/internal/payment/gateway"
 	"payment-service/internal/wallet"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,20 +19,24 @@ import (
 )
 
 type Usecase interface {
-	// CreateOrder tạo một payment order mới và trả về payment URL.
-	// appointmentID là optional: nếu có giá trị, order sẽ được liên kết với lịch hẹn tương ứng.
-	CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string, appointmentID *string) (*entity.PaymentOrder, string, error)
+	// CreateOrder creates a VNPay payment order for a booking appointment.
+	CreateOrder(ctx context.Context, payerID uuid.UUID, appointmentID string, ipAddr string) (*entity.PaymentOrder, string, error)
 	ProcessIPN(ctx context.Context, params map[string][]string) (bool, error)
+}
+
+type PaymentGateway interface {
+	GeneratePaymentURL(txnRef string, amount int64, ipAddr, desc, createDate string) string
+	VerifyChecksum(params map[string][]string) bool
 }
 
 type paymentUsecase struct {
 	repo          Repository
 	walletUsecase wallet.Usecase
-	vnpayClient   *gateway.VNPayClient
+	vnpayClient   PaymentGateway
 	bookingClient client.BookingServiceClient
 }
 
-func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient *gateway.VNPayClient, bookingClient client.BookingServiceClient) Usecase {
+func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient PaymentGateway, bookingClient client.BookingServiceClient) Usecase {
 	return &paymentUsecase{
 		repo:          repo,
 		walletUsecase: walletUsecase,
@@ -41,40 +45,53 @@ func NewUsecase(repo Repository, walletUsecase wallet.Usecase, vnpayClient *gate
 	}
 }
 
-func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid.UUID, grossAmount vo.Money, gatewayName string, ipAddr string, appointmentID *string) (*entity.PaymentOrder, string, error) {
-	var parsedApptID *uuid.UUID
-
-	// Nếu có appointment_id, ta phải lấy giá từ Booking Service để tránh lỗi bảo mật
-	if appointmentID != nil && *appointmentID != "" {
-		parsed, err := uuid.Parse(*appointmentID)
-		if err != nil {
-			return nil, "", fmt.Errorf("invalid appointment_id format: %w", err)
-		}
-
-		// 1. Xác minh Appointment qua Booking Service
-		appt, err := u.bookingClient.GetAppointment(ctx, *appointmentID)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed to verify appointment: %w", err)
-		}
-
-		// 2. Validate Ownership (chỉ người đặt lịch mới được tạo order)
-		if appt.PatientID != payerID.String() {
-			return nil, "", errors.New("unauthorized: appointment does not belong to the payer")
-		}
-
-		// 3. Validate Status (chỉ PENDING_PAYMENT mới được thanh toán)
-		// Trạng thái 0 = PENDING_PAYMENT, 1 = CONFIRMED, 2 = CANCELLED
-		if appt.Status != 0 {
-			return nil, "", errors.New("appointment is not in PENDING_PAYMENT status")
-		}
-
-		// 4. BẢO MẬT: Ghi đè số tiền gửi từ FE bằng giá trị thực tế của lịch khám
-		if appt.Price > 0 {
-			grossAmount = vo.Money(appt.Price)
-		}
-
-		parsedApptID = &parsed
+func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, appointmentID string, ipAddr string) (*entity.PaymentOrder, string, error) {
+	appointmentIDValue := strings.TrimSpace(appointmentID)
+	if appointmentIDValue == "" {
+		return nil, "", fmt.Errorf("%w: appointment_id is required", ErrInvalidCreateOrderRequest)
 	}
+
+	parsedApptID, err := uuid.Parse(appointmentIDValue)
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: invalid appointment_id format: %w", ErrInvalidCreateOrderRequest, err)
+	}
+
+	// Booking is the source of truth for appointment payment authority.
+	appt, err := u.bookingClient.GetAppointment(ctx, appointmentIDValue)
+	if err != nil {
+		if errors.Is(err, client.ErrAppointmentNotFound) {
+			return nil, "", fmt.Errorf("%w: %s", ErrBookingAppointmentNotFound, appointmentIDValue)
+		}
+		return nil, "", fmt.Errorf("failed to verify appointment: %w", err)
+	}
+
+	// Only the appointment owner can create the payment order.
+	appointmentPatientID, err := uuid.Parse(strings.TrimSpace(appt.PatientID))
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: invalid appointment patient_id: %w", ErrInvalidBookingData, err)
+	}
+	if appointmentPatientID != payerID {
+		return nil, "", fmt.Errorf("%w: appointment %s", ErrAppointmentOwnership, appointmentIDValue)
+	}
+
+	// Validate status using the booking client contract.
+	if appt.Status != client.AppointmentStatusPendingPayment {
+		return nil, "", fmt.Errorf("%w: got %s", ErrAppointmentInvalidState, appt.Status.String())
+	}
+
+	// Expert and amount always come from the booking appointment.
+	expertID, err := uuid.Parse(strings.TrimSpace(appt.ExpertID))
+	if err != nil {
+		return nil, "", fmt.Errorf("%w: invalid appointment expert_id: %w", ErrInvalidBookingData, err)
+	}
+	if expertID == uuid.Nil {
+		return nil, "", fmt.Errorf("%w: missing appointment expert_id", ErrInvalidBookingData)
+	}
+	if appt.Price <= 0 {
+		return nil, "", fmt.Errorf("%w: appointment price must be greater than zero", ErrInvalidBookingData)
+	}
+
+	grossAmount := vo.Money(appt.Price)
 
 	// Mức hoa hồng là 15% - Tính toán DỰA TRÊN grossAmount đã được xác thực
 	commissionRate := 0.15
@@ -89,32 +106,26 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID, expertID uuid
 		CommissionRate:   commissionRate,
 		CommissionAmount: commissionAmount,
 		NetAmount:        netAmount,
-		Gateway:          gatewayName,
+		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
-		AppointmentID:    parsedApptID,
+		AppointmentID:    &parsedApptID,
 	}
 
 	if err := u.repo.Create(order); err != nil {
 		return nil, "", err
 	}
 
-	var paymentURL string
-	if gatewayName == "VNPAY" {
-		// VNPay yêu cầu định dạng thời gian theo múi giờ Việt Nam (GMT+7)
-		loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
-		var createDate string
-		if err == nil {
-			createDate = time.Now().In(loc).Format("20060102150405")
-		} else {
-			createDate = time.Now().Add(7 * time.Hour).Format("20060102150405")
-		}
-		desc := fmt.Sprintf("Thanh toan MindCare don hang %s", order.ID.String())
-		paymentURL = u.vnpayClient.GeneratePaymentURL(order.ID.String(), order.GrossAmount.Int64(), ipAddr, desc, createDate)
+	// VNPay requires Vietnam-local timestamp format.
+	// VNPay yêu cầu định dạng thời gian theo múi giờ Việt Nam (GMT+7)
+	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	var createDate string
+	if err == nil {
+		createDate = time.Now().In(loc).Format("20060102150405")
 	} else {
-		// Mock url
-		paymentURL = fmt.Sprintf("http://localhost:8082/api/v1/payments/mock-checkout?order_id=%s", order.ID.String())
+		createDate = time.Now().Add(7 * time.Hour).Format("20060102150405")
 	}
-
+	desc := fmt.Sprintf("Thanh toan MindCare don hang %s", order.ID.String())
+	paymentURL := u.vnpayClient.GeneratePaymentURL(order.ID.String(), order.GrossAmount.Int64(), ipAddr, desc, createDate)
 	return order, paymentURL, nil
 }
 
