@@ -344,6 +344,149 @@ func TestProcessIPNRejectsMalformedAmount(t *testing.T) {
 	}
 }
 
+func TestProcessIPNFailedPaymentWithAppointmentCreatesBookingFailOutbox(t *testing.T) {
+	orderID := uuid.New()
+	appointmentID := uuid.New()
+	repo := newFakePaymentRepo(entity.PaymentOrder{
+		ID:               orderID,
+		PayerID:          uuid.New(),
+		ExpertID:         uuid.New(),
+		GrossAmount:      vo.Money(1000),
+		CommissionRate:   0.15,
+		CommissionAmount: vo.Money(150),
+		NetAmount:        vo.Money(850),
+		Gateway:          "VNPAY",
+		Status:           entity.OrderStatusPending,
+		AppointmentID:    &appointmentID,
+	})
+	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+
+	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), signedFailedIPNParams(orderID))
+	if err != nil {
+		t.Fatalf("ProcessIPN returned error: %v", err)
+	}
+	if alreadyProcessed {
+		t.Fatal("expected alreadyProcessed to be false")
+	}
+	if repo.order.Status != entity.OrderStatusFailed {
+		t.Fatalf("expected order FAILED, got %s", repo.order.Status.String())
+	}
+	assertOnlyBookingFailOutbox(t, repo)
+}
+
+func TestProcessIPNFailedPaymentWithoutAppointmentCreatesNoBookingEvent(t *testing.T) {
+	orderID := uuid.New()
+	repo := newFakePaymentRepo(entity.PaymentOrder{
+		ID:               orderID,
+		PayerID:          uuid.New(),
+		ExpertID:         uuid.New(),
+		GrossAmount:      vo.Money(1000),
+		CommissionRate:   0.15,
+		CommissionAmount: vo.Money(150),
+		NetAmount:        vo.Money(850),
+		Gateway:          "VNPAY",
+		Status:           entity.OrderStatusPending,
+	})
+	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+
+	if _, err := usecase.ProcessIPN(context.Background(), signedFailedIPNParams(orderID)); err != nil {
+		t.Fatalf("ProcessIPN returned error: %v", err)
+	}
+	if len(repo.outboxEvents) != 0 {
+		t.Fatalf("expected no booking event, got %d", len(repo.outboxEvents))
+	}
+}
+
+func TestProcessIPNInvalidChecksumCreatesNoFailureEvent(t *testing.T) {
+	orderID := uuid.New()
+	appointmentID := uuid.New()
+	repo := newFakePaymentRepo(entity.PaymentOrder{
+		ID:               orderID,
+		PayerID:          uuid.New(),
+		ExpertID:         uuid.New(),
+		GrossAmount:      vo.Money(1000),
+		CommissionRate:   0.15,
+		CommissionAmount: vo.Money(150),
+		NetAmount:        vo.Money(850),
+		Gateway:          "VNPAY",
+		Status:           entity.OrderStatusPending,
+		AppointmentID:    &appointmentID,
+	})
+	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+
+	params := signedFailedIPNParams(orderID)
+	params["vnp_SecureHash"] = []string{"invalid"}
+	if _, err := usecase.ProcessIPN(context.Background(), params); err == nil {
+		t.Fatal("expected invalid checksum error")
+	}
+	if len(repo.outboxEvents) != 0 {
+		t.Fatalf("expected no failure event, got %d", len(repo.outboxEvents))
+	}
+}
+
+func TestProcessIPNAmountMismatchCreatesNoFailureEvent(t *testing.T) {
+	orderID := uuid.New()
+	appointmentID := uuid.New()
+	repo := newFakePaymentRepo(entity.PaymentOrder{
+		ID:               orderID,
+		PayerID:          uuid.New(),
+		ExpertID:         uuid.New(),
+		GrossAmount:      vo.Money(1000),
+		CommissionRate:   0.15,
+		CommissionAmount: vo.Money(150),
+		NetAmount:        vo.Money(850),
+		Gateway:          "VNPAY",
+		Status:           entity.OrderStatusPending,
+		AppointmentID:    &appointmentID,
+	})
+	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+
+	params := signedFailedIPNParams(orderID)
+	params["vnp_Amount"] = []string{"99900"}
+	signVNPayParams(params)
+	if _, err := usecase.ProcessIPN(context.Background(), params); err == nil {
+		t.Fatal("expected amount mismatch error")
+	}
+	if len(repo.outboxEvents) != 0 {
+		t.Fatalf("expected no failure event, got %d", len(repo.outboxEvents))
+	}
+}
+
+func TestProcessIPNDuplicateFailedPaymentDoesNotCreateDuplicateFailureEvent(t *testing.T) {
+	orderID := uuid.New()
+	appointmentID := uuid.New()
+	repo := newFakePaymentRepo(entity.PaymentOrder{
+		ID:               orderID,
+		PayerID:          uuid.New(),
+		ExpertID:         uuid.New(),
+		GrossAmount:      vo.Money(1000),
+		CommissionRate:   0.15,
+		CommissionAmount: vo.Money(150),
+		NetAmount:        vo.Money(850),
+		Gateway:          "VNPAY",
+		Status:           entity.OrderStatusPending,
+		AppointmentID:    &appointmentID,
+	})
+	usecase := NewUsecase(repo, &fakeWalletUsecase{}, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
+	params := signedFailedIPNParams(orderID)
+
+	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), params)
+	if err != nil {
+		t.Fatalf("first ProcessIPN returned error: %v", err)
+	}
+	if alreadyProcessed {
+		t.Fatal("expected first IPN to process")
+	}
+	alreadyProcessed, err = usecase.ProcessIPN(context.Background(), params)
+	if err != nil {
+		t.Fatalf("second ProcessIPN returned error: %v", err)
+	}
+	if !alreadyProcessed {
+		t.Fatal("expected duplicate IPN to be already processed")
+	}
+	assertOnlyBookingFailOutbox(t, repo)
+}
+
 type fakePaymentRepo struct {
 	mu                 sync.Mutex
 	rowLock            sync.Mutex
@@ -592,6 +735,17 @@ func signedSuccessIPNParams(orderID uuid.UUID) map[string][]string {
 	return params
 }
 
+func signedFailedIPNParams(orderID uuid.UUID) map[string][]string {
+	params := map[string][]string{
+		"vnp_TxnRef":        {orderID.String()},
+		"vnp_Amount":        {"100000"},
+		"vnp_ResponseCode":  {"24"},
+		"vnp_TransactionNo": {"vnp-txn-failed-1"},
+	}
+	signVNPayParams(params)
+	return params
+}
+
 func assertOnlyBookingConfirmOutbox(t *testing.T, repo *fakePaymentRepo) {
 	t.Helper()
 
@@ -605,6 +759,17 @@ func assertOnlyBookingConfirmOutbox(t *testing.T, repo *fakePaymentRepo) {
 		if event.EventType == "wallet.payment.received" {
 			t.Fatal("did not expect wallet.payment.received outbox event")
 		}
+	}
+}
+
+func assertOnlyBookingFailOutbox(t *testing.T, repo *fakePaymentRepo) {
+	t.Helper()
+
+	if len(repo.outboxEvents) != 1 {
+		t.Fatalf("expected exactly one outbox event, got %d", len(repo.outboxEvents))
+	}
+	if repo.outboxEvents[0].EventType != "booking.appointment.fail" {
+		t.Fatalf("expected booking.appointment.fail outbox event, got %q", repo.outboxEvents[0].EventType)
 	}
 }
 
