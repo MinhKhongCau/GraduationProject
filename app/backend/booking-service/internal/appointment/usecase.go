@@ -16,8 +16,13 @@ type Usecase interface {
 
 type appointmentUsecase struct {
 	repo Repository
+	uow  UnitOfWork
 }
 
 func NewUsecase(repo Repository) Usecase {
-	return &appointmentUsecase{repo: repo}
+	usecase := &appointmentUsecase{repo: repo}
+	if uow, ok := repo.(UnitOfWork); ok {
+		usecase.uow = uow
+	}
+	return usecase
 }
