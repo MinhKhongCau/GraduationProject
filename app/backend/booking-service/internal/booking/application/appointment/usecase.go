@@ -28,3 +28,16 @@ type Repository interface {
 	HandlePaymentResult(command HandlePaymentResultCommand) error
 	CancelExpiredLocks() (int64, error)
 }
+
+type appointmentUsecase struct {
+	repo Repository
+	uow  UnitOfWork
+}
+
+func NewUsecase(repo Repository) Usecase {
+	usecase := &appointmentUsecase{repo: repo}
+	if uow, ok := repo.(UnitOfWork); ok {
+		usecase.uow = uow
+	}
+	return usecase
+}

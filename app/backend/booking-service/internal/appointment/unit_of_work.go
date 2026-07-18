@@ -1,12 +1,8 @@
 package appointment
 
-import (
-	"errors"
+import appappointment "booking-service/internal/booking/application/appointment"
 
-	appappointment "booking-service/internal/booking/application/appointment"
-)
-
-var errTxRecordNotFound = errors.New("record not found")
+var errTxRecordNotFound = appappointment.ErrTxRecordNotFound
 
 type UnitOfWork = appappointment.UnitOfWork
 
