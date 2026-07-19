@@ -3,128 +3,229 @@ package outbox
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
+	"payment-service/internal/domain/entity"
 	apppayment "payment-service/internal/payment/application"
-	"payment-service/pkg/rabbitmq"
+	paymentdomain "payment-service/internal/payment/domain"
+	"strings"
+	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-// Publisher là Background Worker quét bảng outbox_events và dispatch từng event
-// sang đúng đích tương ứng dựa trên event_type.
-//
-// Thiết kế dispatch theo event_type:
-//   - "wallet.payment.received"    → Publish sang RabbitMQ (cho các consumer khác)
-//   - "booking.appointment.confirm" → Gọi REST sang Booking Service (Internal call)
-//   - "booking.appointment.fail"   → Gọi REST sang Booking Service (Internal call)
-//
-// Nếu dispatch thất bại, event không được đánh dấu published → Worker sẽ retry lần sau.
+const (
+	bookingConfirmEvent = "booking.appointment.confirm"
+	bookingFailEvent    = "booking.appointment.fail"
+	maximumErrorLength  = 500
+)
+
+type PublisherOptions struct {
+	PollInterval time.Duration
+	MaxAttempts  int
+	BaseBackoff  time.Duration
+	MaxBackoff   time.Duration
+	BatchSize    int
+	Clock        func() time.Time
+}
+
 type Publisher struct {
 	repo          Repository
 	bookingClient apppayment.BookingServiceClient
+	options       PublisherOptions
+	runMu         sync.Mutex
 }
 
-// NewPublisher tạo Publisher mới.
-// bookingClient: inject BookingServiceClient để gọi sang Booking Service.
+type bookingEventPayload struct {
+	AppointmentID string `json:"appointment_id"`
+	OrderID       string `json:"order_id"`
+	Status        string `json:"status"`
+}
+
 func NewPublisher(repo Repository, bookingClient apppayment.BookingServiceClient) *Publisher {
-	return &Publisher{
-		repo:          repo,
-		bookingClient: bookingClient,
-	}
+	return NewPublisherWithOptions(repo, bookingClient, PublisherOptions{})
 }
 
-// Start chạy Publisher Worker vô hạn với interval 2 giây.
-// Dừng lại khi ctx bị cancel (e.g. khi service shutdown).
-func (p *Publisher) Start(ctx context.Context) {
-	ticker := time.NewTicker(2 * time.Second)
-	defer ticker.Stop()
+func NewPublisherWithOptions(repo Repository, bookingClient apppayment.BookingServiceClient, options PublisherOptions) *Publisher {
+	if options.PollInterval <= 0 {
+		options.PollInterval = 5 * time.Second
+	}
+	if options.MaxAttempts <= 0 {
+		options.MaxAttempts = 10
+	}
+	if options.BaseBackoff <= 0 {
+		options.BaseBackoff = 5 * time.Second
+	}
+	if options.MaxBackoff <= 0 {
+		options.MaxBackoff = 5 * time.Minute
+	}
+	if options.BatchSize <= 0 {
+		options.BatchSize = 50
+	}
+	if options.Clock == nil {
+		options.Clock = time.Now
+	}
+	return &Publisher{repo: repo, bookingClient: bookingClient, options: options}
+}
 
-	log.Println("⏳ Outbox Publisher Worker started")
+func (p *Publisher) Start(ctx context.Context) {
+	log.Printf("[outbox] worker started poll_interval=%s batch_size=%d max_attempts=%d",
+		p.options.PollInterval, p.options.BatchSize, p.options.MaxAttempts)
+	defer log.Println("[outbox] worker stopped")
+
+	p.publishEligibleEvents(ctx)
+	ticker := time.NewTicker(p.options.PollInterval)
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Stopping Outbox Publisher Worker")
 			return
 		case <-ticker.C:
-			p.publishPendingEvents(ctx)
+			p.publishEligibleEvents(ctx)
 		}
 	}
 }
 
-func (p *Publisher) publishPendingEvents(ctx context.Context) {
-	events, err := p.repo.GetUnpublishedEvents(20)
-	if err != nil {
-		log.Printf("Outbox Publisher: Error fetching unpublished events: %v", err)
+func (p *Publisher) publishEligibleEvents(ctx context.Context) {
+	if !p.runMu.TryLock() {
+		log.Println("[outbox] poll skipped because the previous run is still active")
 		return
 	}
+	defer p.runMu.Unlock()
 
+	events, err := p.repo.GetEligibleEvents(ctx, p.options.Clock().UnixMilli(), p.options.BatchSize)
+	if err != nil {
+		log.Printf("[outbox] eligible event query failed: %v", err)
+		return
+	}
 	if len(events) == 0 {
 		return
 	}
+	log.Printf("[outbox] fetched batch size=%d", len(events))
 
-	var publishedIDs []string
-	for _, event := range events {
-		log.Printf("[OUTBOX DISPATCH] EventID: %s | Type: %s", event.ID, event.EventType)
-
-		var dispatchErr error
-
-		switch event.EventType {
-
-		// ── Wallet events → publish sang RabbitMQ (các consumer khác lắng nghe) ──
-		case "wallet.payment.received":
-			dispatchErr = rabbitmq.PublishEvent(event.EventType, event.Payload)
-
-		// ── Booking events → gọi REST sang Booking Service qua Internal JWT Auth ──
-		case "booking.appointment.confirm":
-			appointmentID := extractAppointmentID(event.Payload)
-			if appointmentID == "" {
-				log.Printf("[OUTBOX] booking.appointment.confirm: missing appointment_id in payload, skipping event %s", event.ID)
-				publishedIDs = append(publishedIDs, event.ID.String()) // mark done để không retry mãi
-				continue
-			}
-			dispatchErr = p.bookingClient.ConfirmAppointment(ctx, appointmentID)
-
-		case "booking.appointment.fail":
-			appointmentID := extractAppointmentID(event.Payload)
-			if appointmentID == "" {
-				log.Printf("[OUTBOX] booking.appointment.fail: missing appointment_id in payload, skipping event %s", event.ID)
-				publishedIDs = append(publishedIDs, event.ID.String())
-				continue
-			}
-			dispatchErr = p.bookingClient.FailAppointment(ctx, appointmentID)
-
-		default:
-			// Event type không xác định — log và bỏ qua (đánh dấu published để không retry)
-			log.Printf("[OUTBOX] Unknown event_type: %q — marking as published to skip", event.EventType)
-			publishedIDs = append(publishedIDs, event.ID.String())
-			continue
+	for i := range events {
+		if ctx.Err() != nil {
+			return
 		}
-
-		if dispatchErr != nil {
-			log.Printf("[OUTBOX] Failed to dispatch event %s (type: %s): %v — will retry next tick",
-				event.ID, event.EventType, dispatchErr)
-			// Không append vào publishedIDs → next tick sẽ retry
-			continue
-		}
-
-		publishedIDs = append(publishedIDs, event.ID.String())
-	}
-
-	if len(publishedIDs) > 0 {
-		if err := p.repo.MarkAsPublished(publishedIDs); err != nil {
-			log.Printf("[OUTBOX] Failed to mark events as published: %v", err)
-		}
+		p.processEvent(ctx, &events[i])
 	}
 }
 
-// extractAppointmentID parse appointment_id từ JSON payload của outbox event.
-func extractAppointmentID(payload string) string {
-	var m map[string]interface{}
-	if err := json.Unmarshal([]byte(payload), &m); err != nil {
-		return ""
+func (p *Publisher) processEvent(ctx context.Context, event *entity.OutboxEvent) {
+	err := p.dispatch(ctx, event)
+	if ctx.Err() != nil {
+		return
 	}
-	if v, ok := m["appointment_id"].(string); ok {
-		return v
+
+	attemptedAt := p.options.Clock()
+	attemptNumber := event.AttemptCount + 1
+	result := AttemptResult{AttemptedAt: attemptedAt.UnixMilli()}
+	category := "delivered"
+
+	if err == nil {
+		result.Status = paymentdomain.OutboxStatusDelivered
+	} else {
+		retryable, failureCategory := classifyDeliveryError(err)
+		category = failureCategory
+		result.LastError = boundedError(err)
+		if retryable && attemptNumber < p.options.MaxAttempts {
+			delay := paymentdomain.OutboxRetryDelay(p.options.BaseBackoff, p.options.MaxBackoff, attemptNumber)
+			nextAttemptAt := attemptedAt.Add(delay).UnixMilli()
+			result.Status = paymentdomain.OutboxStatusRetryWait
+			result.NextAttemptAt = &nextAttemptAt
+		} else {
+			result.Status = paymentdomain.OutboxStatusDead
+		}
 	}
-	return ""
+
+	updated, persistErr := p.repo.RecordAttempt(ctx, event.ID, result)
+	if persistErr != nil {
+		log.Printf("[outbox] result persistence failed event_id=%s event_type=%s category=%s error=%v",
+			event.ID, event.EventType, category, persistErr)
+		return
+	}
+	if !updated {
+		return
+	}
+
+	switch result.Status {
+	case paymentdomain.OutboxStatusDelivered:
+		log.Printf("[outbox] event delivered event_id=%s event_type=%s aggregate_id=%s attempts=%d",
+			event.ID, event.EventType, event.AggregateID, attemptNumber)
+	case paymentdomain.OutboxStatusRetryWait:
+		log.Printf("[outbox] retry scheduled event_id=%s event_type=%s aggregate_id=%s attempts=%d category=%s next_attempt_at=%d",
+			event.ID, event.EventType, event.AggregateID, attemptNumber, category, *result.NextAttemptAt)
+	case paymentdomain.OutboxStatusDead:
+		if category == string(apppayment.BookingDeliveryAuthentication) {
+			log.Printf("[outbox] booking authentication failure event_id=%s event_type=%s attempts=%d",
+				event.ID, event.EventType, attemptNumber)
+		}
+		if category == string(apppayment.BookingDeliveryConflict) {
+			log.Printf("[outbox] permanent booking conflict event_id=%s event_type=%s attempts=%d",
+				event.ID, event.EventType, attemptNumber)
+		}
+		log.Printf("[outbox] event marked DEAD event_id=%s event_type=%s aggregate_id=%s attempts=%d category=%s",
+			event.ID, event.EventType, event.AggregateID, attemptNumber, category)
+	}
+}
+
+func (p *Publisher) dispatch(ctx context.Context, event *entity.OutboxEvent) error {
+	switch event.EventType {
+	case bookingConfirmEvent:
+	case bookingFailEvent:
+	default:
+		return &permanentEventError{category: "unsupported_event_type", message: fmt.Sprintf("unsupported outbox event type %q", event.EventType)}
+	}
+
+	payload, err := parseBookingEventPayload(event.Payload)
+	if err != nil {
+		return err
+	}
+	if event.EventType == bookingConfirmEvent {
+		return p.bookingClient.ConfirmAppointment(ctx, payload.AppointmentID)
+	}
+	return p.bookingClient.FailAppointment(ctx, payload.AppointmentID)
+}
+
+func parseBookingEventPayload(raw string) (*bookingEventPayload, error) {
+	var payload bookingEventPayload
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		return nil, &permanentEventError{category: "malformed_payload", message: "malformed booking outbox payload"}
+	}
+	payload.AppointmentID = strings.TrimSpace(payload.AppointmentID)
+	if _, err := uuid.Parse(payload.AppointmentID); err != nil {
+		return nil, &permanentEventError{category: "malformed_payload", message: "booking outbox payload has invalid appointment_id"}
+	}
+	return &payload, nil
+}
+
+type permanentEventError struct {
+	category string
+	message  string
+}
+
+func (e *permanentEventError) Error() string { return e.message }
+
+func classifyDeliveryError(err error) (bool, string) {
+	var eventErr *permanentEventError
+	if errors.As(err, &eventErr) {
+		return false, eventErr.category
+	}
+	var bookingErr *apppayment.BookingDeliveryError
+	if errors.As(err, &bookingErr) {
+		return bookingErr.Retryable, string(bookingErr.Category)
+	}
+	return true, "unknown"
+}
+
+func boundedError(err error) string {
+	message := strings.Join(strings.Fields(err.Error()), " ")
+	runes := []rune(message)
+	if len(runes) > maximumErrorLength {
+		message = string(runes[:maximumErrorLength])
+	}
+	return message
 }
