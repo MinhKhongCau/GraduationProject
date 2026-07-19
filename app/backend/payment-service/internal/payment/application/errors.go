@@ -10,4 +10,8 @@ var (
 	ErrAppointmentInvalidState    = errors.New("appointment is not pending payment")
 	ErrInvalidBookingData         = errors.New("invalid booking appointment data")
 	ErrTxRecordNotFound           = errors.New("record not found")
+	ErrAppointmentAlreadyPaid     = errors.New("appointment is already paid")
+	ErrPaymentWindowTooShort      = errors.New("payment window is too short")
+	ErrExistingOrderConflict      = errors.New("existing payment order conflicts with booking eligibility")
+	ErrActivePendingOrderExists   = errors.New("active pending payment order already exists")
 )

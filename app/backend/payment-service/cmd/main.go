@@ -88,7 +88,10 @@ func main() {
 	vnpayClient := vnpay.NewVNPayClient(vnpTmnCode, vnpHashSecret, vnpPaymentURL, vnpReturnURL)
 
 	paymentUoW := paymentpostgres.NewUnitOfWork(database.DB, walletUsecase)
-	paymentUsecase := apppayment.NewUsecase(paymentRepo, paymentUoW, vnpayClient, bookingSvcClient)
+	paymentUsecase := apppayment.NewUsecaseWithOptions(paymentRepo, paymentUoW, vnpayClient, bookingSvcClient, apppayment.Options{
+		OrderTTL:      config.AppConfig.PaymentOrderTTL,
+		MinimumWindow: config.AppConfig.PaymentMinUsableWindow,
+	})
 	withdrawalUsecase := withdrawal.NewUsecase(withdrawalRepo, walletUsecase)
 
 	// Handlers

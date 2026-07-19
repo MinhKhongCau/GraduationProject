@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -30,6 +33,9 @@ type Config struct {
 
 	// ─── URLs của các service khác (internal Docker network) ─────────────────
 	BookingServiceInternalURL string // http://booking-service:8083
+
+	PaymentOrderTTL        time.Duration
+	PaymentMinUsableWindow time.Duration
 }
 
 var AppConfig *Config
@@ -37,6 +43,14 @@ var AppConfig *Config
 func LoadConfig() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️  Không tìm thấy file .env, sử dụng biến môi trường hệ thống")
+	}
+
+	paymentOrderTTL, paymentMinUsableWindow, err := parsePaymentLifecycleConfig(
+		getEnvOrDefault("PAYMENT_ORDER_TTL_MINUTES", "15"),
+		getEnvOrDefault("PAYMENT_MIN_USABLE_WINDOW_SECONDS", "60"),
+	)
+	if err != nil {
+		log.Fatalf("Invalid payment lifecycle configuration: %v", err)
 	}
 
 	AppConfig = &Config{
@@ -61,7 +75,27 @@ func LoadConfig() {
 
 		// URLs service khác
 		BookingServiceInternalURL: getEnvOrDefault("BOOKING_SERVICE_INTERNAL_URL", "http://booking-service:8083"),
+		PaymentOrderTTL:           paymentOrderTTL,
+		PaymentMinUsableWindow:    paymentMinUsableWindow,
 	}
+}
+
+func parsePaymentLifecycleConfig(ttlMinutesValue, minimumWindowSecondsValue string) (time.Duration, time.Duration, error) {
+	ttlMinutes, err := strconv.Atoi(ttlMinutesValue)
+	if err != nil || ttlMinutes <= 0 || ttlMinutes > 60 {
+		return 0, 0, fmt.Errorf("PAYMENT_ORDER_TTL_MINUTES must be an integer between 1 and 60")
+	}
+	minimumWindowSeconds, err := strconv.Atoi(minimumWindowSecondsValue)
+	if err != nil || minimumWindowSeconds <= 0 {
+		return 0, 0, fmt.Errorf("PAYMENT_MIN_USABLE_WINDOW_SECONDS must be a positive integer")
+	}
+
+	ttl := time.Duration(ttlMinutes) * time.Minute
+	minimumWindow := time.Duration(minimumWindowSeconds) * time.Second
+	if minimumWindow > ttl {
+		return 0, 0, fmt.Errorf("PAYMENT_MIN_USABLE_WINDOW_SECONDS must not exceed PAYMENT_ORDER_TTL_MINUTES")
+	}
+	return ttl, minimumWindow, nil
 }
 
 func getEnvOrDefault(key, defaultValue string) string {

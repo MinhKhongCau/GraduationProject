@@ -3,6 +3,7 @@ package handler
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -34,6 +35,7 @@ func TestCreateOrderUsesTrustedHeaderAndIgnoresBodyPayerID(t *testing.T) {
 			Gateway:          "VNPAY",
 			Status:           entity.OrderStatusPending,
 			AppointmentID:    &appointmentID,
+			ExpiresAt:        1234567890000,
 		},
 		paymentURL: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
 	}
@@ -58,6 +60,15 @@ func TestCreateOrderUsesTrustedHeaderAndIgnoresBodyPayerID(t *testing.T) {
 	}
 	if usecase.appointmentID != appointmentID.String() {
 		t.Fatalf("expected appointment_id %s, got %s", appointmentID, usecase.appointmentID)
+	}
+	var payload struct {
+		Data CreateOrderResponse `json:"data"`
+	}
+	if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Data.ExpiresAt != usecase.order.ExpiresAt || payload.Data.PaymentURL == "" {
+		t.Fatalf("response did not preserve payment URL and expiry: %+v", payload.Data)
 	}
 }
 
@@ -143,6 +154,10 @@ func TestCreateOrderMapsUsecaseErrors(t *testing.T) {
 		{name: "ownership", err: apppayment.ErrAppointmentOwnership, wantStatus: http.StatusForbidden},
 		{name: "booking not found", err: apppayment.ErrBookingAppointmentNotFound, wantStatus: http.StatusNotFound},
 		{name: "invalid state", err: apppayment.ErrAppointmentInvalidState, wantStatus: http.StatusConflict},
+		{name: "already paid", err: apppayment.ErrAppointmentAlreadyPaid, wantStatus: http.StatusConflict},
+		{name: "short payment window", err: apppayment.ErrPaymentWindowTooShort, wantStatus: http.StatusConflict},
+		{name: "existing order conflict", err: apppayment.ErrExistingOrderConflict, wantStatus: http.StatusConflict},
+		{name: "active pending race conflict", err: apppayment.ErrActivePendingOrderExists, wantStatus: http.StatusConflict},
 		{name: "unexpected", err: errors.New("database unavailable"), wantStatus: http.StatusInternalServerError},
 	}
 
@@ -177,12 +192,14 @@ func performCreateOrderRequest(usecase *fakeCreateOrderUsecase, payerID string, 
 }
 
 type fakeCreateOrderUsecase struct {
-	createCalled  bool
-	payerID       uuid.UUID
-	appointmentID string
-	order         *entity.PaymentOrder
-	paymentURL    string
-	err           error
+	createCalled   bool
+	payerID        uuid.UUID
+	appointmentID  string
+	order          *entity.PaymentOrder
+	paymentURL     string
+	err            error
+	processAlready bool
+	processErr     error
 }
 
 func (u *fakeCreateOrderUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, appointmentID string, ipAddr string) (*entity.PaymentOrder, string, error) {
@@ -196,5 +213,5 @@ func (u *fakeCreateOrderUsecase) CreateOrder(ctx context.Context, payerID uuid.U
 }
 
 func (u *fakeCreateOrderUsecase) ProcessIPN(ctx context.Context, params map[string][]string) (bool, error) {
-	return false, nil
+	return u.processAlready, u.processErr
 }

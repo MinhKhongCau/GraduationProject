@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 )
 
 type VNPayClient struct {
@@ -39,7 +40,7 @@ func NewVNPayClient(tmnCode, hashSecret, paymentURL, returnURL string) *VNPayCli
 }
 
 // GeneratePaymentURL builds the VNPay checkout URL
-func (c *VNPayClient) GeneratePaymentURL(txnRef string, amount int64, ipAddr, desc, createDate string) string {
+func (c *VNPayClient) GeneratePaymentURL(txnRef string, amount int64, ipAddr, desc string, createdAt, expiresAt int64) string {
 	// VNPay requires amount * 100
 	vnpAmount := amount * 100
 
@@ -48,7 +49,7 @@ func (c *VNPayClient) GeneratePaymentURL(txnRef string, amount int64, ipAddr, de
 	v.Set("vnp_Command", "pay")
 	v.Set("vnp_TmnCode", c.tmnCode)
 	v.Set("vnp_Amount", fmt.Sprintf("%d", vnpAmount))
-	v.Set("vnp_CreateDate", createDate)
+	v.Set("vnp_CreateDate", formatVNPayTime(createdAt))
 	v.Set("vnp_CurrCode", "VND")
 	v.Set("vnp_IpAddr", ipAddr)
 	v.Set("vnp_Locale", "vn")
@@ -56,6 +57,7 @@ func (c *VNPayClient) GeneratePaymentURL(txnRef string, amount int64, ipAddr, de
 	v.Set("vnp_OrderType", "other")
 	v.Set("vnp_ReturnUrl", c.returnURL)
 	v.Set("vnp_TxnRef", txnRef)
+	v.Set("vnp_ExpireDate", formatVNPayTime(expiresAt))
 
 	// Sort keys alphabetically
 	keys := make([]string, 0, len(v))
@@ -83,6 +85,15 @@ func (c *VNPayClient) GeneratePaymentURL(txnRef string, amount int64, ipAddr, de
 	secureHash := hex.EncodeToString(mac.Sum(nil))
 
 	return fmt.Sprintf("%s?%s&vnp_SecureHash=%s", c.paymentURL, queryString, secureHash)
+}
+
+func formatVNPayTime(unixMillis int64) string {
+	instant := time.UnixMilli(unixMillis)
+	location, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		location = time.FixedZone("Asia/Ho_Chi_Minh", 7*60*60)
+	}
+	return instant.In(location).Format("20060102150405")
 }
 
 // VerifyChecksum checks the validity of VNPay callback parameters

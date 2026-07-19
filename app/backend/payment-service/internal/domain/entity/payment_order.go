@@ -33,9 +33,9 @@ func (s PaymentOrderStatus) String() string {
 }
 
 type PaymentOrder struct {
-	ID               uuid.UUID          `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	PayerID          uuid.UUID          `json:"payer_id" gorm:"type:uuid;not null;column:payer_id"`
-	ExpertID         uuid.UUID          `json:"expert_id" gorm:"type:uuid;not null;column:expert_id"`
+	ID       uuid.UUID `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	PayerID  uuid.UUID `json:"payer_id" gorm:"type:uuid;not null;column:payer_id"`
+	ExpertID uuid.UUID `json:"expert_id" gorm:"type:uuid;not null;column:expert_id"`
 	// AppointmentID là nullable — chỉ có giá trị khi order được tạo từ luồng đặt lịch.
 	// Nếu Patient nạp tiền thủ công vào ví (top-up), trường này sẽ là NULL.
 	AppointmentID    *uuid.UUID         `json:"appointment_id,omitempty" gorm:"type:uuid;column:appointment_id"`
@@ -48,6 +48,7 @@ type PaymentOrder struct {
 	Status           PaymentOrderStatus `json:"status" gorm:"type:integer;not null;default:1;column:status"`
 	Released         bool               `json:"released" gorm:"type:boolean;not null;default:false;column:released"`
 	CreatedAt        int64              `json:"created_at" gorm:"type:bigint;not null;column:created_at"`
+	ExpiresAt        int64              `json:"expires_at" gorm:"type:bigint;column:expires_at"`
 	PaidAt           *int64             `json:"paid_at" gorm:"type:bigint;column:paid_at"`
 }
 

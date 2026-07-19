@@ -606,6 +606,9 @@ const docTemplate = `{
                 "commission_amount": {
                     "type": "integer"
                 },
+                "expires_at": {
+                    "type": "integer"
+                },
                 "gross_amount": {
                     "type": "integer"
                 },
