@@ -23,6 +23,7 @@ type CreateOrderResponse struct {
 	CommissionAmount int64     `json:"commission_amount"`
 	PaymentURL       string    `json:"payment_url"`
 	Status           string    `json:"status"`
+	ExpiresAt        int64     `json:"expires_at"`
 }
 
 // CreateOrder handles POST /api/v1/payments/orders.
@@ -86,6 +87,7 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 		CommissionAmount: order.CommissionAmount.Int64(),
 		PaymentURL:       payURL,
 		Status:           order.Status.String(),
+		ExpiresAt:        order.ExpiresAt,
 	}
 
 	response.Success(c, "Payment order created successfully", res)
@@ -103,6 +105,14 @@ func createOrderErrorResponse(err error) (int, string) {
 		return http.StatusNotFound, "Appointment not found"
 	case errors.Is(err, apppayment.ErrAppointmentInvalidState):
 		return http.StatusConflict, "Appointment is not payable"
+	case errors.Is(err, apppayment.ErrAppointmentAlreadyPaid):
+		return http.StatusConflict, "Appointment is already paid"
+	case errors.Is(err, apppayment.ErrPaymentWindowTooShort):
+		return http.StatusConflict, "Payment window has expired"
+	case errors.Is(err, apppayment.ErrExistingOrderConflict):
+		return http.StatusConflict, "Existing payment order cannot be reused"
+	case errors.Is(err, apppayment.ErrActivePendingOrderExists):
+		return http.StatusConflict, "Active payment order already exists"
 	default:
 		return http.StatusInternalServerError, "Failed to create payment order"
 	}

@@ -24,47 +24,31 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, app
 		return nil, "", fmt.Errorf("%w: invalid appointment_id format: %w", ErrInvalidCreateOrderRequest, err)
 	}
 
+	if _, err := u.repo.GetSuccessfulByAppointment(ctx, parsedApptID); err == nil {
+		return nil, "", ErrAppointmentAlreadyPaid
+	} else if !errors.Is(err, ErrTxRecordNotFound) {
+		return nil, "", fmt.Errorf("check successful payment order: %w", err)
+	}
+
 	eligibility, err := u.bookingClient.GetPaymentEligibility(ctx, appointmentIDValue, payerID)
 	if err != nil {
-		if errors.Is(err, ErrAppointmentNotFound) {
-			return nil, "", fmt.Errorf("%w: %s", ErrBookingAppointmentNotFound, appointmentIDValue)
-		}
-		if errors.Is(err, ErrPaymentEligibilityForbidden) {
-			return nil, "", fmt.Errorf("%w: appointment %s", ErrAppointmentOwnership, appointmentIDValue)
-		}
-		if errors.Is(err, ErrPaymentEligibilityConflict) {
-			return nil, "", fmt.Errorf("%w: appointment %s", ErrAppointmentInvalidState, appointmentIDValue)
-		}
-		if errors.Is(err, ErrInvalidBookingPrice) {
-			return nil, "", fmt.Errorf("%w: appointment price is invalid", ErrInvalidBookingData)
-		}
-		return nil, "", fmt.Errorf("failed to verify payment eligibility: %w", err)
+		return nil, "", mapPaymentEligibilityError(err, appointmentIDValue)
 	}
 
-	if !strings.EqualFold(strings.TrimSpace(eligibility.AppointmentID), appointmentIDValue) {
-		return nil, "", fmt.Errorf("%w: eligibility appointment_id mismatch", ErrInvalidBookingData)
-	}
-	expertID, err := uuid.Parse(strings.TrimSpace(eligibility.ExpertID))
+	expertID, grossAmount, err := validatePaymentEligibility(eligibility, appointmentIDValue)
 	if err != nil {
-		return nil, "", fmt.Errorf("%w: invalid eligibility expert_id: %w", ErrInvalidBookingData, err)
+		return nil, "", err
 	}
-	if expertID == uuid.Nil {
-		return nil, "", fmt.Errorf("%w: missing eligibility expert_id", ErrInvalidBookingData)
-	}
-	if eligibility.AmountVND <= 0 {
-		return nil, "", fmt.Errorf("%w: eligibility amount_vnd must be greater than zero", ErrInvalidBookingData)
-	}
-	if eligibility.ExpiresAt <= time.Now().UnixMilli() {
+
+	now := u.clock()
+	if eligibility.ExpiresAt <= now.UnixMilli() {
 		return nil, "", fmt.Errorf("%w: eligibility has expired", ErrAppointmentInvalidState)
 	}
+	expiresAt := paymentdomain.PaymentExpiry(now, u.orderTTL, eligibility.ExpiresAt)
+	hasUsableWindow := paymentdomain.HasUsablePaymentWindow(now, expiresAt, u.minimumWindow)
 
-	grossAmount := vo.Money(eligibility.AmountVND)
-
-	// Má»©c hoa há»“ng lÃ  15% - TÃ­nh toÃ¡n Dá»°A TRÃŠN grossAmount Ä‘Ã£ Ä‘Æ°á»£c xÃ¡c thá»±c
 	commission := paymentdomain.CalculateCommission(grossAmount)
-
-	order := &entity.PaymentOrder{
-		ID:               uuid.New(),
+	newOrder := &entity.PaymentOrder{
 		PayerID:          payerID,
 		ExpertID:         expertID,
 		GrossAmount:      grossAmount,
@@ -74,22 +58,164 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, app
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
 		AppointmentID:    &parsedApptID,
+		CreatedAt:        now.UnixMilli(),
+		ExpiresAt:        expiresAt,
 	}
 
-	if err := u.repo.Create(order); err != nil {
+	selectedOrder, err := u.createOrReuseOrder(ctx, newOrder, now.UnixMilli(), hasUsableWindow)
+	if errors.Is(err, ErrActivePendingOrderExists) {
+		selectedOrder, err = u.reloadConcurrentWinner(ctx, newOrder, now.UnixMilli())
+	}
+	if err != nil {
 		return nil, "", err
 	}
 
-	// VNPay requires Vietnam-local timestamp format.
-	// VNPay yÃªu cáº§u Ä‘á»‹nh dáº¡ng thá»i gian theo mÃºi giá» Viá»‡t Nam (GMT+7)
-	loc, err := time.LoadLocation("Asia/Ho_Chi_Minh")
-	var createDate string
-	if err == nil {
-		createDate = time.Now().In(loc).Format("20060102150405")
-	} else {
-		createDate = time.Now().Add(7 * time.Hour).Format("20060102150405")
+	desc := fmt.Sprintf("Thanh toan MindCare don hang %s", selectedOrder.ID.String())
+	paymentURL := u.vnpayClient.GeneratePaymentURL(
+		selectedOrder.ID.String(),
+		selectedOrder.GrossAmount.Int64(),
+		ipAddr,
+		desc,
+		selectedOrder.CreatedAt,
+		selectedOrder.ExpiresAt,
+	)
+	return selectedOrder, paymentURL, nil
+}
+
+func (u *paymentUsecase) createOrReuseOrder(ctx context.Context, newOrder *entity.PaymentOrder, nowMs int64, hasUsableWindow bool) (*entity.PaymentOrder, error) {
+	var selected *entity.PaymentOrder
+	var decisionErr error
+	err := u.uow.WithinTx(ctx, func(tx Tx) error {
+		orders, err := tx.ListOrdersForAppointmentForUpdate(ctx, *newOrder.AppointmentID)
+		if err != nil {
+			return err
+		}
+
+		var activePending *entity.PaymentOrder
+		for i := range orders {
+			order := &orders[i]
+			switch order.Status {
+			case entity.OrderStatusSuccess:
+				return ErrAppointmentAlreadyPaid
+			case entity.OrderStatusPending:
+				if paymentdomain.IsOrderExpired(timeFromMillis(nowMs), order.ExpiresAt) {
+					order.Status = entity.OrderStatusExpired
+					if err := tx.UpdateOrder(ctx, order); err != nil {
+						return err
+					}
+					continue
+				}
+				if activePending != nil {
+					return fmt.Errorf("%w: multiple active pending orders", ErrExistingOrderConflict)
+				}
+				activePending = order
+			case entity.OrderStatusFailed, entity.OrderStatusExpired:
+				// Historical retryable attempts do not block a replacement.
+			default:
+				return fmt.Errorf("%w: unsupported order status %d", ErrExistingOrderConflict, order.Status)
+			}
+		}
+
+		if activePending != nil {
+			if err := validateReusableOrder(activePending, newOrder); err != nil {
+				return err
+			}
+			copy := *activePending
+			selected = &copy
+			return nil
+		}
+		if !hasUsableWindow {
+			decisionErr = fmt.Errorf("%w: booking lock expires too soon", ErrPaymentWindowTooShort)
+			return nil
+		}
+
+		newOrder.ID = uuid.New()
+		if err := tx.CreateOrder(ctx, newOrder); err != nil {
+			return err
+		}
+		copy := *newOrder
+		selected = &copy
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
-	desc := fmt.Sprintf("Thanh toan MindCare don hang %s", order.ID.String())
-	paymentURL := u.vnpayClient.GeneratePaymentURL(order.ID.String(), order.GrossAmount.Int64(), ipAddr, desc, createDate)
-	return order, paymentURL, nil
+	return selected, decisionErr
+}
+
+func (u *paymentUsecase) reloadConcurrentWinner(ctx context.Context, expected *entity.PaymentOrder, nowMs int64) (*entity.PaymentOrder, error) {
+	var winner *entity.PaymentOrder
+	err := u.uow.WithinTx(ctx, func(tx Tx) error {
+		orders, err := tx.ListOrdersForAppointmentForUpdate(ctx, *expected.AppointmentID)
+		if err != nil {
+			return err
+		}
+		for i := range orders {
+			order := &orders[i]
+			if order.Status == entity.OrderStatusSuccess {
+				return ErrAppointmentAlreadyPaid
+			}
+			if order.Status == entity.OrderStatusPending && order.ExpiresAt > nowMs {
+				if err := validateReusableOrder(order, expected); err != nil {
+					return err
+				}
+				copy := *order
+				winner = &copy
+				return nil
+			}
+		}
+		return ErrActivePendingOrderExists
+	})
+	return winner, err
+}
+
+func validateReusableOrder(existing, expected *entity.PaymentOrder) error {
+	if existing.AppointmentID == nil || expected.AppointmentID == nil ||
+		*existing.AppointmentID != *expected.AppointmentID ||
+		existing.PayerID != expected.PayerID ||
+		existing.ExpertID != expected.ExpertID ||
+		existing.GrossAmount != expected.GrossAmount ||
+		existing.Gateway != "VNPAY" || existing.ExpiresAt <= 0 {
+		return ErrExistingOrderConflict
+	}
+	return nil
+}
+
+func validatePaymentEligibility(eligibility *PaymentEligibility, appointmentID string) (uuid.UUID, vo.Money, error) {
+	if eligibility == nil {
+		return uuid.Nil, 0, fmt.Errorf("%w: missing eligibility response", ErrInvalidBookingData)
+	}
+	if !strings.EqualFold(strings.TrimSpace(eligibility.AppointmentID), appointmentID) {
+		return uuid.Nil, 0, fmt.Errorf("%w: eligibility appointment_id mismatch", ErrInvalidBookingData)
+	}
+	expertID, err := uuid.Parse(strings.TrimSpace(eligibility.ExpertID))
+	if err != nil {
+		return uuid.Nil, 0, fmt.Errorf("%w: invalid eligibility expert_id: %w", ErrInvalidBookingData, err)
+	}
+	if expertID == uuid.Nil {
+		return uuid.Nil, 0, fmt.Errorf("%w: missing eligibility expert_id", ErrInvalidBookingData)
+	}
+	if eligibility.AmountVND <= 0 {
+		return uuid.Nil, 0, fmt.Errorf("%w: eligibility amount_vnd must be greater than zero", ErrInvalidBookingData)
+	}
+	return expertID, vo.Money(eligibility.AmountVND), nil
+}
+
+func mapPaymentEligibilityError(err error, appointmentID string) error {
+	switch {
+	case errors.Is(err, ErrAppointmentNotFound):
+		return fmt.Errorf("%w: %s", ErrBookingAppointmentNotFound, appointmentID)
+	case errors.Is(err, ErrPaymentEligibilityForbidden):
+		return fmt.Errorf("%w: appointment %s", ErrAppointmentOwnership, appointmentID)
+	case errors.Is(err, ErrPaymentEligibilityConflict):
+		return fmt.Errorf("%w: appointment %s", ErrAppointmentInvalidState, appointmentID)
+	case errors.Is(err, ErrInvalidBookingPrice):
+		return fmt.Errorf("%w: appointment price is invalid", ErrInvalidBookingData)
+	default:
+		return fmt.Errorf("failed to verify payment eligibility: %w", err)
+	}
+}
+
+func timeFromMillis(value int64) time.Time {
+	return time.UnixMilli(value)
 }

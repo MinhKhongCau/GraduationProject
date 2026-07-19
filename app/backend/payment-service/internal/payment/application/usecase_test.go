@@ -294,6 +294,7 @@ func TestProcessIPNCommitsPaymentWalletAndBookingOutboxAtomically(t *testing.T) 
 		NetAmount:        vo.Money(850),
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
+		ExpiresAt:        time.Now().Add(5 * time.Minute).UnixMilli(),
 		AppointmentID:    &appointmentID,
 	})
 	walletUsecase := &fakeWalletUsecase{}
@@ -392,6 +393,7 @@ func TestProcessIPNAbortsWhenGatewayTxnLookupReturnsDatabaseError(t *testing.T) 
 		NetAmount:        vo.Money(850),
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
+		ExpiresAt:        time.Now().Add(5 * time.Minute).UnixMilli(),
 	})
 	repo.gatewayLookupErr = errors.New("database unavailable")
 
@@ -543,6 +545,7 @@ func TestProcessIPNFailedPaymentWithAppointmentCreatesBookingFailOutbox(t *testi
 		NetAmount:        vo.Money(850),
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
+		ExpiresAt:        time.Now().Add(5 * time.Minute).UnixMilli(),
 		AppointmentID:    &appointmentID,
 	})
 	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
@@ -572,6 +575,7 @@ func TestProcessIPNFailedPaymentWithoutAppointmentCreatesNoBookingEvent(t *testi
 		NetAmount:        vo.Money(850),
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
+		ExpiresAt:        time.Now().Add(5 * time.Minute).UnixMilli(),
 	})
 	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
 
@@ -596,6 +600,7 @@ func TestProcessIPNInvalidChecksumCreatesNoFailureEvent(t *testing.T) {
 		NetAmount:        vo.Money(850),
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
+		ExpiresAt:        time.Now().Add(5 * time.Minute).UnixMilli(),
 		AppointmentID:    &appointmentID,
 	})
 	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
@@ -623,6 +628,7 @@ func TestProcessIPNAmountMismatchCreatesNoFailureEvent(t *testing.T) {
 		NetAmount:        vo.Money(850),
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
+		ExpiresAt:        time.Now().Add(5 * time.Minute).UnixMilli(),
 		AppointmentID:    &appointmentID,
 	})
 	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
@@ -651,6 +657,7 @@ func TestProcessIPNDuplicateFailedPaymentDoesNotCreateDuplicateFailureEvent(t *t
 		NetAmount:        vo.Money(850),
 		Gateway:          "VNPAY",
 		Status:           entity.OrderStatusPending,
+		ExpiresAt:        time.Now().Add(5 * time.Minute).UnixMilli(),
 		AppointmentID:    &appointmentID,
 	})
 	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
@@ -750,6 +757,33 @@ func (r *fakePaymentRepo) GetByGatewayTxnRef(ref string) (*entity.PaymentOrder, 
 	return &order, nil
 }
 
+func (r *fakePaymentRepo) GetSuccessfulByAppointment(ctx context.Context, appointmentID uuid.UUID) (*entity.PaymentOrder, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.order.AppointmentID == nil || *r.order.AppointmentID != appointmentID || r.order.Status != entity.OrderStatusSuccess {
+		return nil, ErrTxRecordNotFound
+	}
+	order := r.order
+	return &order, nil
+}
+
+func (r *fakePaymentRepo) GetOrder(ctx context.Context, orderID uuid.UUID) (*entity.PaymentOrder, error) {
+	return r.GetByID(orderID)
+}
+
+func (r *fakePaymentRepo) ListOrdersForAppointmentForUpdate(ctx context.Context, appointmentID uuid.UUID) ([]entity.PaymentOrder, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.order.AppointmentID == nil || *r.order.AppointmentID != appointmentID {
+		return nil, nil
+	}
+	return []entity.PaymentOrder{r.order}, nil
+}
+
+func (r *fakePaymentRepo) CreateOrder(ctx context.Context, order *entity.PaymentOrder) error {
+	return r.Create(order)
+}
+
 func (r *fakePaymentRepo) GetGatewayTxnRef(ctx context.Context, ref string) (*entity.PaymentOrder, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -769,6 +803,10 @@ func (r *fakePaymentRepo) Update(order *entity.PaymentOrder) error {
 
 func (r *fakePaymentRepo) UpdateOrder(ctx context.Context, order *entity.PaymentOrder) error {
 	return r.updateOrder(order)
+}
+
+func (r *fakePaymentRepo) ExpireOtherPendingOrders(ctx context.Context, appointmentID, exceptOrderID uuid.UUID) error {
+	return nil
 }
 
 func (r *fakePaymentRepo) updateOrder(order *entity.PaymentOrder) error {
@@ -921,14 +959,20 @@ func (u *fakeWalletUsecase) rollbackTx() {
 }
 
 type fakePaymentGateway struct {
-	paymentURL      string
-	generateCalls   int
-	generatedAmount int64
+	paymentURL         string
+	generateCalls      int
+	generatedTxnRef    string
+	generatedAmount    int64
+	generatedCreatedAt int64
+	generatedExpiresAt int64
 }
 
-func (g *fakePaymentGateway) GeneratePaymentURL(txnRef string, amount int64, ipAddr, desc, createDate string) string {
+func (g *fakePaymentGateway) GeneratePaymentURL(txnRef string, amount int64, ipAddr, desc string, createdAt, expiresAt int64) string {
 	g.generateCalls++
+	g.generatedTxnRef = txnRef
 	g.generatedAmount = amount
+	g.generatedCreatedAt = createdAt
+	g.generatedExpiresAt = expiresAt
 	return g.paymentURL
 }
 

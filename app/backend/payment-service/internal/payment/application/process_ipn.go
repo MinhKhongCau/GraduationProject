@@ -7,7 +7,6 @@ import (
 	"log"
 	"payment-service/internal/domain/entity"
 	paymentdomain "payment-service/internal/payment/domain"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -57,19 +56,56 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 
 	// 3. Tiáº¿n hÃ nh cáº­p nháº­t Database
 	var alreadyProcessed bool
+	var appointmentID *uuid.UUID
 	err = u.uow.WithinTx(ctx, func(tx Tx) error {
-		order, err := tx.GetOrderForUpdate(ctx, orderID)
+		order, appointmentOrders, err := loadOrderForIPN(ctx, tx, orderID)
 		if err != nil {
 			return err
 		}
+		if order.AppointmentID != nil {
+			value := *order.AppointmentID
+			appointmentID = &value
+		}
 
-		if order.Status != entity.OrderStatusPending {
+		if order.Status == entity.OrderStatusSuccess || order.Status == entity.OrderStatusFailed {
+			alreadyProcessed = true
+			return nil
+		}
+		if order.Status != entity.OrderStatusPending && order.Status != entity.OrderStatusExpired {
 			alreadyProcessed = true
 			return nil
 		}
 
 		if order.GrossAmount.Int64() != vnpAmount {
 			return errors.New("amount mismatch")
+		}
+		locallyExpired := order.Status == entity.OrderStatusExpired ||
+			(order.Status == entity.OrderStatusPending && paymentdomain.IsOrderExpired(u.clock(), order.ExpiresAt))
+		if locallyExpired && vnpResponseCode != "00" {
+			if order.Status == entity.OrderStatusPending {
+				order.Status = entity.OrderStatusExpired
+				if err := tx.UpdateOrder(ctx, order); err != nil {
+					return err
+				}
+			}
+			alreadyProcessed = true
+			return nil
+		}
+
+		if vnpResponseCode == "00" && order.AppointmentID != nil {
+			for i := range appointmentOrders {
+				other := &appointmentOrders[i]
+				if other.ID != order.ID && other.Status == entity.OrderStatusSuccess {
+					if order.Status == entity.OrderStatusPending {
+						order.Status = entity.OrderStatusExpired
+						if err := tx.UpdateOrder(ctx, order); err != nil {
+							return err
+						}
+					}
+					alreadyProcessed = true
+					return nil
+				}
+			}
 		}
 
 		// Replay attack check
@@ -84,8 +120,13 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			}
 		}
 
-		paidAt := time.Now().UnixMilli()
+		paidAt := u.clock().UnixMilli()
 		if vnpResponseCode == "00" {
+			if order.AppointmentID != nil {
+				if err := tx.ExpireOtherPendingOrders(ctx, *order.AppointmentID, order.ID); err != nil {
+					return err
+				}
+			}
 			order.Status = entity.OrderStatusSuccess
 			order.PaidAt = &paidAt
 			order.GatewayTxnRef = vnpTxnNo
@@ -147,8 +188,57 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 	})
 
 	if err != nil {
+		if errors.Is(err, ErrAppointmentAlreadyPaid) && appointmentID != nil {
+			winnerExists, reloadErr := u.hasSuccessfulOrder(ctx, *appointmentID)
+			if reloadErr != nil {
+				return false, reloadErr
+			}
+			if winnerExists {
+				return true, nil
+			}
+		}
 		return false, err
 	}
 
 	return alreadyProcessed, nil
+}
+
+func (u *paymentUsecase) hasSuccessfulOrder(ctx context.Context, appointmentID uuid.UUID) (bool, error) {
+	var found bool
+	err := u.uow.WithinTx(ctx, func(tx Tx) error {
+		orders, err := tx.ListOrdersForAppointmentForUpdate(ctx, appointmentID)
+		if err != nil {
+			return err
+		}
+		for i := range orders {
+			if orders[i].Status == entity.OrderStatusSuccess {
+				found = true
+				break
+			}
+		}
+		return nil
+	})
+	return found, err
+}
+
+func loadOrderForIPN(ctx context.Context, tx Tx, orderID uuid.UUID) (*entity.PaymentOrder, []entity.PaymentOrder, error) {
+	order, err := tx.GetOrder(ctx, orderID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if order.AppointmentID == nil {
+		locked, err := tx.GetOrderForUpdate(ctx, orderID)
+		return locked, nil, err
+	}
+
+	orders, err := tx.ListOrdersForAppointmentForUpdate(ctx, *order.AppointmentID)
+	if err != nil {
+		return nil, nil, err
+	}
+	for i := range orders {
+		if orders[i].ID == orderID {
+			return &orders[i], orders, nil
+		}
+	}
+	return nil, nil, ErrTxRecordNotFound
 }
