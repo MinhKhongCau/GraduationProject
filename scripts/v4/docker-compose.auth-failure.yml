@@ -1,0 +1,6 @@
+services:
+  payment-service:
+    environment:
+      INTERNAL_CLIENT_ID: booking-service
+      INTERNAL_CLIENT_SECRET: ${INTERNAL_PLAIN_SECRET_BOOKING_SERVICE:-booking_internal_secret_2024}
+
