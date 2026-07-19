@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -66,9 +67,10 @@ func main() {
 
 	// Usecase
 	slotUsecase := slot.NewUsecase(slotRepo, appointmentRepo)
-	scheduleUsecase := schedule.NewUsecase(scheduleRepo)
+	scheduleUsecase := schedule.NewUsecaseWithReconciliation(scheduleRepo, timeoffRepo, config.AppConfig.RollingSlotDays)
 	timeoffUsecase := timeoff.NewUsecase(timeoffRepo, slotRepo, appointmentRepo)
 	appointmentUsecase := appappointment.NewUsecase(appointmentRepo)
+	generationService := slot.NewGenerationService(slotUsecase, scheduleRepo, timeoffRepo)
 
 	// 3. Khai báo API Endpoints
 	publicAPI := router.Group("/api/v1/public/booking")
@@ -76,7 +78,7 @@ func main() {
 	// internalAPI: chỉ service khác trong Docker network gọi được (Kong đã block /internal/* từ internet)
 	internalAPI := router.Group("/internal")
 
-	slotHandler.RegisterRoutes(publicAPI, privateAPI, slotRepo, appointmentRepo, slotUsecase, scheduleRepo, timeoffRepo)
+	slotHandler.RegisterRoutes(publicAPI, privateAPI, slotRepo, appointmentRepo, slotUsecase, generationService)
 	apptHandler.RegisterRoutes(publicAPI, privateAPI, internalAPI, appointmentUsecase)
 	timeoffHandler.RegisterRoutes(privateAPI, timeoffUsecase)
 	schedHandler.RegisterRoutes(publicAPI, privateAPI, scheduleUsecase)
@@ -96,6 +98,9 @@ func main() {
 	// 5. Khởi chạy Background Workers
 	slot.StartExpiredLockWorker(appointmentRepo)
 	timeoff.StartWorker(timeoffUsecase)
+	workerContext := context.Background()
+	go slot.RunStartupGeneration(workerContext, generationService, config.AppConfig.RollingSlotDays)
+	slot.StartRollingGenerationWorker(workerContext, generationService, config.AppConfig.RollingSlotDays)
 
 	// 6. Khởi chạy Server
 	port := config.AppConfig.ServerPort

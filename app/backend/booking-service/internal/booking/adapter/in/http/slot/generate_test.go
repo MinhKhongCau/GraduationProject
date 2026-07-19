@@ -1,42 +1,28 @@
 package handler
 
 import (
-	"booking-service/internal/booking/domain"
 	"booking-service/internal/slot"
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-type fakeGenerationUsecase struct {
+type fakeGenerationApplication struct {
 	result slot.GenerationResult
 	err    error
 }
 
-func (u fakeGenerationUsecase) GenerateSlotsForNextDays(string, int, []domain.Availability, []domain.TimeTemplate, []domain.ExpertTimeOff) (slot.GenerationResult, error) {
+func (u fakeGenerationApplication) GenerateExpert(context.Context, string, int) (slot.GenerationResult, error) {
 	return u.result, u.err
 }
-func (fakeGenerationUsecase) LockSlot(string, string) error { return nil }
-func (fakeGenerationUsecase) GetDates(string, time.Time, time.Time) ([]string, error) {
-	return nil, nil
-}
-func (fakeGenerationUsecase) GetTimes(string, string) ([]slot.SlotTimeResult, error) { return nil, nil }
-
-type fakeScheduleProvider struct{}
-
-func (fakeScheduleProvider) GetAvailabilities(string) ([]domain.Availability, error) { return nil, nil }
-func (fakeScheduleProvider) GetAllTimeTemplates() ([]domain.TimeTemplate, error)     { return nil, nil }
-
-type fakeTimeOffProvider struct{}
-
-func (fakeTimeOffProvider) GetTimeOffs(string, time.Time) ([]domain.ExpertTimeOff, error) {
-	return nil, nil
+func (fakeGenerationApplication) GenerateAll(context.Context, int) slot.GenerationRunSummary {
+	return slot.GenerationRunSummary{}
 }
 
 func TestGenerateReportsActualInsertedCount(t *testing.T) {
@@ -50,7 +36,7 @@ func TestGenerateReportsActualInsertedCount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			response := performGenerate(fakeGenerationUsecase{result: tt.result})
+			response := performGenerate(fakeGenerationApplication{result: tt.result})
 			if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), tt.want) {
 				t.Fatalf("unexpected response %d: %s", response.Code, response.Body.String())
 			}
@@ -59,7 +45,7 @@ func TestGenerateReportsActualInsertedCount(t *testing.T) {
 }
 
 func TestGenerateMapsScheduleConflictWithoutFalseSuccess(t *testing.T) {
-	response := performGenerate(fakeGenerationUsecase{err: errors.Join(slot.ErrSlotOverlap, errors.New("overlap"))})
+	response := performGenerate(fakeGenerationApplication{err: errors.Join(slot.ErrSlotOverlap, errors.New("overlap"))})
 	if response.Code != http.StatusConflict {
 		t.Fatalf("expected 409, got %d: %s", response.Code, response.Body.String())
 	}
@@ -68,9 +54,9 @@ func TestGenerateMapsScheduleConflictWithoutFalseSuccess(t *testing.T) {
 	}
 }
 
-func performGenerate(usecase slot.Usecase) *httptest.ResponseRecorder {
+func performGenerate(generation slot.GenerationApplication) *httptest.ResponseRecorder {
 	gin.SetMode(gin.TestMode)
-	h := &Handler{usecase: usecase, scheduleRepo: fakeScheduleProvider{}, timeoffRepo: fakeTimeOffProvider{}}
+	h := &Handler{generation: generation}
 	router := gin.New()
 	router.POST("/api/v1/booking/slots/generate", h.Generate)
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/booking/slots/generate", bytes.NewBufferString(`{"days_to_generate":1}`))

@@ -5,7 +5,6 @@ import (
 	"booking-service/pkg/response"
 	"errors"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,27 +50,7 @@ func (h *Handler) Generate(c *gin.Context) {
 		return
 	}
 
-	// Retrieve inputs from Database
-	avails, err := h.scheduleRepo.GetAvailabilities(expertID)
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to retrieve availability config", err.Error())
-		return
-	}
-
-	templates, err := h.scheduleRepo.GetAllTimeTemplates()
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to retrieve time templates", err.Error())
-		return
-	}
-
-	timeOffs, err := h.timeoffRepo.GetTimeOffs(expertID, time.Now())
-	if err != nil {
-		response.Error(c, http.StatusInternalServerError, "Failed to retrieve time-off configurations", err.Error())
-		return
-	}
-
-	// Generate slots
-	result, err := h.usecase.GenerateSlotsForNextDays(expertID, req.DaysToGenerate, avails, templates, timeOffs)
+	result, err := h.generation.GenerateExpert(c.Request.Context(), expertID, req.DaysToGenerate)
 	if err != nil {
 		switch {
 		case errors.Is(err, slot.ErrInvalidGeneration):

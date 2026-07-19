@@ -4,6 +4,7 @@ import (
 	"booking-service/internal/booking/domain"
 	"errors"
 	"math"
+	"sync"
 	"testing"
 	"time"
 )
@@ -53,6 +54,9 @@ func TestGeneratedSlotSnapshotsValidatedAvailabilityPrice(t *testing.T) {
 	for _, slot := range repo.inserted {
 		if slot.Price != 250000 {
 			t.Fatalf("expected price snapshot 250000, got %v", slot.Price)
+		}
+		if slot.AvailabilityID == nil || *slot.AvailabilityID != "avail" {
+			t.Fatalf("expected source availability avail, got %v", slot.AvailabilityID)
 		}
 	}
 }
@@ -221,6 +225,60 @@ func TestGenerationRejectsCandidateAndPersistedOverlapsButAllowsIdempotency(t *t
 	_, err = u.GenerateSlotsForNextDays("expert", 1, []domain.Availability{availability}, []domain.TimeTemplate{generationTemplate("08:30", "09:00", 30)}, nil)
 	if !errors.Is(err, ErrSlotOverlap) || repo.bulkCalls != 0 {
 		t.Fatalf("expected persisted overlap rejection, got %v", err)
+	}
+}
+
+type concurrencyGenerationRepo struct {
+	generationRepo
+	mu        sync.Mutex
+	active    int
+	maxActive int
+	entered   chan struct{}
+	release   chan struct{}
+}
+
+func (r *concurrencyGenerationRepo) GetOverlappingSlots(string, int64, int64) ([]domain.ExpertSlot, error) {
+	r.mu.Lock()
+	r.active++
+	if r.active > r.maxActive {
+		r.maxActive = r.active
+	}
+	r.mu.Unlock()
+	r.entered <- struct{}{}
+	<-r.release
+	r.mu.Lock()
+	r.active--
+	r.mu.Unlock()
+	return nil, nil
+}
+
+func TestConcurrentGenerationRunsDoNotOverlapCheckAndInsert(t *testing.T) {
+	now := generationNow()
+	repo := &concurrencyGenerationRepo{entered: make(chan struct{}, 2), release: make(chan struct{}, 2)}
+	u := NewUsecaseWithClock(repo, fakeAppointmentLocker{}, fixedClock{now})
+	run := func(done chan<- error) {
+		_, err := u.GenerateSlotsForNextDays("expert", 1, []domain.Availability{generationAvailability(now, floatPointer(200000))}, []domain.TimeTemplate{generationTemplate("08:30", "09:00", 30)}, nil)
+		done <- err
+	}
+	done := make(chan error, 2)
+	go run(done)
+	<-repo.entered
+	go run(done)
+	select {
+	case <-repo.entered:
+		t.Fatal("second generation entered persistence check before first completed")
+	case <-time.After(20 * time.Millisecond):
+	}
+	repo.release <- struct{}{}
+	<-repo.entered
+	repo.release <- struct{}{}
+	for range 2 {
+		if err := <-done; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if repo.maxActive != 1 {
+		t.Fatalf("max concurrent critical sections = %d", repo.maxActive)
 	}
 }
 

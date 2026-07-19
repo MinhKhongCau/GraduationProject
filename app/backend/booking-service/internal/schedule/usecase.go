@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"booking-service/internal/booking/domain"
+	"booking-service/internal/slot"
 	"errors"
 	"fmt"
 	"time"
@@ -26,9 +27,33 @@ type Usecase interface {
 	UpdateAvailability(availID, expertID string, updates map[string]interface{}) error
 }
 
-type scheduleUsecase struct{ repo Repository }
+type TimeOffProvider interface {
+	GetTimeOffs(expertID string, fromDate time.Time) ([]domain.ExpertTimeOff, error)
+}
 
-func NewUsecase(repo Repository) Usecase { return &scheduleUsecase{repo: repo} }
+type Clock interface{ Now() time.Time }
+type realClock struct{}
+
+func (realClock) Now() time.Time { return time.Now() }
+
+type scheduleUsecase struct {
+	repo        Repository
+	timeOffs    TimeOffProvider
+	rollingDays int
+	clock       Clock
+}
+
+func NewUsecase(repo Repository) Usecase {
+	return &scheduleUsecase{repo: repo, clock: realClock{}}
+}
+
+func NewUsecaseWithReconciliation(repo Repository, timeOffs TimeOffProvider, rollingDays int) Usecase {
+	return &scheduleUsecase{repo: repo, timeOffs: timeOffs, rollingDays: rollingDays, clock: realClock{}}
+}
+
+func NewUsecaseWithReconciliationAndClock(repo Repository, timeOffs TimeOffProvider, rollingDays int, clock Clock) Usecase {
+	return &scheduleUsecase{repo: repo, timeOffs: timeOffs, rollingDays: rollingDays, clock: clock}
+}
 
 func (u *scheduleUsecase) CreateTimeTemplate(shiftName, startTime, endTime string, slotDuration int) (*domain.TimeTemplate, error) {
 	template := domain.TimeTemplate{TemplateID: uuid.New().String(), ShiftName: shiftName, StartTime: startTime, EndTime: endTime, SlotDurationMinutes: slotDuration, IsActive: true}
@@ -67,7 +92,18 @@ func (u *scheduleUsecase) UpdateTemplate(templateID string, isActive bool) error
 			}
 		}
 	}
-	return u.repo.UpdateTemplate(templateID, map[string]interface{}{"is_active": isActive})
+	updates := map[string]interface{}{"is_active": isActive}
+	if u.timeOffs == nil || u.rollingDays == 0 {
+		return u.repo.UpdateTemplate(templateID, updates)
+	}
+	candidateTemplate := *template
+	candidateTemplate.IsActive = isActive
+	plans, err := u.buildTemplateReconciliationPlans(candidateTemplate)
+	if err != nil {
+		return err
+	}
+	_, err = u.repo.ReconcileTemplate(templateID, updates, plans, u.clock.Now().UnixMilli())
+	return mapReconciliationError(err)
 }
 
 func (u *scheduleUsecase) CreateAvailability(expertID, templateID string, dayOfWeek int, effectiveFrom int64, effectiveUntil *int64, price float64) (*domain.Availability, error) {
@@ -111,7 +147,81 @@ func (u *scheduleUsecase) UpdateAvailability(availID, expertID string, updates m
 			return err
 		}
 	}
-	return u.repo.UpdateAvailability(availID, expertID, updates)
+	if u.timeOffs == nil || u.rollingDays == 0 {
+		return u.repo.UpdateAvailability(availID, expertID, updates)
+	}
+	candidates, err := u.planAvailability(candidate)
+	if err != nil {
+		return err
+	}
+	_, err = u.repo.ReconcileAvailability(candidate, updates, candidates, u.clock.Now().UnixMilli())
+	return mapReconciliationError(err)
+}
+
+func (u *scheduleUsecase) planAvailability(availability domain.Availability) ([]domain.ExpertSlot, error) {
+	templates, err := u.repo.GetAllTimeTemplates()
+	if err != nil {
+		return nil, err
+	}
+	timeOffs, err := u.timeOffs.GetTimeOffs(availability.ExpertID, u.clock.Now())
+	if err != nil {
+		return nil, err
+	}
+	availabilities := []domain.Availability(nil)
+	if availability.IsEnabled {
+		availabilities = []domain.Availability{availability}
+	}
+	candidates, err := slot.PlanSlotsForNextDays(u.clock.Now(), availability.ExpertID, u.rollingDays, availabilities, templates, timeOffs)
+	if err != nil {
+		return nil, mapReconciliationError(err)
+	}
+	return candidates, nil
+}
+
+func (u *scheduleUsecase) buildTemplateReconciliationPlans(template domain.TimeTemplate) ([]ReconciliationPlan, error) {
+	availabilities, err := u.repo.GetEnabledAvailabilitiesByTemplate(template.TemplateID)
+	if err != nil {
+		return nil, err
+	}
+	templates, err := u.repo.GetAllTimeTemplates()
+	if err != nil {
+		return nil, err
+	}
+	for i := range templates {
+		if templates[i].TemplateID == template.TemplateID {
+			templates[i] = template
+		}
+	}
+	plans := make([]ReconciliationPlan, 0, len(availabilities))
+	for _, availability := range availabilities {
+		timeOffs, err := u.timeOffs.GetTimeOffs(availability.ExpertID, u.clock.Now())
+		if err != nil {
+			return nil, err
+		}
+		active := []domain.Availability(nil)
+		if template.IsActive {
+			active = []domain.Availability{availability}
+		}
+		candidates, err := slot.PlanSlotsForNextDays(u.clock.Now(), availability.ExpertID, u.rollingDays, active, templates, timeOffs)
+		if err != nil {
+			return nil, mapReconciliationError(err)
+		}
+		plans = append(plans, ReconciliationPlan{Availability: availability, Candidates: candidates})
+	}
+	return plans, nil
+}
+
+func mapReconciliationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, slot.ErrSlotOverlap) {
+		return fmt.Errorf("%w: %v", ErrScheduleOverlap, err)
+	}
+	if errors.Is(err, slot.ErrInvalidGeneration) {
+		return fmt.Errorf("%w: %v", ErrInvalidSchedule, err)
+	}
+	return err
 }
 
 func (u *scheduleUsecase) ensureNoAvailabilityOverlap(candidate domain.Availability, template domain.TimeTemplate, excludeID string) error {

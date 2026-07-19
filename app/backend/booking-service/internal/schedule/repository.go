@@ -2,9 +2,16 @@ package schedule
 
 import (
 	"booking-service/internal/booking/domain"
+	"booking-service/internal/slot"
 	"errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
+
+type ReconciliationPlan struct {
+	Availability domain.Availability
+	Candidates   []domain.ExpertSlot
+}
 
 type Repository interface {
 	GetAvailabilities(expertID string) ([]domain.Availability, error)
@@ -14,10 +21,13 @@ type Repository interface {
 	GetAvailabilityByID(availID, expertID string) (*domain.Availability, error)
 	GetEnabledAvailabilities(expertID string) ([]domain.Availability, error)
 	GetEnabledAvailabilitiesByTemplate(templateID string) ([]domain.Availability, error)
+	GetEnabledExpertIDs() ([]string, error)
 	CreateTimeTemplate(template *domain.TimeTemplate) error
 	CreateAvailability(avail *domain.Availability) error
 	UpdateAvailability(availID string, expertID string, updates map[string]interface{}) error
 	UpdateTemplate(templateID string, updates map[string]interface{}) error
+	ReconcileAvailability(availability domain.Availability, updates map[string]interface{}, candidates []domain.ExpertSlot, nowMs int64) (int64, error)
+	ReconcileTemplate(templateID string, updates map[string]interface{}, plans []ReconciliationPlan, nowMs int64) (int64, error)
 }
 
 var ErrNotFound = errors.New("schedule record not found")
@@ -85,6 +95,12 @@ func (r *pgRepository) GetEnabledAvailabilitiesByTemplate(templateID string) ([]
 	return availabilities, err
 }
 
+func (r *pgRepository) GetEnabledExpertIDs() ([]string, error) {
+	var expertIDs []string
+	err := r.db.Model(&domain.Availability{}).Where("is_enabled = ?", true).Distinct().Pluck("expert_id", &expertIDs).Error
+	return expertIDs, err
+}
+
 // CreateTimeTemplate lưu ca làm việc mẫu mới
 func (r *pgRepository) CreateTimeTemplate(template *domain.TimeTemplate) error {
 	return r.db.Create(template).Error
@@ -107,4 +123,68 @@ func (r *pgRepository) UpdateTemplate(templateID string, updates map[string]inte
 	return r.db.Model(&domain.TimeTemplate{}).
 		Where("template_id = ?", templateID).
 		Updates(updates).Error
+}
+
+func (r *pgRepository) ReconcileAvailability(availability domain.Availability, updates map[string]interface{}, candidates []domain.ExpertSlot, nowMs int64) (inserted int64, err error) {
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&domain.Availability{}).Where("availability_id = ? AND expert_id = ?", availability.AvailabilityID, availability.ExpertID).Updates(updates).Error; err != nil {
+			return err
+		}
+		if err := deleteReconciledSlots(tx, availability.ExpertID, availability.AvailabilityID, nowMs); err != nil {
+			return err
+		}
+		var insertErr error
+		inserted, insertErr = insertReconciledSlots(tx, candidates)
+		return insertErr
+	})
+	return inserted, err
+}
+
+func (r *pgRepository) ReconcileTemplate(templateID string, updates map[string]interface{}, plans []ReconciliationPlan, nowMs int64) (inserted int64, err error) {
+	err = r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&domain.TimeTemplate{}).Where("template_id = ?", templateID).Updates(updates).Error; err != nil {
+			return err
+		}
+		var candidates []domain.ExpertSlot
+		for _, plan := range plans {
+			if err := deleteReconciledSlots(tx, plan.Availability.ExpertID, plan.Availability.AvailabilityID, nowMs); err != nil {
+				return err
+			}
+			candidates = append(candidates, plan.Candidates...)
+		}
+		var insertErr error
+		inserted, insertErr = insertReconciledSlots(tx, candidates)
+		return insertErr
+	})
+	return inserted, err
+}
+
+func deleteReconciledSlots(tx *gorm.DB, expertID, availabilityID string, nowMs int64) error {
+	return tx.Where(
+		`expert_id = ? AND availability_id = ? AND status = ? AND start_time > ? AND NOT EXISTS (`+
+			`SELECT 1 FROM "Booking_Appointments" appointment WHERE appointment.slot_id = "Booking_Expert_Slots".slot_id)`,
+		expertID, availabilityID, domain.SlotStatusAvailable, nowMs,
+	).Delete(&domain.ExpertSlot{}).Error
+}
+
+func insertReconciledSlots(tx *gorm.DB, candidates []domain.ExpertSlot) (int64, error) {
+	for _, candidate := range candidates {
+		var existing []domain.ExpertSlot
+		if err := tx.Where("expert_id = ? AND start_time < ? AND end_time > ?", candidate.ExpertID, candidate.EndTime, candidate.StartTime).Find(&existing).Error; err != nil {
+			return 0, err
+		}
+		for _, persisted := range existing {
+			if persisted.StartTime == candidate.StartTime && persisted.EndTime == candidate.EndTime {
+				continue
+			}
+			if domain.IntervalsOverlap(candidate.StartTime, candidate.EndTime, persisted.StartTime, persisted.EndTime) {
+				return 0, slot.ErrSlotOverlap
+			}
+		}
+	}
+	if len(candidates) == 0 {
+		return 0, nil
+	}
+	result := tx.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(candidates, 100)
+	return result.RowsAffected, result.Error
 }

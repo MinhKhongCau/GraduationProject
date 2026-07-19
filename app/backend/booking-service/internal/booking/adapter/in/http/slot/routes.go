@@ -11,10 +11,9 @@ func RegisterRoutes(
 	repo slot.Repository,
 	appointmentRepo appappointment.Repository,
 	usecase slot.Usecase,
-	scheduleRepo ScheduleProvider,
-	timeoffRepo TimeOffProvider,
+	generation slot.GenerationApplication,
 ) {
-	h := NewHandler(repo, appointmentRepo, usecase, scheduleRepo, timeoffRepo)
+	h := NewHandler(repo, appointmentRepo, usecase, generation)
 
 	// Public APIs
 	publicGroup.GET("/slots/available-dates", h.GetDates)
