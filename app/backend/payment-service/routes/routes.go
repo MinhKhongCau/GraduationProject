@@ -27,6 +27,8 @@ func SetupRoutes(
 		// Đơn hàng thanh toán & VNPay Webhook
 		api.POST("/orders", pHandler.CreateOrder)
 		api.GET("/vnpay-ipn", pHandler.HandleVNPayIPN)
+		api.GET("/compensation-cases", pHandler.ListCompensationCases)
+		api.GET("/compensation-cases/:id", pHandler.GetCompensationCase)
 
 		// Tài khoản ngân hàng
 		api.POST("/bank-accounts", wdHandler.LinkBankAccount)

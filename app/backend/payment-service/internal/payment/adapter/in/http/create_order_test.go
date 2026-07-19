@@ -192,14 +192,21 @@ func performCreateOrderRequest(usecase *fakeCreateOrderUsecase, payerID string, 
 }
 
 type fakeCreateOrderUsecase struct {
-	createCalled   bool
-	payerID        uuid.UUID
-	appointmentID  string
-	order          *entity.PaymentOrder
-	paymentURL     string
-	err            error
-	processAlready bool
-	processErr     error
+	createCalled       bool
+	payerID            uuid.UUID
+	appointmentID      string
+	order              *entity.PaymentOrder
+	paymentURL         string
+	err                error
+	processAlready     bool
+	processErr         error
+	compensationPage   *apppayment.CompensationCasePage
+	compensationCase   *apppayment.CompensationCase
+	compensationErr    error
+	listCalled         bool
+	getCalled          bool
+	compensationFilter apppayment.CompensationCaseFilter
+	compensationCaseID uuid.UUID
 }
 
 func (u *fakeCreateOrderUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, appointmentID string, ipAddr string) (*entity.PaymentOrder, string, error) {
@@ -214,4 +221,16 @@ func (u *fakeCreateOrderUsecase) CreateOrder(ctx context.Context, payerID uuid.U
 
 func (u *fakeCreateOrderUsecase) ProcessIPN(ctx context.Context, params map[string][]string) (bool, error) {
 	return u.processAlready, u.processErr
+}
+
+func (u *fakeCreateOrderUsecase) ListCompensationCases(ctx context.Context, filter apppayment.CompensationCaseFilter) (*apppayment.CompensationCasePage, error) {
+	u.listCalled = true
+	u.compensationFilter = filter
+	return u.compensationPage, u.compensationErr
+}
+
+func (u *fakeCreateOrderUsecase) GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*apppayment.CompensationCase, error) {
+	u.getCalled = true
+	u.compensationCaseID = caseID
+	return u.compensationCase, u.compensationErr
 }

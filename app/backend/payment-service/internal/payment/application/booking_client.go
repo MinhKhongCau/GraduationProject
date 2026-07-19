@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	paymentdomain "payment-service/internal/payment/domain"
 
 	"github.com/google/uuid"
 )
@@ -21,19 +22,19 @@ type PaymentEligibility struct {
 	ExpiresAt     int64
 }
 
-type BookingDeliveryFailureCategory string
+type BookingDeliveryFailureCategory = paymentdomain.BookingDeliveryFailureCategory
 
 const (
-	BookingDeliveryNetwork           BookingDeliveryFailureCategory = "network"
-	BookingDeliveryTimeout           BookingDeliveryFailureCategory = "timeout"
-	BookingDeliveryRateLimited       BookingDeliveryFailureCategory = "rate_limited"
-	BookingDeliveryUpstream          BookingDeliveryFailureCategory = "upstream"
-	BookingDeliveryMalformedResponse BookingDeliveryFailureCategory = "malformed_response"
-	BookingDeliveryNotFound          BookingDeliveryFailureCategory = "not_found"
-	BookingDeliveryConflict          BookingDeliveryFailureCategory = "conflict"
-	BookingDeliveryAuthentication    BookingDeliveryFailureCategory = "authentication"
-	BookingDeliveryBadRequest        BookingDeliveryFailureCategory = "bad_request"
-	BookingDeliveryBusinessRejection BookingDeliveryFailureCategory = "business_rejection"
+	BookingDeliveryNetwork           = paymentdomain.BookingDeliveryNetwork
+	BookingDeliveryTimeout           = paymentdomain.BookingDeliveryTimeout
+	BookingDeliveryRateLimited       = paymentdomain.BookingDeliveryRateLimited
+	BookingDeliveryUpstream          = paymentdomain.BookingDeliveryUpstream
+	BookingDeliveryMalformedResponse = paymentdomain.BookingDeliveryMalformedResponse
+	BookingDeliveryNotFound          = paymentdomain.BookingDeliveryNotFound
+	BookingDeliveryConflict          = paymentdomain.BookingDeliveryConflict
+	BookingDeliveryAuthentication    = paymentdomain.BookingDeliveryAuthentication
+	BookingDeliveryBadRequest        = paymentdomain.BookingDeliveryBadRequest
+	BookingDeliveryBusinessRejection = paymentdomain.BookingDeliveryBusinessRejection
 )
 
 type BookingDeliveryError struct {

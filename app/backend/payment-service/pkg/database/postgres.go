@@ -39,6 +39,7 @@ func ConnectDB() {
 		&entity.Wallet{},
 		&entity.WalletTransaction{},
 		&entity.PaymentOrder{},
+		&entity.PaymentCompensationCase{},
 		&entity.WithdrawalRequest{},
 		&entity.OutboxEvent{},
 	)

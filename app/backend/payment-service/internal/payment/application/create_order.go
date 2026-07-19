@@ -49,17 +49,19 @@ func (u *paymentUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, app
 
 	commission := paymentdomain.CalculateCommission(grossAmount)
 	newOrder := &entity.PaymentOrder{
-		PayerID:          payerID,
-		ExpertID:         expertID,
-		GrossAmount:      grossAmount,
-		CommissionRate:   commission.Rate,
-		CommissionAmount: commission.Amount,
-		NetAmount:        commission.NetAmount,
-		Gateway:          "VNPAY",
-		Status:           entity.OrderStatusPending,
-		AppointmentID:    &parsedApptID,
-		CreatedAt:        now.UnixMilli(),
-		ExpiresAt:        expiresAt,
+		PayerID:              payerID,
+		ExpertID:             expertID,
+		GrossAmount:          grossAmount,
+		CommissionRate:       commission.Rate,
+		CommissionAmount:     commission.Amount,
+		NetAmount:            commission.NetAmount,
+		Gateway:              "VNPAY",
+		Status:               entity.OrderStatusPending,
+		GatewayCaptureStatus: paymentdomain.GatewayCapturePending,
+		FulfillmentStatus:    paymentdomain.FulfillmentPending,
+		AppointmentID:        &parsedApptID,
+		CreatedAt:            now.UnixMilli(),
+		ExpiresAt:            expiresAt,
 	}
 
 	selectedOrder, err := u.createOrReuseOrder(ctx, newOrder, now.UnixMilli(), hasUsableWindow)

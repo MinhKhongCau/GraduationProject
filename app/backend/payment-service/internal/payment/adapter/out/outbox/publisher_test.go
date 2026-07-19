@@ -85,6 +85,11 @@ func (r *memoryOutboxRepository) RecordAttempt(_ context.Context, eventID uuid.U
 	event.LastAttemptAt = &result.AttemptedAt
 	event.NextAttemptAt = result.NextAttemptAt
 	event.Status = result.Status
+	if result.Status == paymentdomain.OutboxStatusDead {
+		event.TerminalReasonCode = result.FailureCategory
+	} else {
+		event.TerminalReasonCode = ""
+	}
 	event.Published = result.Status == paymentdomain.OutboxStatusDelivered
 	if result.LastError == "" {
 		event.LastError = nil
@@ -263,17 +268,18 @@ func TestRetryableDeliverySchedulesPersistentBackoff(t *testing.T) {
 
 func TestPermanentDeliveryFailuresBecomeDead(t *testing.T) {
 	tests := []struct {
-		name       string
-		clientErr  error
-		event      entity.OutboxEvent
-		wantCalls  int
-		wantReason string
+		name         string
+		clientErr    error
+		event        entity.OutboxEvent
+		wantCalls    int
+		wantReason   string
+		wantCategory paymentdomain.BookingDeliveryFailureCategory
 	}{
-		{name: "not found", clientErr: &apppayment.BookingDeliveryError{Category: apppayment.BookingDeliveryNotFound, Message: "HTTP 404"}, event: bookingEvent(bookingConfirmEvent, 1), wantCalls: 1},
-		{name: "opposite terminal conflict", clientErr: &apppayment.BookingDeliveryError{Category: apppayment.BookingDeliveryConflict, Message: "HTTP 409"}, event: bookingEvent(bookingConfirmEvent, 1), wantCalls: 1},
-		{name: "authentication", clientErr: &apppayment.BookingDeliveryError{Category: apppayment.BookingDeliveryAuthentication, Message: "HTTP 401"}, event: bookingEvent(bookingConfirmEvent, 1), wantCalls: 1},
-		{name: "unsupported event", event: bookingEvent("wallet.payment.received", 1), wantCalls: 0, wantReason: "unsupported outbox event type"},
-		{name: "malformed payload", event: bookingEvent(bookingConfirmEvent, 1), wantCalls: 0, wantReason: "malformed booking outbox payload"},
+		{name: "not found", clientErr: &apppayment.BookingDeliveryError{Category: apppayment.BookingDeliveryNotFound, Message: "HTTP 404"}, event: bookingEvent(bookingConfirmEvent, 1), wantCalls: 1, wantCategory: paymentdomain.BookingDeliveryNotFound},
+		{name: "opposite terminal conflict", clientErr: &apppayment.BookingDeliveryError{Category: apppayment.BookingDeliveryConflict, Message: "HTTP 409"}, event: bookingEvent(bookingConfirmEvent, 1), wantCalls: 1, wantCategory: paymentdomain.BookingDeliveryConflict},
+		{name: "authentication", clientErr: &apppayment.BookingDeliveryError{Category: apppayment.BookingDeliveryAuthentication, Message: "HTTP 401"}, event: bookingEvent(bookingConfirmEvent, 1), wantCalls: 1, wantCategory: paymentdomain.BookingDeliveryAuthentication},
+		{name: "unsupported event", event: bookingEvent("wallet.payment.received", 1), wantCalls: 0, wantReason: "unsupported outbox event type", wantCategory: "unsupported_event_type"},
+		{name: "malformed payload", event: bookingEvent(bookingConfirmEvent, 1), wantCalls: 0, wantReason: "malformed booking outbox payload", wantCategory: "malformed_payload"},
 	}
 	tests[4].event.Payload = "not-json"
 	for _, test := range tests {
@@ -293,6 +299,9 @@ func TestPermanentDeliveryFailuresBecomeDead(t *testing.T) {
 			}
 			if client.callCount() != test.wantCalls {
 				t.Fatalf("expected %d booking calls, got %d", test.wantCalls, client.callCount())
+			}
+			if stored.TerminalReasonCode != test.wantCategory {
+				t.Fatalf("expected terminal category %q, got %q", test.wantCategory, stored.TerminalReasonCode)
 			}
 			if test.wantReason != "" && (stored.LastError == nil || !strings.Contains(*stored.LastError, test.wantReason)) {
 				t.Fatalf("expected last_error containing %q, got %+v", test.wantReason, stored.LastError)
@@ -329,6 +338,9 @@ func TestRetryableFailureAtMaxAttemptsBecomesDead(t *testing.T) {
 	stored := repo.event(event.ID)
 	if stored.Status != paymentdomain.OutboxStatusDead || stored.AttemptCount != 3 || stored.NextAttemptAt != nil {
 		t.Fatalf("unexpected max-attempt state: %+v", stored)
+	}
+	if stored.TerminalReasonCode != paymentdomain.BookingDeliveryUpstream {
+		t.Fatalf("retry exhaustion lost typed terminal reason: %+v", stored)
 	}
 }
 

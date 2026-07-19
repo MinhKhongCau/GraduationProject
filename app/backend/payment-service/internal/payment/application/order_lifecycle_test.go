@@ -11,6 +11,7 @@ import (
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
 	vnpayadapter "payment-service/internal/payment/adapter/out/vnpay"
+	paymentdomain "payment-service/internal/payment/domain"
 
 	"github.com/google/uuid"
 )
@@ -267,6 +268,119 @@ func TestExpiredOrderSuccessExpiresReplacementAndSettlesOnce(t *testing.T) {
 	}
 }
 
+func TestDuplicateGatewayCaptureCreatesOneRefundCaseWithoutSettlement(t *testing.T) {
+	now := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
+	appointmentID, payerID, expertID := uuid.New(), uuid.New(), uuid.New()
+	winner := lifecycleOrder(appointmentID, payerID, expertID, entity.OrderStatusSuccess, now.Add(-time.Minute).UnixMilli())
+	winner.GatewayTxnRef = "winner-vnp-txn"
+	loser := lifecycleOrder(appointmentID, payerID, expertID, entity.OrderStatusExpired, now.Add(-time.Minute).UnixMilli())
+	repo := newLifecycleRepo(winner, loser)
+	usecase := lifecycleUsecase(repo, vnpayadapter.NewVNPayClient("", "", "", ""), lifecycleBooking(appointmentID, expertID, now.Add(5*time.Minute).UnixMilli(), 1000), now, 15*time.Minute, time.Minute)
+	params := signedSuccessIPNParamsWithTxn(loser.ID, "second-vnp-txn")
+
+	already, err := usecase.ProcessIPN(context.Background(), params)
+	if err != nil || !already {
+		t.Fatalf("first attempt was not stably acknowledged: already=%v err=%v", already, err)
+	}
+	firstPaidAt := *repo.orders[loser.ID].PaidAt
+	usecase.(*paymentUsecase).clock = func() time.Time { return now.Add(time.Hour) }
+	params["vnp_TransactionStatus"] = []string{"01"}
+	params["vnp_PayDate"] = []string{"20260719110000"}
+	signVNPayParams(params)
+	already, err = usecase.ProcessIPN(context.Background(), params)
+	if err != nil || !already {
+		t.Fatalf("duplicate attempt was not stably acknowledged: already=%v err=%v", already, err)
+	}
+	if *repo.orders[loser.ID].PaidAt != firstPaidAt {
+		t.Fatal("duplicate IPN rewrote the first captured-at timestamp")
+	}
+
+	stored := repo.orders[loser.ID]
+	if stored.Status != entity.OrderStatusExpired || stored.GatewayCaptureStatus != paymentdomain.GatewayCaptureDuplicate || stored.FulfillmentStatus != paymentdomain.FulfillmentRefundRequired {
+		t.Fatalf("duplicate gateway truth was not preserved: %+v", stored)
+	}
+	if stored.GatewayTxnRef != "second-vnp-txn" || stored.PaidAt == nil {
+		t.Fatalf("duplicate capture audit data missing: %+v", stored)
+	}
+	if stored.GatewayResponseCode != "00" || stored.GatewayTransactionStatus != "00" || stored.GatewayPaymentDate != "20260719100000" {
+		t.Fatalf("signed gateway evidence was not preserved immutably: %+v", stored)
+	}
+	if len(repo.compensationCases) != 1 {
+		t.Fatalf("expected one idempotent compensation case, got %d", len(repo.compensationCases))
+	}
+	compensationCase := repo.compensationCases[0]
+	if compensationCase.PaymentOrderID != loser.ID || compensationCase.AppointmentID != appointmentID || compensationCase.AmountVND != loser.GrossAmount || compensationCase.GatewayOrderReference != loser.ID.String() || compensationCase.GatewayTransactionNumber != "second-vnp-txn" || compensationCase.GatewayResponseCode != "00" || compensationCase.GatewayTransactionStatus != "00" || compensationCase.GatewayPaymentDate != "20260719100000" || compensationCase.CreatedAt != firstPaidAt || compensationCase.Status != paymentdomain.CompensationRefundRequired {
+		t.Fatalf("unexpected compensation case: %+v", compensationCase)
+	}
+	if repo.walletCredits != 0 || repo.walletDebits != 0 || len(repo.outboxEvents) != 0 {
+		t.Fatalf("duplicate capture produced settlement side effects: credits=%d debits=%d outbox=%d", repo.walletCredits, repo.walletDebits, len(repo.outboxEvents))
+	}
+}
+
+func TestDuplicateCaptureInvalidIPNAndDifferentAppointmentCreateNoCase(t *testing.T) {
+	now := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
+	payerID, expertID := uuid.New(), uuid.New()
+	winnerAppointment, otherAppointment := uuid.New(), uuid.New()
+	winner := lifecycleOrder(winnerAppointment, payerID, expertID, entity.OrderStatusSuccess, now.Add(-time.Minute).UnixMilli())
+	loser := lifecycleOrder(winnerAppointment, payerID, expertID, entity.OrderStatusExpired, now.Add(-time.Minute).UnixMilli())
+
+	for _, test := range []struct {
+		name   string
+		params func() map[string][]string
+	}{
+		{name: "invalid checksum", params: func() map[string][]string {
+			params := signedSuccessIPNParamsWithTxn(loser.ID, "second-vnp-txn")
+			params["vnp_SecureHash"] = []string{"invalid"}
+			return params
+		}},
+		{name: "invalid amount", params: func() map[string][]string {
+			params := signedSuccessIPNParamsWithTxn(loser.ID, "second-vnp-txn")
+			params["vnp_Amount"] = []string{"invalid"}
+			signVNPayParams(params)
+			return params
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			repo := newLifecycleRepo(winner, loser)
+			usecase := lifecycleUsecase(repo, vnpayadapter.NewVNPayClient("", "", "", ""), lifecycleBooking(winnerAppointment, expertID, now.Add(5*time.Minute).UnixMilli(), 1000), now, 15*time.Minute, time.Minute)
+			if _, err := usecase.ProcessIPN(context.Background(), test.params()); err == nil {
+				t.Fatal("expected validation error")
+			}
+			stored := repo.orders[loser.ID]
+			if len(repo.compensationCases) != 0 || repo.walletCredits != 0 || len(repo.outboxEvents) != 0 || stored.GatewayCaptureStatus != "" || stored.GatewayTxnRef != "" || stored.GatewayResponseCode != "" {
+				t.Fatal("invalid IPN created compensation or settlement side effects")
+			}
+		})
+	}
+
+	other := lifecycleOrder(otherAppointment, payerID, expertID, entity.OrderStatusPending, now.Add(5*time.Minute).UnixMilli())
+	repo := newLifecycleRepo(winner, other)
+	usecase := lifecycleUsecase(repo, vnpayadapter.NewVNPayClient("", "", "", ""), lifecycleBooking(otherAppointment, expertID, now.Add(5*time.Minute).UnixMilli(), 1000), now, 15*time.Minute, time.Minute)
+	already, err := usecase.ProcessIPN(context.Background(), signedSuccessIPNParamsWithTxn(other.ID, "other-appointment-txn"))
+	if err != nil || already || repo.orders[other.ID].Status != entity.OrderStatusSuccess || len(repo.compensationCases) != 0 {
+		t.Fatalf("different appointment was treated as duplicate capture: already=%v err=%v order=%+v cases=%d", already, err, repo.orders[other.ID], len(repo.compensationCases))
+	}
+}
+
+func TestDuplicateCaptureCompensationFailureRollsBackEvidence(t *testing.T) {
+	now := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
+	appointmentID, payerID, expertID := uuid.New(), uuid.New(), uuid.New()
+	winner := lifecycleOrder(appointmentID, payerID, expertID, entity.OrderStatusSuccess, now.Add(-time.Minute).UnixMilli())
+	loser := lifecycleOrder(appointmentID, payerID, expertID, entity.OrderStatusExpired, now.Add(-time.Minute).UnixMilli())
+	repo := newLifecycleRepo(winner, loser)
+	repo.compensationErr = errors.New("compensation persistence failed")
+	usecase := lifecycleUsecase(repo, vnpayadapter.NewVNPayClient("", "", "", ""), lifecycleBooking(appointmentID, expertID, now.Add(5*time.Minute).UnixMilli(), 1000), now, 15*time.Minute, time.Minute)
+
+	already, err := usecase.ProcessIPN(context.Background(), signedSuccessIPNParamsWithTxn(loser.ID, "second-vnp-txn"))
+	if err == nil || already {
+		t.Fatalf("expected compensation failure, already=%v err=%v", already, err)
+	}
+	stored := repo.orders[loser.ID]
+	if repo.listForUpdateCount == 0 || stored.Status != entity.OrderStatusExpired || stored.GatewayCaptureStatus != "" || stored.GatewayTxnRef != "" || stored.PaidAt != nil || len(repo.compensationCases) != 0 || repo.walletCredits != 0 || repo.walletDebits != 0 || len(repo.outboxEvents) != 0 {
+		t.Fatalf("duplicate capture transaction did not roll back atomically: order=%+v cases=%+v", stored, repo.compensationCases)
+	}
+}
+
 func TestConcurrentSuccessIndexLossReloadsWinnerWithoutSettlement(t *testing.T) {
 	now := time.Date(2026, 7, 19, 10, 0, 0, 0, time.UTC)
 	appointmentID, payerID, expertID := uuid.New(), uuid.New(), uuid.New()
@@ -290,6 +404,9 @@ func TestConcurrentSuccessIndexLossReloadsWinnerWithoutSettlement(t *testing.T) 
 	}
 	if repo.walletCredits != 0 || repo.walletDebits != 0 || len(repo.outboxEvents) != 0 {
 		t.Fatalf("losing transaction leaked side effects: credits=%d debits=%d outbox=%d", repo.walletCredits, repo.walletDebits, len(repo.outboxEvents))
+	}
+	if len(repo.compensationCases) != 1 || repo.orders[loser.ID].GatewayCaptureStatus != paymentdomain.GatewayCaptureDuplicate {
+		t.Fatalf("unique-index loser was not recorded for refund review: order=%+v cases=%+v", repo.orders[loser.ID], repo.compensationCases)
 	}
 }
 
@@ -402,7 +519,7 @@ func TestInvalidExpiredOrderIPNHasNoSideEffects(t *testing.T) {
 			if _, err := usecase.ProcessIPN(context.Background(), tc.params(order.ID)); err == nil {
 				t.Fatal("expected invalid IPN error")
 			}
-			if repo.orders[order.ID].Status != entity.OrderStatusExpired || repo.walletCredits != 0 || len(repo.outboxEvents) != 0 {
+			if repo.orders[order.ID].Status != entity.OrderStatusExpired || repo.walletCredits != 0 || len(repo.outboxEvents) != 0 || len(repo.compensationCases) != 0 {
 				t.Fatal("invalid IPN changed persisted state")
 			}
 		})
@@ -436,6 +553,9 @@ type lifecycleRepo struct {
 	walletCredits         int
 	walletDebits          int
 	outboxEvents          []entity.OutboxEvent
+	compensationCases     []entity.PaymentCompensationCase
+	compensationErr       error
+	listForUpdateCount    int
 }
 
 func newLifecycleRepo(orders ...entity.PaymentOrder) *lifecycleRepo {
@@ -485,6 +605,46 @@ func (r *lifecycleRepo) Update(order *entity.PaymentOrder) error {
 	return nil
 }
 
+func (r *lifecycleRepo) ListCompensationCases(ctx context.Context, filter CompensationCaseFilter) ([]CompensationCaseRecord, int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	var matches []CompensationCaseRecord
+	for i := range r.compensationCases {
+		compensationCase := r.compensationCases[i]
+		if filter.Status != "" && compensationCase.Status != filter.Status {
+			continue
+		}
+		if filter.AppointmentID != nil && compensationCase.AppointmentID != *filter.AppointmentID {
+			continue
+		}
+		if filter.PaymentOrderID != nil && compensationCase.PaymentOrderID != *filter.PaymentOrderID {
+			continue
+		}
+		order := r.orders[compensationCase.PaymentOrderID]
+		matches = append(matches, CompensationCaseRecord{
+			Case: compensationCase, PaymentStatus: order.Status,
+			GatewayCaptureStatus: order.GatewayCaptureStatus, FulfillmentStatus: order.FulfillmentStatus,
+		})
+	}
+	return matches, int64(len(matches)), nil
+}
+
+func (r *lifecycleRepo) GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*CompensationCaseRecord, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i := range r.compensationCases {
+		if r.compensationCases[i].ID == caseID {
+			copy := r.compensationCases[i]
+			order := r.orders[copy.PaymentOrderID]
+			return &CompensationCaseRecord{
+				Case: copy, PaymentStatus: order.Status,
+				GatewayCaptureStatus: order.GatewayCaptureStatus, FulfillmentStatus: order.FulfillmentStatus,
+			}, nil
+		}
+	}
+	return nil, ErrCompensationCaseNotFound
+}
+
 func (r *lifecycleRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -492,11 +652,13 @@ func (r *lifecycleRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) erro
 	snapshot := cloneOrders(r.orders)
 	createCount, credits, debits := r.createCount, r.walletCredits, r.walletDebits
 	outbox := append([]entity.OutboxEvent(nil), r.outboxEvents...)
+	compensationCases := append([]entity.PaymentCompensationCase(nil), r.compensationCases...)
 	err := fn(r)
 	if err != nil {
 		r.orders = snapshot
 		r.createCount, r.walletCredits, r.walletDebits = createCount, credits, debits
 		r.outboxEvents = outbox
+		r.compensationCases = compensationCases
 		if r.preserveWinner != nil {
 			r.orders[r.preserveWinner.ID] = *r.preserveWinner
 			r.preserveWinner = nil
@@ -514,6 +676,7 @@ func (r *lifecycleRepo) GetOrderForUpdate(ctx context.Context, orderID uuid.UUID
 }
 
 func (r *lifecycleRepo) ListOrdersForAppointmentForUpdate(ctx context.Context, appointmentID uuid.UUID) ([]entity.PaymentOrder, error) {
+	r.listForUpdateCount++
 	var orders []entity.PaymentOrder
 	for _, order := range r.orders {
 		if order.AppointmentID != nil && *order.AppointmentID == appointmentID {
@@ -575,6 +738,20 @@ func (r *lifecycleRepo) ExpireOtherPendingOrders(ctx context.Context, appointmen
 
 func (r *lifecycleRepo) SaveOutboxEvent(ctx context.Context, event *entity.OutboxEvent) error {
 	r.outboxEvents = append(r.outboxEvents, *event)
+	return nil
+}
+
+func (r *lifecycleRepo) SaveCompensationCase(ctx context.Context, compensationCase *entity.PaymentCompensationCase) error {
+	if r.compensationErr != nil {
+		return r.compensationErr
+	}
+	for i := range r.compensationCases {
+		existing := &r.compensationCases[i]
+		if existing.PaymentOrderID == compensationCase.PaymentOrderID && existing.ReasonCode == compensationCase.ReasonCode {
+			return nil
+		}
+	}
+	r.compensationCases = append(r.compensationCases, *compensationCase)
 	return nil
 }
 
