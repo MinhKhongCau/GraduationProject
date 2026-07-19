@@ -3,6 +3,7 @@ package handler
 import (
 	"booking-service/internal/timeoff"
 	"booking-service/pkg/response"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -50,20 +51,24 @@ func (h *Handler) Create(c *gin.Context) {
 	}
 
 	timeOff, affectedAppointments, err := h.usecase.CreateTimeOff(expertID, req.StartDatetime, req.EndDatetime, req.Reason)
-	
+
 	if err != nil {
-		if err == timeoff.ErrConflict {
+		if errors.Is(err, timeoff.ErrConflict) {
 			affectedAppointmentsStr := strings.Join(affectedAppointments, ", ")
 			response.Error(c, http.StatusConflict,
-				"This time period already has confirmed appointments. Please call /time-off/confirm to override and automatically cancel affected appointments.",
+				"This time period conflicts with a protected booking. Force-confirm may cancel pending-payment bookings only; confirmed or occupied bookings must be resolved first.",
 				"affected_appointments: "+affectedAppointmentsStr)
+			return
+		}
+		if errors.Is(err, timeoff.ErrInvalidDate) || errors.Is(err, timeoff.ErrDuplicate) {
+			response.Error(c, http.StatusBadRequest, "Invalid time-off registration", err.Error())
 			return
 		}
 		response.Error(c, http.StatusInternalServerError, "Failed to save time-off registration", err.Error())
 		return
 	}
 
-	response.Success(c, "Time-off registered successfully. Affected schedules are being cleaned up.", gin.H{
+	response.Success(c, "Time-off registered and affected schedules reconciled successfully.", gin.H{
 		"time_off": timeOff,
 	})
 }

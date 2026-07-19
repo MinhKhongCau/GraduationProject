@@ -81,6 +81,13 @@ func (u *appointmentUsecase) getPaymentEligibilitySnapshot(command GetPaymentEli
 			}
 			return err
 		}
+		covered, err := tx.IsSlotCoveredByTimeOff(context.Background(), *slot)
+		if err != nil {
+			return err
+		}
+		if covered {
+			return fmt.Errorf("%w: slot is covered by expert time-off", ErrPaymentEligibilityConflict)
+		}
 
 		eligibility, err := buildApplicationPaymentEligibility(*appt, *slot, command.PayerID)
 		if err != nil {

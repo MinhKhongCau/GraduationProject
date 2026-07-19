@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"booking-service/internal/timeoff"
 	"booking-service/pkg/response"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +31,10 @@ func (h *Handler) Confirm(c *gin.Context) {
 	}
 
 	expertID := c.GetHeader("X-User-Id")
+	if expertID == "" {
+		response.Error(c, http.StatusUnauthorized, "User identity could not be determined", "Missing X-User-Id header")
+		return
+	}
 
 	var req CreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -38,11 +44,19 @@ func (h *Handler) Confirm(c *gin.Context) {
 
 	timeOff, err := h.usecase.ConfirmTimeOff(expertID, req.StartDatetime, req.EndDatetime, req.Reason)
 	if err != nil {
+		if errors.Is(err, timeoff.ErrConflict) {
+			response.Error(c, http.StatusConflict, "Time-off conflicts with a confirmed or occupied booking", err.Error())
+			return
+		}
+		if errors.Is(err, timeoff.ErrInvalidDate) || errors.Is(err, timeoff.ErrDuplicate) {
+			response.Error(c, http.StatusBadRequest, "Invalid time-off registration", err.Error())
+			return
+		}
 		response.Error(c, http.StatusInternalServerError, "Failed to save time-off registration", err.Error())
 		return
 	}
 
-	response.Success(c, "Time-off confirmed and registered successfully. Background worker will cancel overlapping appointments.", gin.H{
+	response.Success(c, "Time-off confirmed and affected pending-payment bookings reconciled successfully.", gin.H{
 		"time_off": timeOff,
 	})
 }

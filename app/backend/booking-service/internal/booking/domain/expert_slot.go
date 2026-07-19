@@ -10,14 +10,19 @@ import (
 type SlotStatus int
 
 const (
-	SlotStatusAvailable SlotStatus = 0 // "AVAILABLE"
-	SlotStatusLocked    SlotStatus = 1 // "LOCKED"
-	SlotStatusOccupied  SlotStatus = 2 // "OCCUPIED"
+	SlotStatusAvailable   SlotStatus = 0 // "AVAILABLE"
+	SlotStatusLocked      SlotStatus = 1 // "LOCKED"
+	SlotStatusOccupied    SlotStatus = 2 // "OCCUPIED"
+	SlotStatusUnavailable SlotStatus = 3 // "UNAVAILABLE"
 )
 
 // String trả về label chuỗi tương ứng với giá trị enum
 func (s SlotStatus) String() string {
-	return [...]string{"AVAILABLE", "LOCKED", "OCCUPIED"}[s]
+	labels := [...]string{"AVAILABLE", "LOCKED", "OCCUPIED", "UNAVAILABLE"}
+	if int(s) < 0 || int(s) >= len(labels) {
+		return "UNKNOWN"
+	}
+	return labels[s]
 }
 
 type ExpertSlot struct {

@@ -76,6 +76,19 @@ func TestCreateAppointmentUnitOfWorkValidationPreventsPersistence(t *testing.T) 
 	}
 }
 
+func TestCreateAppointmentRejectsTimeOffCoveredSlot(t *testing.T) {
+	patientID, expertID, slotID := "patient-1", "expert-1", "slot-1"
+	expiresAt := time.Now().Add(time.Minute).UnixMilli()
+	repo := newUOWTestRepo(domain.Appointment{}, domain.ExpertSlot{SlotID: slotID, ExpertID: expertID, Status: domain.SlotStatusLocked, LockedBy: &patientID, LockedExpiresAt: &expiresAt})
+	repo.tx.coveredByTimeOff = true
+	if _, err := NewUsecase(repo).CreateAppointment(patientID, expertID, slotID); err == nil {
+		t.Fatal("expected covered slot rejection")
+	}
+	if repo.tx.createAppointmentCalls != 0 {
+		t.Fatal("covered slot created an appointment")
+	}
+}
+
 func TestCreateAppointmentUnitOfWorkPreservesCurrentErrorMessages(t *testing.T) {
 	patientID := "patient-1"
 	expertID := "expert-1"
@@ -204,6 +217,20 @@ func TestGetPaymentEligibilityUnitOfWorkRejectsIneligibleSnapshot(t *testing.T) 
 	}
 }
 
+func TestPaymentEligibilityRejectsTimeOffCoveredSlot(t *testing.T) {
+	repo := paymentResultUOWRepo(domain.AppointmentStatusPendingPayment, domain.SlotStatusLocked)
+	expires := time.Now().Add(time.Minute).UnixMilli()
+	patient := "patient-1"
+	repo.tx.slot.Price = 200000
+	repo.tx.slot.LockedBy = &patient
+	repo.tx.slot.LockedExpiresAt = &expires
+	repo.tx.coveredByTimeOff = true
+	_, err := NewUsecase(repo).GetPaymentEligibility(GetPaymentEligibilityCommand{AppointmentID: "appt-1", PayerID: patient})
+	if !errors.Is(err, ErrPaymentEligibilityConflict) {
+		t.Fatalf("expected eligibility conflict, got %v", err)
+	}
+}
+
 func TestHandlePaymentResultUnitOfWorkSuccessAndFailureTransitions(t *testing.T) {
 	tests := []struct {
 		name                  string
@@ -289,6 +316,17 @@ func TestHandlePaymentResultUnitOfWorkDuplicateCallbacksAreNoop(t *testing.T) {
 				t.Fatalf("expected no updates for duplicate callback, got appointment=%d slot=%d", repo.tx.updateAppointmentCalls, repo.tx.updateSlotCalls)
 			}
 		})
+	}
+}
+
+func TestPaymentFailureKeepsTimeOffCoveredSlotUnavailable(t *testing.T) {
+	repo := paymentResultUOWRepo(domain.AppointmentStatusPendingPayment, domain.SlotStatusLocked)
+	repo.tx.coveredByTimeOff = true
+	if err := NewUsecase(repo).HandlePaymentResult(HandlePaymentResultCommand{AppointmentID: "appt-1", Status: PaymentResultFailed}); err != nil {
+		t.Fatal(err)
+	}
+	if repo.tx.lastSlotUpdates["status"] != domain.SlotStatusUnavailable {
+		t.Fatalf("covered slot was released: %#v", repo.tx.lastSlotUpdates)
 	}
 }
 
@@ -409,6 +447,11 @@ type fakeAppointmentTx struct {
 	lastAppointmentUpdates map[string]interface{}
 	lastSlotUpdates        map[string]interface{}
 	lastExpectedSlotStatus *domain.SlotStatus
+	coveredByTimeOff       bool
+}
+
+func (tx *fakeAppointmentTx) IsSlotCoveredByTimeOff(context.Context, domain.ExpertSlot) (bool, error) {
+	return tx.coveredByTimeOff, nil
 }
 
 func (tx *fakeAppointmentTx) LoadAppointmentForUpdate(ctx context.Context, appointmentID string) (*domain.Appointment, error) {

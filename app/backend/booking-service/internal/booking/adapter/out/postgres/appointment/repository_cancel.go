@@ -6,13 +6,14 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Há»§y Appointment do bÃ¡c sÄ© nghá»‰ phÃ©p (TimeOff)
 func (r *pgRepository) CancelAppointmentByExpert(appointmentID string, reason string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		var appt domain.Appointment
-		if err := tx.Where("appointment_id = ?", appointmentID).First(&appt).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("appointment_id = ?", appointmentID).First(&appt).Error; err != nil {
 			return err
 		}
 
@@ -27,9 +28,15 @@ func (r *pgRepository) CancelAppointmentByExpert(appointmentID string, reason st
 
 		// Tráº£ Slot vá» AVAILABLE
 		if plan.ShouldReleaseSlot {
-			if err := tx.Model(&domain.ExpertSlot{}).
-				Where("slot_id = ?", appt.SlotID).
-				Updates(plan.SlotUpdates).Error; err != nil {
+			var slot domain.ExpertSlot
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("slot_id = ?", appt.SlotID).First(&slot).Error; err != nil {
+				return err
+			}
+			updates, err := releasedSlotUpdatesForCoverage(tx, slot)
+			if err != nil {
+				return err
+			}
+			if err := tx.Model(&slot).Updates(updates).Error; err != nil {
 				return err
 			}
 		}
@@ -42,7 +49,7 @@ func (r *pgRepository) CancelAppointmentByExpert(appointmentID string, reason st
 func (r *pgRepository) CancelAppointmentByPatient(appointmentID string, patientID string, reason string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		var appt domain.Appointment
-		if err := tx.Where("appointment_id = ? AND patient_id = ?", appointmentID, patientID).First(&appt).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("appointment_id = ? AND patient_id = ?", appointmentID, patientID).First(&appt).Error; err != nil {
 			return errors.New("khÃ´ng tÃ¬m tháº¥y cuá»™c háº¹n hoáº·c báº¡n khÃ´ng cÃ³ quyá»n há»§y")
 		}
 
@@ -57,9 +64,15 @@ func (r *pgRepository) CancelAppointmentByPatient(appointmentID string, patientI
 
 		// Tráº£ Slot vá» AVAILABLE
 		if plan.ShouldReleaseSlot {
-			if err := tx.Model(&domain.ExpertSlot{}).
-				Where("slot_id = ?", appt.SlotID).
-				Updates(plan.SlotUpdates).Error; err != nil {
+			var slot domain.ExpertSlot
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("slot_id = ?", appt.SlotID).First(&slot).Error; err != nil {
+				return err
+			}
+			updates, err := releasedSlotUpdatesForCoverage(tx, slot)
+			if err != nil {
+				return err
+			}
+			if err := tx.Model(&slot).Updates(updates).Error; err != nil {
 				return err
 			}
 		}
