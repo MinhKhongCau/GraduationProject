@@ -47,6 +47,10 @@ func (tx *gormTx) LoadSlotForUpdate(ctx context.Context, slotID string) (*domain
 	return &slot, nil
 }
 
+func (tx *gormTx) IsSlotCoveredByTimeOff(ctx context.Context, slot domain.ExpertSlot) (bool, error) {
+	return isSlotCoveredByTimeOff(tx.db.WithContext(ctx), slot)
+}
+
 func (tx *gormTx) CreateAppointment(ctx context.Context, appointment *domain.Appointment) error {
 	return tx.db.WithContext(ctx).Create(appointment).Error
 }

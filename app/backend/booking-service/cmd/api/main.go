@@ -96,9 +96,9 @@ func main() {
 	})
 
 	// 5. Khởi chạy Background Workers
-	slot.StartExpiredLockWorker(appointmentRepo)
-	timeoff.StartWorker(timeoffUsecase)
 	workerContext := context.Background()
+	slot.StartExpiredLockWorker(appointmentRepo)
+	timeoff.StartWorkerWithContext(workerContext, timeoffUsecase, timeoff.WorkerInterval)
 	go slot.RunStartupGeneration(workerContext, generationService, config.AppConfig.RollingSlotDays)
 	slot.StartRollingGenerationWorker(workerContext, generationService, config.AppConfig.RollingSlotDays)
 

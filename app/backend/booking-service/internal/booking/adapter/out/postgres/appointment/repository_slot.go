@@ -14,8 +14,8 @@ import (
 func (r *pgRepository) LockSlot(slotID string, patientID string) error {
 	lock := domain.NewSlotLock(patientID, time.Now().UnixMilli())
 
-	result := r.db.Model(&domain.ExpertSlot{}).
-		Where("slot_id = ? AND status = ?", slotID, domain.SlotStatusAvailable).
+	result := withoutActiveTimeOffForSlot(r.db.Model(&domain.ExpertSlot{})).
+		Where("slot_id = ? AND status = ? AND start_time > ?", slotID, domain.SlotStatusAvailable, time.Now().Add(5*time.Minute).UnixMilli()).
 		Updates(lock.Updates())
 
 	if result.Error != nil {

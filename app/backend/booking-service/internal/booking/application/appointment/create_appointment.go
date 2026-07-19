@@ -45,6 +45,13 @@ func CreateAppointmentWithUnitOfWork(ctx context.Context, repo Repository, uow U
 		if err := domain.ValidateAppointmentCreationSlot(*slot, appointment, nowMs); err != nil {
 			return mapAppointmentCreationSlotError(err)
 		}
+		covered, err := tx.IsSlotCoveredByTimeOff(ctx, *slot)
+		if err != nil {
+			return err
+		}
+		if covered {
+			return errors.New("slot is covered by expert time-off")
+		}
 
 		appointment.CreatedAt = nowMs
 		appointment.UpdatedAt = nowMs

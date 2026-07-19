@@ -4,6 +4,10 @@ import (
 	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/booking/domain"
 	"booking-service/internal/slot"
+	"fmt"
+	"log"
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -16,76 +20,38 @@ type Usecase interface {
 }
 
 type timeoffUsecase struct {
-	repo            Repository
-	slotRepo        slot.Repository
-	appointmentRepo appappointment.Repository
+	repo  Repository
+	clock func() time.Time
 }
 
-func NewUsecase(repo Repository, slotRepo slot.Repository, appointmentRepo appappointment.Repository) Usecase {
-	return &timeoffUsecase{
-		repo:            repo,
-		slotRepo:        slotRepo,
-		appointmentRepo: appointmentRepo,
-	}
+func NewUsecase(repo Repository, _ slot.Repository, _ appappointment.Repository) Usecase {
+	return &timeoffUsecase{repo: repo, clock: time.Now}
+}
+
+func newUsecaseWithClock(repo Repository, clock func() time.Time) Usecase {
+	return &timeoffUsecase{repo: repo, clock: clock}
 }
 
 func (u *timeoffUsecase) CreateTimeOff(expertID string, startDatetime, endDatetime int64, reason string) (*domain.ExpertTimeOff, []string, error) {
-	// 1. Conflict detection
-	overlappingSlots, err := u.repo.GetOverlappingSlots(expertID, startDatetime, endDatetime)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	hasOccupied := false
-	var affectedAppointments []string
-
-	for _, slot := range overlappingSlots {
-		if slot.Status == domain.SlotStatusOccupied {
-			hasOccupied = true
-			// Find affected appointment
-			appt, _ := u.appointmentRepo.GetAppointmentBySlotID(slot.SlotID)
-			if appt != nil {
-				affectedAppointments = append(affectedAppointments, appt.AppointmentID)
-			}
-		}
-	}
-
-	// 2. If there are occupied slots -> Return ErrConflict
-	if hasOccupied {
-		return nil, affectedAppointments, ErrConflict
-	}
-
-	// 3. Save TimeOff
-	timeOff := domain.ExpertTimeOff{
-		TimeOffID:     uuid.New().String(),
-		ExpertID:      expertID,
-		StartDatetime: startDatetime,
-		EndDatetime:   endDatetime,
-		Reason:        reason,
-		// ProcessedAt is left empty (null) for the Background Worker to process cancellations
-	}
-
-	if err := u.repo.CreateTimeOff(&timeOff); err != nil {
-		return nil, nil, err
-	}
-
-	return &timeOff, nil, nil
+	return u.create(expertID, startDatetime, endDatetime, reason, false)
 }
 
 func (u *timeoffUsecase) ConfirmTimeOff(expertID string, startDatetime, endDatetime int64, reason string) (*domain.ExpertTimeOff, error) {
-	timeOff := domain.ExpertTimeOff{
-		TimeOffID:     uuid.New().String(),
-		ExpertID:      expertID,
-		StartDatetime: startDatetime,
-		EndDatetime:   endDatetime,
-		Reason:        reason,
-	}
+	timeOff, _, err := u.create(expertID, startDatetime, endDatetime, reason, true)
+	return timeOff, err
+}
 
-	if err := u.repo.CreateTimeOff(&timeOff); err != nil {
-		return nil, err
+func (u *timeoffUsecase) create(expertID string, startDatetime, endDatetime int64, reason string, force bool) (*domain.ExpertTimeOff, []string, error) {
+	nowMs := u.clock().UnixMilli()
+	if err := domain.ValidateTimeOffRange(startDatetime, endDatetime, nowMs); err != nil {
+		return nil, nil, fmt.Errorf("%w: %v", ErrInvalidDate, err)
 	}
-
-	return &timeOff, nil
+	timeOff := &domain.ExpertTimeOff{TimeOffID: uuid.New().String(), ExpertID: expertID, StartDatetime: startDatetime, EndDatetime: endDatetime, Reason: reason}
+	conflicts, err := u.repo.CreateAndProcessTimeOff(timeOff, force, nowMs)
+	if err != nil {
+		return nil, conflicts, err
+	}
+	return timeOff, nil, nil
 }
 
 func (u *timeoffUsecase) GetTimeOffs(expertID string) ([]domain.ExpertTimeOff, error) {
@@ -93,36 +59,18 @@ func (u *timeoffUsecase) GetTimeOffs(expertID string) ([]domain.ExpertTimeOff, e
 }
 
 func (u *timeoffUsecase) DeleteTimeOff(expertID, timeOffID string) error {
-	// TODO: verify ownership or if it exists
 	return u.repo.DeleteTimeOff(timeOffID, expertID)
 }
 
 func (u *timeoffUsecase) ProcessTimeOffs() {
 	timeOffs, err := u.repo.GetUnprocessedTimeOffs()
 	if err != nil {
+		log.Printf("[time-off] load unprocessed failed: %v", err)
 		return
 	}
-
-	for _, to := range timeOffs {
-		// 1. Xoá tất cả Slot AVAILABLE trong khoảng thời gian nghỉ
-		err := u.repo.DeleteAvailableSlots(to.ExpertID, to.StartDatetime, to.EndDatetime)
-		if err != nil {
-			continue
+	for _, item := range timeOffs {
+		if err := u.repo.ProcessExistingTimeOff(item.TimeOffID, false, u.clock().UnixMilli()); err != nil {
+			log.Printf("[time-off] process id=%s failed: %v", item.TimeOffID, err)
 		}
-
-		// 2. Tìm tất cả các Appointment bị đè lên
-		appts, err := u.repo.GetOverlappingAppointments(to.ExpertID, to.StartDatetime, to.EndDatetime)
-		if err != nil {
-			continue
-		}
-
-		// 3. Huỷ các cuộc hẹn bị đè
-		reason := "Bác sĩ đăng ký lịch nghỉ đột xuất: " + to.Reason
-		for _, appt := range appts {
-			_ = u.appointmentRepo.CancelAppointmentByExpert(appt.AppointmentID, reason)
-		}
-
-		// 4. Đánh dấu đã xử lý
-		_ = u.repo.MarkAsProcessed(to.TimeOffID)
 	}
 }

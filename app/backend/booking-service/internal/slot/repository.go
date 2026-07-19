@@ -37,7 +37,7 @@ func (r *pgRepository) GetAvailableDates(expertID string, startDate, endDate tim
 
 	// DISTINCT DATE: gom tất cả các slot trong cùng ngày thành 1 dòng
 	// Lọc: chỉ lấy ngày có ít nhất 1 slot AVAILABLE, chưa bị khóa, và chưa qua (start_time > now)
-	err := r.db.Table(`"Booking_Expert_Slots"`).
+	err := withoutActiveTimeOff(r.db.Table(`"Booking_Expert_Slots"`)).
 		Where(`expert_id = ? AND date_slot >= ? AND date_slot <= ? AND status = ? AND start_time > ?`,
 			expertID, startDate, endDate, domain.SlotStatusAvailable, nowMs).
 		Select(`DISTINCT TO_CHAR(date_slot, 'YYYY-MM-DD')`).
@@ -59,7 +59,7 @@ func (r *pgRepository) GetAvailableTimes(date string, expertID string) ([]SlotTi
 	var times []SlotTimeResult
 	nowMs := time.Now().UnixMilli()
 
-	err := r.db.Table(`"Booking_Expert_Slots"`).
+	err := withoutActiveTimeOff(r.db.Table(`"Booking_Expert_Slots"`)).
 		Where(`TO_CHAR(date_slot, 'YYYY-MM-DD') = ? AND expert_id = ? AND status = ? AND start_time > ?`,
 			date, expertID, domain.SlotStatusAvailable, nowMs).
 		Select("slot_id, start_time, end_time").
@@ -69,10 +69,15 @@ func (r *pgRepository) GetAvailableTimes(date string, expertID string) ([]SlotTi
 	return times, err
 }
 
+func withoutActiveTimeOff(query *gorm.DB) *gorm.DB {
+	return query.Where(`NOT EXISTS (SELECT 1 FROM "Booking_Expert_Time_Off" time_off WHERE time_off.expert_id = "Booking_Expert_Slots".expert_id AND time_off.start_datetime < "Booking_Expert_Slots".end_time AND time_off.end_datetime > "Booking_Expert_Slots".start_time)`)
+}
+
 // 3. Lấy toàn bộ danh sách Slot của Expert (bao gồm AVAILABLE, LOCKED, OCCUPIED)
 func (r *pgRepository) GetSlotsByExpert(expertID string, fromDate, toDate int64) ([]domain.ExpertSlot, error) {
 	var slots []domain.ExpertSlot
-	query := r.db.Where("expert_id = ?", expertID)
+	query := r.db.Where("expert_id = ?", expertID).
+		Where(`NOT (status = ? AND EXISTS (SELECT 1 FROM "Booking_Expert_Time_Off" time_off WHERE time_off.expert_id = "Booking_Expert_Slots".expert_id AND time_off.start_datetime < "Booking_Expert_Slots".end_time AND time_off.end_datetime > "Booking_Expert_Slots".start_time))`, domain.SlotStatusAvailable)
 
 	if fromDate > 0 {
 		query = query.Where("start_time >= ?", fromDate)

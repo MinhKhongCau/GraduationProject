@@ -76,6 +76,15 @@ func (u *appointmentUsecase) HandlePaymentResult(command HandlePaymentResultComm
 		if err != nil {
 			return mapPaymentResultDomainError(err)
 		}
+		if command.Status == PaymentResultFailed && !transition.Noop {
+			covered, err := tx.IsSlotCoveredByTimeOff(context.Background(), *slot)
+			if err != nil {
+				return err
+			}
+			if covered {
+				transition.SlotUpdates["status"] = domain.SlotStatusUnavailable
+			}
+		}
 		return persistPaymentResultTransition(context.Background(), tx, appt, transition)
 	})
 }

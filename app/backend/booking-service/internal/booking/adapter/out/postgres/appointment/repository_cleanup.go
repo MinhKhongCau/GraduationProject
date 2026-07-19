@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // =====================================================================
@@ -18,7 +19,7 @@ func (r *pgRepository) CancelExpiredLocks() (int64, error) {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// 1. TÃ¬m táº¥t cáº£ cÃ¡c slot Ä‘Ã£ háº¿t háº¡n lock
 		var expiredSlots []domain.ExpertSlot
-		if err := tx.
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("status = ? AND locked_expires_at < ?",
 				domain.SlotStatusLocked, nowMs).
 			Find(&expiredSlots).Error; err != nil {
@@ -44,15 +45,18 @@ func (r *pgRepository) CancelExpiredLocks() (int64, error) {
 			return result.Error
 		}
 
-		// 3. Má»Ÿ khÃ³a táº¥t cáº£ slot háº¿t háº¡n, tráº£ vá» tráº¡ng thÃ¡i AVAILABLE
-		result = tx.Model(&domain.ExpertSlot{}).
-			Where("slot_id IN ?", slotIDs).
-			Updates(plan.SlotUpdates)
-		if result.Error != nil {
-			return result.Error
+		// 3. Release only uncovered slots; covered slots remain non-bookable.
+		for _, slot := range expiredSlots {
+			updates, err := releasedSlotUpdatesForCoverage(tx, slot)
+			if err != nil {
+				return err
+			}
+			result = tx.Model(&domain.ExpertSlot{}).Where("slot_id = ?", slot.SlotID).Updates(updates)
+			if result.Error != nil {
+				return result.Error
+			}
+			totalCleaned += result.RowsAffected
 		}
-
-		totalCleaned = result.RowsAffected
 		return nil
 	})
 
