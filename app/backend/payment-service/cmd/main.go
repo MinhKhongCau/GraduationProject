@@ -121,7 +121,13 @@ func main() {
 	go withdrawalWorker.Start(ctx)
 
 	// Worker 3: Quét Outbox events để dispatch (RabbitMQ / Internal REST Call sang Booking)
-	outboxPublisher := outbox.NewPublisher(outboxRepo, bookingSvcClient)
+	outboxPublisher := outbox.NewPublisherWithOptions(outboxRepo, bookingSvcClient, outbox.PublisherOptions{
+		PollInterval: config.AppConfig.OutboxPollInterval,
+		MaxAttempts:  config.AppConfig.OutboxMaxAttempts,
+		BaseBackoff:  config.AppConfig.OutboxBaseBackoff,
+		MaxBackoff:   config.AppConfig.OutboxMaxBackoff,
+		BatchSize:    config.AppConfig.OutboxBatchSize,
+	})
 	go outboxPublisher.Start(ctx)
 
 	// Worker 4: Đối soát ví (Ledger Audit) & Đối soát giao dịch VNPay

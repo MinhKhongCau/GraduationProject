@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	apppayment "payment-service/internal/payment/application"
@@ -16,8 +18,9 @@ import (
 )
 
 type restBookingClient struct {
-	baseURL    string
-	httpClient *httpclient.Client
+	baseURL         string
+	eligibilityHTTP *httpclient.Client
+	deliveryHTTP    *httpclient.Client
 }
 
 type webhookPayload struct {
@@ -43,14 +46,28 @@ type paymentEligibilityAPIResponse struct {
 	Error   string                     `json:"error"`
 }
 
+type webhookAPIResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
 func NewRestBookingClient(baseURL string, tokenProvider httpclient.TokenProvider) apppayment.BookingServiceClient {
-	return &restBookingClient{
-		baseURL: baseURL,
-		httpClient: httpclient.New(httpclient.Options{
+	return newRestBookingClient(
+		baseURL,
+		httpclient.New(httpclient.Options{
 			MaxRetries:    3,
 			TokenProvider: tokenProvider,
 		}),
-	}
+		httpclient.New(httpclient.Options{
+			DisableRetries: true,
+			TokenProvider:  tokenProvider,
+		}),
+	)
+}
+
+func newRestBookingClient(baseURL string, eligibilityHTTP, deliveryHTTP *httpclient.Client) *restBookingClient {
+	return &restBookingClient{baseURL: baseURL, eligibilityHTTP: eligibilityHTTP, deliveryHTTP: deliveryHTTP}
 }
 
 func (c *restBookingClient) GetPaymentEligibility(ctx context.Context, appointmentID string, payerID uuid.UUID) (*apppayment.PaymentEligibility, error) {
@@ -67,7 +84,7 @@ func (c *restBookingClient) GetPaymentEligibility(ctx context.Context, appointme
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.httpClient.Do(ctx, req)
+	resp, err := c.eligibilityHTTP.Do(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("booking_client: get payment eligibility %s: %w", endpoint, err)
 	}
@@ -118,33 +135,72 @@ func (c *restBookingClient) FailAppointment(ctx context.Context, appointmentID s
 
 func (c *restBookingClient) callWebhook(ctx context.Context, appointmentID, status string) error {
 	endpoint := fmt.Sprintf("%s/internal/appointments/%s/webhook", c.baseURL, url.PathEscape(appointmentID))
-
-	payload := webhookPayload{
-		AppointmentID: appointmentID,
-		Status:        status,
-	}
-	body, err := json.Marshal(payload)
+	body, err := json.Marshal(webhookPayload{AppointmentID: appointmentID, Status: status})
 	if err != nil {
-		return fmt.Errorf("booking_client: marshal payload: %w", err)
+		return permanentDeliveryError(apppayment.BookingDeliveryBadRequest, "booking webhook payload could not be encoded")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("booking_client: create request: %w", err)
+		return permanentDeliveryError(apppayment.BookingDeliveryBadRequest, "booking webhook request could not be created")
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.httpClient.Do(ctx, req)
+	resp, err := c.deliveryHTTP.Do(ctx, req)
 	if err != nil {
-		return fmt.Errorf("booking_client: call %s: %w", endpoint, err)
+		category := apppayment.BookingDeliveryNetwork
+		var netErr net.Error
+		if errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &netErr) && netErr.Timeout()) {
+			category = apppayment.BookingDeliveryTimeout
+		}
+		return retryableDeliveryError(category, "booking webhook request failed")
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("booking_client: unexpected status %d from booking-service: %s", resp.StatusCode, string(respBody))
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		if resp.StatusCode == http.StatusNoContent {
+			return nil
+		}
+		var apiResp webhookAPIResponse
+		if err := json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&apiResp); err != nil {
+			return retryableDeliveryError(apppayment.BookingDeliveryMalformedResponse, "booking webhook returned a malformed success response")
+		}
+		if !apiResp.Success {
+			return retryableDeliveryError(apppayment.BookingDeliveryMalformedResponse, "booking webhook returned an ambiguous unsuccessful 2xx response")
+		}
+		log.Printf("[booking_client] appointment %s -> %s accepted by booking-service", appointmentID, status)
+		return nil
 	}
 
-	log.Printf("[booking_client] appointment %s -> %s accepted by booking-service", appointmentID, status)
-	return nil
+	return classifyWebhookStatus(resp.StatusCode)
+}
+
+func classifyWebhookStatus(statusCode int) error {
+	switch statusCode {
+	case http.StatusRequestTimeout:
+		return retryableDeliveryError(apppayment.BookingDeliveryTimeout, "booking webhook returned HTTP 408")
+	case http.StatusTooManyRequests:
+		return retryableDeliveryError(apppayment.BookingDeliveryRateLimited, "booking webhook returned HTTP 429")
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return permanentDeliveryError(apppayment.BookingDeliveryAuthentication, fmt.Sprintf("booking webhook returned HTTP %d", statusCode))
+	case http.StatusNotFound:
+		return permanentDeliveryError(apppayment.BookingDeliveryNotFound, "booking webhook returned HTTP 404")
+	case http.StatusConflict:
+		return permanentDeliveryError(apppayment.BookingDeliveryConflict, "booking webhook returned HTTP 409")
+	case http.StatusBadRequest:
+		return permanentDeliveryError(apppayment.BookingDeliveryBadRequest, "booking webhook returned HTTP 400")
+	default:
+		if statusCode >= 500 && statusCode <= 599 {
+			return retryableDeliveryError(apppayment.BookingDeliveryUpstream, fmt.Sprintf("booking webhook returned HTTP %d", statusCode))
+		}
+		return permanentDeliveryError(apppayment.BookingDeliveryBusinessRejection, fmt.Sprintf("booking webhook returned unexpected HTTP %d", statusCode))
+	}
+}
+
+func retryableDeliveryError(category apppayment.BookingDeliveryFailureCategory, message string) error {
+	return &apppayment.BookingDeliveryError{Category: category, Retryable: true, Message: message}
+}
+
+func permanentDeliveryError(category apppayment.BookingDeliveryFailureCategory, message string) error {
+	return &apppayment.BookingDeliveryError{Category: category, Retryable: false, Message: message}
 }
