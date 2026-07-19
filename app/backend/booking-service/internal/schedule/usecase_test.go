@@ -12,7 +12,13 @@ type fakeScheduleRepo struct {
 	availabilities map[string]domain.Availability
 	created        *domain.Availability
 	updated        map[string]interface{}
+	reconciled     bool
+	candidates     []domain.ExpertSlot
+	plans          []ReconciliationPlan
+	reconcileErr   error
 }
+
+func (r *fakeScheduleRepo) GetEnabledExpertIDs() ([]string, error) { return nil, nil }
 
 func newFakeScheduleRepo() *fakeScheduleRepo {
 	return &fakeScheduleRepo{templates: map[string]domain.TimeTemplate{}, availabilities: map[string]domain.Availability{}}
@@ -86,6 +92,34 @@ func (r *fakeScheduleRepo) UpdateTemplate(id string, updates map[string]interfac
 	r.updated = updates
 	return nil
 }
+func (r *fakeScheduleRepo) ReconcileAvailability(availability domain.Availability, updates map[string]interface{}, candidates []domain.ExpertSlot, nowMs int64) (int64, error) {
+	if r.reconcileErr != nil {
+		return 0, r.reconcileErr
+	}
+	r.reconciled = true
+	r.updated = updates
+	r.candidates = candidates
+	return int64(len(candidates)), nil
+}
+func (r *fakeScheduleRepo) ReconcileTemplate(id string, updates map[string]interface{}, plans []ReconciliationPlan, nowMs int64) (int64, error) {
+	if r.reconcileErr != nil {
+		return 0, r.reconcileErr
+	}
+	r.reconciled = true
+	r.updated = updates
+	r.plans = plans
+	return 0, nil
+}
+
+type fakeScheduleTimeOffs struct{}
+
+func (fakeScheduleTimeOffs) GetTimeOffs(string, time.Time) ([]domain.ExpertTimeOff, error) {
+	return nil, nil
+}
+
+type fixedScheduleClock struct{ now time.Time }
+
+func (c fixedScheduleClock) Now() time.Time { return c.now }
 
 func TestCreateAvailabilityValidatesTemplateWeekdayRangeAndPrice(t *testing.T) {
 	repo := newFakeScheduleRepo()
@@ -113,6 +147,86 @@ func TestCreateAvailabilityValidatesTemplateWeekdayRangeAndPrice(t *testing.T) {
 	}
 	if availability.Price == nil || *availability.Price != 200000 || repo.created == nil {
 		t.Fatal("validated price was not persisted")
+	}
+}
+
+func TestUpdateAvailabilityPlansAtomicReconciliation(t *testing.T) {
+	now := time.Date(2030, time.January, 7, 7, 0, 0, 0, businessLocation) // Monday
+	price := 200000.0
+	repo := newFakeScheduleRepo()
+	repo.templates["tpl"] = testTemplate("tpl", "08:00", "09:00", true)
+	repo.availabilities["avail"] = domain.Availability{
+		AvailabilityID: "avail", ExpertID: "expert", TemplateID: "tpl", DayOfWeek: 1,
+		IsEnabled: true, EffectiveFrom: now.Add(-time.Hour).UnixMilli(), Price: &price,
+	}
+	u := NewUsecaseWithReconciliationAndClock(repo, fakeScheduleTimeOffs{}, 30, fixedScheduleClock{now: now})
+
+	newPrice := 250000.0
+	if err := u.UpdateAvailability("avail", "expert", map[string]interface{}{"price": newPrice}); err != nil {
+		t.Fatal(err)
+	}
+	if !repo.reconciled || len(repo.candidates) == 0 {
+		t.Fatalf("replacement slots were not planned: reconciled=%v candidates=%d", repo.reconciled, len(repo.candidates))
+	}
+	for _, candidate := range repo.candidates {
+		if candidate.AvailabilityID == nil || *candidate.AvailabilityID != "avail" || candidate.Price != newPrice {
+			t.Fatalf("candidate lost provenance or new price: %+v", candidate)
+		}
+	}
+}
+
+func TestDisableAvailabilityPlansDeletionWithoutReplacement(t *testing.T) {
+	now := time.Date(2030, time.January, 7, 7, 0, 0, 0, businessLocation)
+	price := 200000.0
+	repo := newFakeScheduleRepo()
+	repo.templates["tpl"] = testTemplate("tpl", "08:00", "09:00", true)
+	repo.availabilities["avail"] = domain.Availability{AvailabilityID: "avail", ExpertID: "expert", TemplateID: "tpl", DayOfWeek: 1, IsEnabled: true, EffectiveFrom: now.Add(-time.Hour).UnixMilli(), Price: &price}
+	u := NewUsecaseWithReconciliationAndClock(repo, fakeScheduleTimeOffs{}, 30, fixedScheduleClock{now: now})
+
+	if err := u.UpdateAvailability("avail", "expert", map[string]interface{}{"is_enabled": false}); err != nil {
+		t.Fatal(err)
+	}
+	if !repo.reconciled || len(repo.candidates) != 0 {
+		t.Fatalf("disable must delete without replacement: %+v", repo.candidates)
+	}
+}
+
+func TestAvailabilityReconciliationFailureDoesNotApplyUpdate(t *testing.T) {
+	now := time.Date(2030, time.January, 7, 7, 0, 0, 0, businessLocation)
+	price := 200000.0
+	repo := newFakeScheduleRepo()
+	repo.templates["tpl"] = testTemplate("tpl", "08:00", "09:00", true)
+	repo.availabilities["avail"] = domain.Availability{AvailabilityID: "avail", ExpertID: "expert", TemplateID: "tpl", DayOfWeek: 1, IsEnabled: true, EffectiveFrom: now.Add(-time.Hour).UnixMilli(), Price: &price}
+	repo.reconcileErr = errors.New("insert failed")
+	u := NewUsecaseWithReconciliationAndClock(repo, fakeScheduleTimeOffs{}, 30, fixedScheduleClock{now: now})
+
+	if err := u.UpdateAvailability("avail", "expert", map[string]interface{}{"price": 250000.0}); err == nil {
+		t.Fatal("expected reconciliation failure")
+	}
+	if repo.updated != nil || repo.reconciled {
+		t.Fatal("failed atomic reconciliation applied configuration update")
+	}
+}
+
+func TestTemplateDeactivationPlansEveryAffectedAvailabilityWithoutReplacement(t *testing.T) {
+	now := time.Date(2030, time.January, 7, 7, 0, 0, 0, businessLocation)
+	price := 200000.0
+	repo := newFakeScheduleRepo()
+	repo.templates["tpl"] = testTemplate("tpl", "08:00", "09:00", true)
+	repo.availabilities["a1"] = domain.Availability{AvailabilityID: "a1", ExpertID: "e1", TemplateID: "tpl", DayOfWeek: 1, IsEnabled: true, EffectiveFrom: now.Add(-time.Hour).UnixMilli(), Price: &price}
+	repo.availabilities["a2"] = domain.Availability{AvailabilityID: "a2", ExpertID: "e2", TemplateID: "tpl", DayOfWeek: 1, IsEnabled: true, EffectiveFrom: now.Add(-time.Hour).UnixMilli(), Price: &price}
+	u := NewUsecaseWithReconciliationAndClock(repo, fakeScheduleTimeOffs{}, 30, fixedScheduleClock{now: now})
+
+	if err := u.UpdateTemplate("tpl", false); err != nil {
+		t.Fatal(err)
+	}
+	if len(repo.plans) != 2 {
+		t.Fatalf("expected both availabilities to reconcile, got %d", len(repo.plans))
+	}
+	for _, plan := range repo.plans {
+		if len(plan.Candidates) != 0 {
+			t.Fatal("inactive template generated replacement slots")
+		}
 	}
 }
 

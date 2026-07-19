@@ -33,9 +33,9 @@ type ExpertSlot struct {
 	LockedExpiresAt *int64  `json:"locked_expires_at" gorm:"column:locked_expires_at"`   // Unix ms, nullable
 	LockedBy        *string `json:"locked_by"         gorm:"column:locked_by;type:uuid"` // PatientID, nullable
 
-	AvailabilityID *string `json:"availability_id"   gorm:"column:availability_id;type:uuid"` // UUID, nullable
-	CreatedAt      int64   `json:"created_at"        gorm:"column:created_at"`                // Unix ms
-	UpdatedAt      int64   `json:"updated_at"        gorm:"column:updated_at"`                // Unix ms
+	AvailabilityID *string `json:"availability_id"   gorm:"column:availability_id;type:uuid;index"` // UUID, nullable
+	CreatedAt      int64   `json:"created_at"        gorm:"column:created_at"`                      // Unix ms
+	UpdatedAt      int64   `json:"updated_at"        gorm:"column:updated_at"`                      // Unix ms
 }
 
 func (ExpertSlot) TableName() string { return "Booking_Expert_Slots" }

@@ -72,46 +72,8 @@ func (u *slotUsecase) GenerateSlotsForNextDays(expertID string, daysToGenerate i
 	u.generationMu.Lock()
 	defer u.generationMu.Unlock()
 
-	now := u.clock.Now().In(generationLocation)
-	cutoff := now.Add(GenerationLeadTime)
-	templateByID := make(map[string]domain.TimeTemplate, len(templates))
-	for _, template := range templates {
-		templateByID[template.TemplateID] = template
-	}
-
-	var candidates []domain.ExpertSlot
-	for dayOffset := 0; dayOffset < daysToGenerate; dayOffset++ {
-		targetDate := now.AddDate(0, 0, dayOffset)
-		weekday := dayOfWeek(targetDate)
-		for _, availability := range availabilities {
-			if availability.DayOfWeek != weekday || !domain.AvailabilityAppliesOnDate(availability, targetDate, generationLocation) {
-				continue
-			}
-			template, ok := templateByID[availability.TemplateID]
-			if !ok {
-				return GenerationResult{}, fmt.Errorf("%w: template %s not found", ErrInvalidGeneration, availability.TemplateID)
-			}
-			if !template.IsActive {
-				continue
-			}
-			price, err := domain.ValidateAvailability(availability, template)
-			if err != nil {
-				return GenerationResult{}, fmt.Errorf("%w: %v", ErrInvalidGeneration, err)
-			}
-			slots, err := sliceShiftIntoSlots(expertID, availability.AvailabilityID, targetDate, template, float64(price), cutoff)
-			if err != nil {
-				return GenerationResult{}, fmt.Errorf("%w: %v", ErrInvalidGeneration, err)
-			}
-			for _, candidate := range slots {
-				if !overlapsAnyTimeOff(candidate, timeOffs) {
-					candidates = append(candidates, candidate)
-				}
-			}
-		}
-	}
-
-	sortSlots(candidates)
-	if err := rejectCandidateOverlaps(candidates); err != nil {
+	candidates, err := PlanSlotsForNextDays(u.clock.Now(), expertID, daysToGenerate, availabilities, templates, timeOffs)
+	if err != nil {
 		return GenerationResult{}, err
 	}
 	result := GenerationResult{Candidates: len(candidates)}
@@ -133,6 +95,57 @@ func (u *slotUsecase) GenerateSlotsForNextDays(expertID string, daysToGenerate i
 	}
 	result.Inserted = inserted
 	return result, nil
+}
+
+// PlanSlotsForNextDays deterministically builds valid slot candidates without persistence.
+// Reconciliation uses it before committing configuration and slot changes atomically.
+func PlanSlotsForNextDays(now time.Time, expertID string, daysToGenerate int, availabilities []domain.Availability, templates []domain.TimeTemplate, timeOffs []domain.ExpertTimeOff) ([]domain.ExpertSlot, error) {
+	if daysToGenerate <= 0 {
+		return nil, fmt.Errorf("%w: days_to_generate must be positive", ErrInvalidGeneration)
+	}
+	now = now.In(generationLocation)
+	cutoff := now.Add(GenerationLeadTime)
+	templateByID := make(map[string]domain.TimeTemplate, len(templates))
+	for _, template := range templates {
+		templateByID[template.TemplateID] = template
+	}
+
+	var candidates []domain.ExpertSlot
+	for dayOffset := 0; dayOffset < daysToGenerate; dayOffset++ {
+		targetDate := now.AddDate(0, 0, dayOffset)
+		weekday := dayOfWeek(targetDate)
+		for _, availability := range availabilities {
+			if availability.DayOfWeek != weekday || !domain.AvailabilityAppliesOnDate(availability, targetDate, generationLocation) {
+				continue
+			}
+			template, ok := templateByID[availability.TemplateID]
+			if !ok {
+				return nil, fmt.Errorf("%w: template %s not found", ErrInvalidGeneration, availability.TemplateID)
+			}
+			if !template.IsActive {
+				continue
+			}
+			price, err := domain.ValidateAvailability(availability, template)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %v", ErrInvalidGeneration, err)
+			}
+			slots, err := sliceShiftIntoSlots(expertID, availability.AvailabilityID, targetDate, template, float64(price), cutoff)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %v", ErrInvalidGeneration, err)
+			}
+			for _, candidate := range slots {
+				if !overlapsAnyTimeOff(candidate, timeOffs) {
+					candidates = append(candidates, candidate)
+				}
+			}
+		}
+	}
+
+	sortSlots(candidates)
+	if err := rejectCandidateOverlaps(candidates); err != nil {
+		return nil, err
+	}
+	return candidates, nil
 }
 
 func sliceShiftIntoSlots(expertID, availabilityID string, targetDate time.Time, template domain.TimeTemplate, price float64, cutoff time.Time) ([]domain.ExpertSlot, error) {
