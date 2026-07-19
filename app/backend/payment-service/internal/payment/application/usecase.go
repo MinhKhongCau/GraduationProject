@@ -13,6 +13,8 @@ type Usecase interface {
 	// CreateOrder creates a VNPay payment order for a booking appointment.
 	CreateOrder(ctx context.Context, payerID uuid.UUID, appointmentID string, ipAddr string) (*entity.PaymentOrder, string, error)
 	ProcessIPN(ctx context.Context, params map[string][]string) (bool, error)
+	ListCompensationCases(ctx context.Context, filter CompensationCaseFilter) (*CompensationCasePage, error)
+	GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*CompensationCase, error)
 }
 
 type PaymentGateway interface {
@@ -43,6 +45,7 @@ type Tx interface {
 	SaveOutboxEvent(ctx context.Context, event *entity.OutboxEvent) error
 	CreditWalletPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refID uuid.UUID, idempotencyKey string) error
 	DebitWalletPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refID uuid.UUID, idempotencyKey string) error
+	SaveCompensationCase(ctx context.Context, compensationCase *entity.PaymentCompensationCase) error
 }
 
 type paymentUsecase struct {

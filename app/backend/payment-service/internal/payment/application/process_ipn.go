@@ -53,6 +53,15 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 	if len(params["vnp_TransactionNo"]) > 0 {
 		vnpTxnNo = params["vnp_TransactionNo"][0]
 	}
+	vnpTransactionStatus := firstIPNValue(params, "vnp_TransactionStatus")
+	vnpPaymentDate := firstIPNValue(params, "vnp_PayDate")
+	evidence := gatewayIPNEvidence{
+		OrderReference:    orderID.String(),
+		TransactionNumber: vnpTxnNo,
+		ResponseCode:      vnpResponseCode,
+		TransactionStatus: vnpTransactionStatus,
+		PaymentDate:       vnpPaymentDate,
+	}
 
 	// 3. Tiáº¿n hÃ nh cáº­p nháº­t Database
 	var alreadyProcessed bool
@@ -96,11 +105,19 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			for i := range appointmentOrders {
 				other := &appointmentOrders[i]
 				if other.ID != order.ID && other.Status == entity.OrderStatusSuccess {
-					if order.Status == entity.OrderStatusPending {
-						order.Status = entity.OrderStatusExpired
-						if err := tx.UpdateOrder(ctx, order); err != nil {
-							return err
+					if vnpTxnNo != "" {
+						existing, lookupErr := tx.GetGatewayTxnRef(ctx, vnpTxnNo)
+						if lookupErr != nil && !errors.Is(lookupErr, ErrTxRecordNotFound) {
+							return lookupErr
 						}
+						if lookupErr == nil && existing.ID != order.ID {
+							alreadyProcessed = true
+							return nil
+						}
+					}
+					paidAt := u.clock().UnixMilli()
+					if err := recordDuplicateCapture(ctx, tx, order, evidence, paidAt); err != nil {
+						return err
 					}
 					alreadyProcessed = true
 					return nil
@@ -108,7 +125,7 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 			}
 		}
 
-		// Replay attack check
+		// Replay attack check for orders that are still eligible for normal settlement.
 		if vnpTxnNo != "" {
 			existing, err := tx.GetGatewayTxnRef(ctx, vnpTxnNo)
 			if err != nil {
@@ -128,8 +145,11 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 				}
 			}
 			order.Status = entity.OrderStatusSuccess
+			order.GatewayCaptureStatus = paymentdomain.GatewayCaptureSucceeded
+			order.FulfillmentStatus = paymentdomain.FulfillmentPending
 			order.PaidAt = &paidAt
 			order.GatewayTxnRef = vnpTxnNo
+			applyGatewayEvidence(order, evidence)
 
 			if err := tx.UpdateOrder(ctx, order); err != nil {
 				return err
@@ -165,6 +185,9 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 
 		} else {
 			order.Status = entity.OrderStatusFailed
+			order.GatewayCaptureStatus = paymentdomain.GatewayCaptureFailed
+			order.FulfillmentStatus = paymentdomain.FulfillmentPending
+			applyGatewayEvidence(order, evidence)
 			if err := tx.UpdateOrder(ctx, order); err != nil {
 				return err
 			}
@@ -189,11 +212,11 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 
 	if err != nil {
 		if errors.Is(err, ErrAppointmentAlreadyPaid) && appointmentID != nil {
-			winnerExists, reloadErr := u.hasSuccessfulOrder(ctx, *appointmentID)
-			if reloadErr != nil {
-				return false, reloadErr
+			recorded, recordErr := u.recordConcurrentDuplicateCapture(ctx, orderID, *appointmentID, evidence)
+			if recordErr != nil {
+				return false, recordErr
 			}
-			if winnerExists {
+			if recorded {
 				return true, nil
 			}
 		}
@@ -203,22 +226,107 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 	return alreadyProcessed, nil
 }
 
-func (u *paymentUsecase) hasSuccessfulOrder(ctx context.Context, appointmentID uuid.UUID) (bool, error) {
-	var found bool
+func (u *paymentUsecase) recordConcurrentDuplicateCapture(ctx context.Context, orderID, appointmentID uuid.UUID, evidence gatewayIPNEvidence) (bool, error) {
+	var recorded bool
 	err := u.uow.WithinTx(ctx, func(tx Tx) error {
 		orders, err := tx.ListOrdersForAppointmentForUpdate(ctx, appointmentID)
 		if err != nil {
 			return err
 		}
+		var order *entity.PaymentOrder
+		winnerExists := false
 		for i := range orders {
-			if orders[i].Status == entity.OrderStatusSuccess {
-				found = true
-				break
+			candidate := &orders[i]
+			if candidate.ID == orderID {
+				order = candidate
+			} else if candidate.Status == entity.OrderStatusSuccess {
+				winnerExists = true
 			}
 		}
-		return nil
+		if order == nil || !winnerExists {
+			return ErrAppointmentAlreadyPaid
+		}
+		if evidence.TransactionNumber != "" {
+			existing, lookupErr := tx.GetGatewayTxnRef(ctx, evidence.TransactionNumber)
+			if lookupErr != nil && !errors.Is(lookupErr, ErrTxRecordNotFound) {
+				return lookupErr
+			}
+			if lookupErr == nil && existing.ID != order.ID {
+				recorded = true
+				return nil
+			}
+		}
+		recorded = true
+		return recordDuplicateCapture(ctx, tx, order, evidence, u.clock().UnixMilli())
 	})
-	return found, err
+	return recorded, err
+}
+
+type gatewayIPNEvidence struct {
+	OrderReference    string
+	TransactionNumber string
+	ResponseCode      string
+	TransactionStatus string
+	PaymentDate       string
+}
+
+func recordDuplicateCapture(ctx context.Context, tx Tx, order *entity.PaymentOrder, evidence gatewayIPNEvidence, paidAt int64) error {
+	if order.AppointmentID == nil {
+		return errors.New("duplicate gateway capture has no appointment")
+	}
+	caseTimestamp := paidAt
+	alreadyRecorded := order.GatewayCaptureStatus == paymentdomain.GatewayCaptureDuplicate && order.GatewayTxnRef == evidence.TransactionNumber
+	if alreadyRecorded {
+		if order.PaidAt != nil {
+			caseTimestamp = *order.PaidAt
+		}
+	} else {
+		if order.Status == entity.OrderStatusPending {
+			order.Status = entity.OrderStatusExpired
+		}
+		order.GatewayCaptureStatus = paymentdomain.GatewayCaptureDuplicate
+		order.FulfillmentStatus = paymentdomain.FulfillmentRefundRequired
+		order.GatewayTxnRef = evidence.TransactionNumber
+		applyGatewayEvidence(order, evidence)
+		order.PaidAt = &paidAt
+		if err := tx.UpdateOrder(ctx, order); err != nil {
+			return err
+		}
+	}
+
+	plan := paymentdomain.PlanDuplicateGatewayCapture()
+	compensationCase := &entity.PaymentCompensationCase{
+		ID:                       uuid.New(),
+		PaymentOrderID:           order.ID,
+		AppointmentID:            *order.AppointmentID,
+		Type:                     plan.Type,
+		Status:                   plan.Status,
+		ReasonCode:               plan.ReasonCode,
+		SafeReason:               plan.SafeReason,
+		GatewayOrderReference:    evidence.OrderReference,
+		GatewayTransactionNumber: order.GatewayTxnRef,
+		GatewayResponseCode:      order.GatewayResponseCode,
+		GatewayTransactionStatus: order.GatewayTransactionStatus,
+		GatewayPaymentDate:       order.GatewayPaymentDate,
+		AmountVND:                order.GrossAmount,
+		CreatedAt:                caseTimestamp,
+		UpdatedAt:                caseTimestamp,
+	}
+	return tx.SaveCompensationCase(ctx, compensationCase)
+}
+
+func applyGatewayEvidence(order *entity.PaymentOrder, evidence gatewayIPNEvidence) {
+	order.GatewayTxnRef = evidence.TransactionNumber
+	order.GatewayResponseCode = evidence.ResponseCode
+	order.GatewayTransactionStatus = evidence.TransactionStatus
+	order.GatewayPaymentDate = evidence.PaymentDate
+}
+
+func firstIPNValue(params map[string][]string, key string) string {
+	if len(params[key]) == 0 {
+		return ""
+	}
+	return params[key][0]
 }
 
 func loadOrderForIPN(ctx context.Context, tx Tx, orderID uuid.UUID) (*entity.PaymentOrder, []entity.PaymentOrder, error) {

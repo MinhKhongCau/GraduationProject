@@ -687,6 +687,7 @@ type fakePaymentRepo struct {
 	order              entity.PaymentOrder
 	createCount        int
 	outboxEvents       []entity.OutboxEvent
+	compensationCases  []entity.PaymentCompensationCase
 	successTransitions int
 	gatewayLookupErr   error
 	participants       []fakeTxParticipant
@@ -826,6 +827,19 @@ func (r *fakePaymentRepo) SaveOutboxEvent(ctx context.Context, event *entity.Out
 	return nil
 }
 
+func (r *fakePaymentRepo) SaveCompensationCase(ctx context.Context, compensationCase *entity.PaymentCompensationCase) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i := range r.compensationCases {
+		existing := &r.compensationCases[i]
+		if existing.PaymentOrderID == compensationCase.PaymentOrderID && existing.ReasonCode == compensationCase.ReasonCode {
+			return nil
+		}
+	}
+	r.compensationCases = append(r.compensationCases, *compensationCase)
+	return nil
+}
+
 func (r *fakePaymentRepo) CreditWalletPending(ctx context.Context, userID uuid.UUID, amount vo.Money, refID uuid.UUID, idempotencyKey string) error {
 	return r.walletUsecase.CreditPending(ctx, userID, amount, "PAYMENT_ORDER", refID, idempotencyKey)
 }
@@ -839,6 +853,7 @@ func (r *fakePaymentRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) er
 	orderSnapshot := r.order
 	createCountSnapshot := r.createCount
 	outboxSnapshot := append([]entity.OutboxEvent(nil), r.outboxEvents...)
+	compensationSnapshot := append([]entity.PaymentCompensationCase(nil), r.compensationCases...)
 	successTransitionsSnapshot := r.successTransitions
 	for _, participant := range r.participants {
 		participant.beginTx()
@@ -852,6 +867,7 @@ func (r *fakePaymentRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) er
 		r.order = orderSnapshot
 		r.createCount = createCountSnapshot
 		r.outboxEvents = outboxSnapshot
+		r.compensationCases = compensationSnapshot
 		r.successTransitions = successTransitionsSnapshot
 		for _, participant := range r.participants {
 			participant.rollbackTx()
@@ -1015,11 +1031,17 @@ func (c *fakeBookingClient) FailAppointment(ctx context.Context, appointmentID s
 }
 
 func signedSuccessIPNParams(orderID uuid.UUID) map[string][]string {
+	return signedSuccessIPNParamsWithTxn(orderID, "vnp-txn-1")
+}
+
+func signedSuccessIPNParamsWithTxn(orderID uuid.UUID, gatewayTxnRef string) map[string][]string {
 	params := map[string][]string{
-		"vnp_TxnRef":        {orderID.String()},
-		"vnp_Amount":        {"100000"},
-		"vnp_ResponseCode":  {"00"},
-		"vnp_TransactionNo": {"vnp-txn-1"},
+		"vnp_TxnRef":            {orderID.String()},
+		"vnp_Amount":            {"100000"},
+		"vnp_ResponseCode":      {"00"},
+		"vnp_TransactionNo":     {gatewayTxnRef},
+		"vnp_TransactionStatus": {"00"},
+		"vnp_PayDate":           {"20260719100000"},
 	}
 	signVNPayParams(params)
 	return params

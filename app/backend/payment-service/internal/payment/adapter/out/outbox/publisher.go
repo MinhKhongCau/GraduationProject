@@ -17,8 +17,8 @@ import (
 )
 
 const (
-	bookingConfirmEvent = "booking.appointment.confirm"
-	bookingFailEvent    = "booking.appointment.fail"
+	bookingConfirmEvent = paymentdomain.BookingConfirmEvent
+	bookingFailEvent    = paymentdomain.BookingFailEvent
 	maximumErrorLength  = 500
 )
 
@@ -32,7 +32,7 @@ type PublisherOptions struct {
 }
 
 type Publisher struct {
-	repo          Repository
+	repo          apppayment.OutboxRepository
 	bookingClient apppayment.BookingServiceClient
 	options       PublisherOptions
 	runMu         sync.Mutex
@@ -44,11 +44,11 @@ type bookingEventPayload struct {
 	Status        string `json:"status"`
 }
 
-func NewPublisher(repo Repository, bookingClient apppayment.BookingServiceClient) *Publisher {
+func NewPublisher(repo apppayment.OutboxRepository, bookingClient apppayment.BookingServiceClient) *Publisher {
 	return NewPublisherWithOptions(repo, bookingClient, PublisherOptions{})
 }
 
-func NewPublisherWithOptions(repo Repository, bookingClient apppayment.BookingServiceClient, options PublisherOptions) *Publisher {
+func NewPublisherWithOptions(repo apppayment.OutboxRepository, bookingClient apppayment.BookingServiceClient, options PublisherOptions) *Publisher {
 	if options.PollInterval <= 0 {
 		options.PollInterval = 5 * time.Second
 	}
@@ -131,6 +131,7 @@ func (p *Publisher) processEvent(ctx context.Context, event *entity.OutboxEvent)
 		retryable, failureCategory := classifyDeliveryError(err)
 		category = failureCategory
 		result.LastError = boundedError(err)
+		result.FailureCategory = paymentdomain.BookingDeliveryFailureCategory(failureCategory)
 		if retryable && attemptNumber < p.options.MaxAttempts {
 			delay := paymentdomain.OutboxRetryDelay(p.options.BaseBackoff, p.options.MaxBackoff, attemptNumber)
 			nextAttemptAt := attemptedAt.Add(delay).UnixMilli()
