@@ -21,15 +21,16 @@ func (h *Handler) HandleVNPayIPN(c *gin.Context) {
 	alreadyProcessed, err := h.usecase.ProcessIPN(c.Request.Context(), queryParams)
 	if err != nil {
 		logStr := err.Error()
-		if strings.Contains(logStr, "checksum") {
+		classification := strings.ToLower(logStr)
+		if strings.Contains(classification, "checksum") || strings.Contains(classification, "securehash") {
 			c.JSON(http.StatusOK, gin.H{"RspCode": "97", "Message": "Invalid Signature"})
 			return
 		}
-		if strings.Contains(logStr, "not found") {
+		if strings.Contains(classification, "not found") {
 			c.JSON(http.StatusOK, gin.H{"RspCode": "01", "Message": "Order not found"})
 			return
 		}
-		if strings.Contains(logStr, "amount") {
+		if strings.Contains(classification, "amount") {
 			c.JSON(http.StatusOK, gin.H{"RspCode": "04", "Message": "Invalid amount"})
 			return
 		}

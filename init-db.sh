@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Sử dụng psql trực tiếp với block EOF để chạy chuỗi lệnh
+# Su dung psql truc tiep voi block EOF de chay chuoi lenh.
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     CREATE DATABASE "${PROFILE_DB_NAME:-profile_db}";
     CREATE DATABASE "${PAYMENT_DB_NAME:-payment_db}";
