@@ -92,6 +92,11 @@ jobs:
           INTERNAL_PLAIN_SECRET_PAYMENT=${{ secrets.INTERNAL_PLAIN_SECRET_PAYMENT }}
           INTERNAL_PLAIN_SECRET_PROFILE=${{ secrets.INTERNAL_PLAIN_SECRET_PROFILE }}
           INTERNAL_PLAIN_SECRET_ASSESSMENT=${{ secrets.INTERNAL_PLAIN_SECRET_ASSESSMENT }}
+
+          VNP_TMN_CODE=${{ secrets.VNP_TMN_CODE }}
+          VNP_HASH_SECRET=${{ secrets.VNP_HASH_SECRET }}
+          VNP_PAYMENT_URL=${{ secrets.VNP_PAYMENT_URL }}
+          VNP_RETURN_URL=${{ secrets.VNP_RETURN_URL }}
           EOF
 
       # Bước 3: Pull Image lasted from Docker Hub before deploy.

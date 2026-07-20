@@ -150,6 +150,7 @@ services:
       - GO_ENV=${APP_ENV}
       - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
       - DB_USER=${DB_USER}
+      - DB_HOST=${DB_HOST}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${PAYMENT_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
@@ -160,6 +161,11 @@ services:
       - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
       - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
+      # VNPay Sandbox
+      - VNP_TMN_CODE=${VNP_TMN_CODE}
+      - VNP_HASH_SECRET=${VNP_HASH_SECRET} 
+      - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
+      - VNP_RETURN_URL=${VNP_RETURN_URL}
 
   booking-service:
     image: ${DOCKERHUB_USERNAME}/booking-service-dev:latest
