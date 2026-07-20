@@ -14,6 +14,7 @@ func RegisterRoutes(
 	// 1. Templates (Công khai hoặc riêng tùy vai trò)
 	publicGroup.GET("/templates", h.GetTemplates)
 	privateGroup.POST("/templates", h.CreateTemplate) // Admin
+	privateGroup.GET("/templates", h.GetAdminTemplates)
 	privateGroup.PATCH("/templates/:id", h.UpdateTemplate) // Admin
 
 	// 2. Availabilities (Chuyên gia)

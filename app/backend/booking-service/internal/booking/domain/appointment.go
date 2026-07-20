@@ -25,6 +25,8 @@ type Appointment struct {
 	Status             AppointmentStatus `json:"status"              gorm:"column:status;type:smallint;default:0"`
 	StatusLabel        string            `json:"status_label"        gorm:"-"` // Tự động điền bởi AfterFind hook
 	Price              float64           `json:"price"               gorm:"-"` // Giá tiền lấy từ bảng Slot thông qua JOIN
+	StartTime          int64             `json:"start_time"          gorm:"-"`
+	EndTime            int64             `json:"end_time"            gorm:"-"`
 	MeetingLink        string            `json:"meeting_link"        gorm:"column:meeting_link"`
 	CreatedAt          int64             `json:"created_at"          gorm:"column:created_at"`   // Unix ms
 	UpdatedAt          int64             `json:"updated_at"          gorm:"column:updated_at"`   // Unix ms

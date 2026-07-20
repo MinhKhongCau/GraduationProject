@@ -4,10 +4,12 @@ import (
 	"errors"
 	"net/http"
 	apppayment "payment-service/internal/payment/application"
+	"payment-service/internal/payment/application/readquery"
 	paymentdomain "payment-service/internal/payment/domain"
 	"payment-service/pkg/response"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -23,7 +25,7 @@ import (
 // @Param        payment_order_id  query string false "Payment order UUID"
 // @Param        page              query int    false "Page number"
 // @Param        size              query int    false "Page size, maximum 100"
-// @Success      200 {object} response.Response{data=apppayment.CompensationCasePage}
+// @Success      200 {object} response.Response
 // @Failure      400 {object} response.Response
 // @Failure      401 {object} response.Response
 // @Failure      403 {object} response.Response
@@ -58,7 +60,7 @@ func (h *Handler) ListCompensationCases(c *gin.Context) {
 // @Produce      json
 // @Security     BearerAuth
 // @Param        id path string true "Compensation case UUID"
-// @Success      200 {object} response.Response{data=apppayment.CompensationCase}
+// @Success      200 {object} response.Response
 // @Failure      400 {object} response.Response
 // @Failure      401 {object} response.Response
 // @Failure      403 {object} response.Response
@@ -102,7 +104,7 @@ func requireAdmin(c *gin.Context) bool {
 }
 
 func compensationFilterFromRequest(c *gin.Context) (apppayment.CompensationCaseFilter, error) {
-	filter := apppayment.CompensationCaseFilter{Status: paymentdomain.CompensationStatus(strings.TrimSpace(c.Query("status")))}
+	filter := apppayment.CompensationCaseFilter{Status: paymentdomain.CompensationStatus(strings.TrimSpace(c.Query("status"))), ReasonCode: paymentdomain.CompensationReasonCode(strings.TrimSpace(c.Query("reason_code")))}
 	var err error
 	if filter.AppointmentID, err = optionalUUID(c.Query("appointment_id")); err != nil {
 		return filter, err
@@ -112,8 +114,8 @@ func compensationFilterFromRequest(c *gin.Context) (apppayment.CompensationCaseF
 	}
 	if value := strings.TrimSpace(c.Query("page")); value != "" {
 		filter.Page, err = strconv.Atoi(value)
-		if err != nil || filter.Page <= 0 {
-			return filter, errors.New("page must be a positive integer")
+		if err != nil || filter.Page < 0 {
+			return filter, errors.New("page must be an integer greater than or equal to 0")
 		}
 	}
 	if value := strings.TrimSpace(c.Query("size")); value != "" {
@@ -122,6 +124,11 @@ func compensationFilterFromRequest(c *gin.Context) (apppayment.CompensationCaseF
 			return filter, errors.New("size must be a positive integer")
 		}
 	}
+	dateRange, err := readquery.ParseDateRange(c.Query("from"), c.Query("to"), time.Now())
+	if err != nil {
+		return filter, err
+	}
+	filter.FromMs, filter.ToMs = dateRange.FromMs, dateRange.ToMs
 	return filter, nil
 }
 

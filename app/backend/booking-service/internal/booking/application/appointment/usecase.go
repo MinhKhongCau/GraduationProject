@@ -1,6 +1,9 @@
 package appointment
 
-import "booking-service/internal/booking/domain"
+import (
+	bookingquery "booking-service/internal/booking/application/query"
+	"booking-service/internal/booking/domain"
+)
 
 type Usecase interface {
 	CreateAppointment(patientID, expertID, slotID string) (*domain.Appointment, error)
@@ -12,6 +15,11 @@ type Usecase interface {
 	HandlePaymentResult(command HandlePaymentResultCommand) error
 	GetAppointmentsByPatient(patientID string) ([]domain.Appointment, error)
 	GetAppointmentsByExpert(expertID string, fromDate, toDate int64, status *domain.AppointmentStatus) ([]domain.Appointment, error)
+}
+
+type ReadUsecase interface {
+	ListAppointments(query AppointmentListQuery) (bookingquery.Page[domain.Appointment], error)
+	GetAppointmentDetail(actorID, actorRole, appointmentID string) (*domain.Appointment, error)
 }
 
 type Repository interface {

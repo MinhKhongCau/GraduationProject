@@ -1,6 +1,7 @@
 package schedule
 
 import (
+	bookingquery "booking-service/internal/booking/application/query"
 	"booking-service/internal/booking/domain"
 	"booking-service/internal/slot"
 	"errors"
@@ -25,6 +26,8 @@ type Usecase interface {
 	CreateAvailability(expertID, templateID string, dayOfWeek int, effectiveFrom int64, effectiveUntil *int64, price float64) (*domain.Availability, error)
 	GetAvailabilities(expertID string) ([]domain.Availability, error)
 	UpdateAvailability(availID, expertID string, updates map[string]interface{}) error
+	ListAvailabilities(query AvailabilityListQuery) (bookingquery.Page[domain.Availability], error)
+	ListTimeTemplates(query TemplateListQuery) (bookingquery.Page[domain.TimeTemplate], error)
 }
 
 type TimeOffProvider interface {

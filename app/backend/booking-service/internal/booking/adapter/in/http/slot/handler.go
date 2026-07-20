@@ -9,6 +9,7 @@ type Handler struct {
 	repo            slot.Repository
 	appointmentRepo appappointment.Repository
 	usecase         slot.Usecase
+	reader          slot.ReadUsecase
 	generation      slot.GenerationApplication
 }
 
@@ -18,10 +19,14 @@ func NewHandler(
 	usecase slot.Usecase,
 	generation slot.GenerationApplication,
 ) *Handler {
-	return &Handler{
+	handler := &Handler{
 		repo:            repo,
 		appointmentRepo: appointmentRepo,
 		usecase:         usecase,
 		generation:      generation,
 	}
+	if reader, ok := usecase.(slot.ReadUsecase); ok {
+		handler.reader = reader
+	}
+	return handler
 }

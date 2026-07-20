@@ -6,8 +6,13 @@ import (
 
 type Handler struct {
 	usecase apppayment.Usecase
+	reader  apppayment.ReadUsecase
 }
 
 func NewHandler(usecase apppayment.Usecase) *Handler {
-	return &Handler{usecase: usecase}
+	handler := &Handler{usecase: usecase}
+	if reader, ok := usecase.(apppayment.ReadUsecase); ok {
+		handler.reader = reader
+	}
+	return handler
 }

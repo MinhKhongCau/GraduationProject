@@ -19,11 +19,14 @@ definitions:
         type: integer
       effective_until:
         type: integer
+      price:
+        type: number
       template_id:
         type: string
     required:
     - day_of_week
     - effective_from
+    - price
     - template_id
     type: object
   handler.CreateTemplateRequest:
@@ -65,6 +68,8 @@ definitions:
         type: integer
       is_enabled:
         type: boolean
+      price:
+        type: number
       template_id:
         type: string
     type: object
@@ -86,7 +91,7 @@ definitions:
     - appointment_id
     - status
     type: object
-  internal_appointment_handler.CreateRequest:
+  internal_booking_adapter_in_http_appointment.CreateRequest:
     properties:
       expert_id:
         type: string
@@ -96,7 +101,7 @@ definitions:
     - expert_id
     - slot_id
     type: object
-  internal_timeoff_handler.CreateRequest:
+  internal_booking_adapter_in_http_timeoff.CreateRequest:
     properties:
       end_datetime:
         type: integer
@@ -117,12 +122,41 @@ info:
 paths:
   /booking/appointments:
     get:
-      description: '[PATIENT] Get a list of all appointments for the current patient'
+      parameters:
+      - description: Start date YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: PENDING_PAYMENT, CONFIRMED, or CANCELLED
+        in: query
+        name: status
+        type: string
+      - description: Expert ID
+        in: query
+        name: expert_id
+        type: string
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
           schema:
             additionalProperties: true
             type: object
@@ -136,14 +170,9 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - BearerAuth: []
-      summary: '[PATIENT] Get patient''s appointments'
+      summary: '[PATIENT] Get patient appointment calendar'
       tags:
       - Appointments
     post:
@@ -157,7 +186,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_appointment_handler.CreateRequest'
+          $ref: '#/definitions/internal_booking_adapter_in_http_appointment.CreateRequest'
       produces:
       - application/json
       responses:
@@ -184,6 +213,42 @@ paths:
       security:
       - BearerAuth: []
       summary: '[PATIENT] Create a new appointment'
+      tags:
+      - Appointments
+  /booking/appointments/{id}:
+    get:
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT/EXPERT/ADMIN] Get appointment detail'
       tags:
       - Appointments
   /booking/appointments/{id}/cancel:
@@ -244,26 +309,41 @@ paths:
       - Appointments
   /booking/appointments/expert:
     get:
-      description: '[EXPERT] Get a list of appointments for the current expert with
-        optional filters'
       parameters:
-      - description: From Date (Unix ms)
+      - description: Start date YYYY-MM-DD
         in: query
-        name: from_date
-        type: integer
-      - description: To Date (Unix ms)
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
         in: query
-        name: to_date
-        type: integer
-      - description: Status (0=PENDING, 1=CONFIRMED, 2=CANCELLED)
+        name: to
+        type: string
+      - description: PENDING_PAYMENT, CONFIRMED, or CANCELLED
         in: query
         name: status
+        type: string
+      - description: Patient ID
+        in: query
+        name: patient_id
+        type: string
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
         type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
           schema:
             additionalProperties: true
             type: object
@@ -277,14 +357,9 @@ paths:
           schema:
             additionalProperties: true
             type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
       security:
       - BearerAuth: []
-      summary: '[EXPERT] Get expert''s appointments'
+      summary: '[EXPERT] Get expert appointment calendar'
       tags:
       - Appointments
   /booking/availabilities:
@@ -443,43 +518,35 @@ paths:
       - Slots
   /booking/slots/expert:
     get:
-      description: '[EXPERT] Retrieve all slots (AVAILABLE, LOCKED, OCCUPIED) to display
-        on calendar'
       parameters:
-      - description: From Date (Unix ms)
+      - description: Start date YYYY-MM-DD
         in: query
-        name: from_date
-        type: integer
-      - description: To Date (Unix ms)
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
         in: query
-        name: to_date
+        name: to
+        type: string
+      - description: AVAILABLE, LOCKED, OCCUPIED, UNAVAILABLE
+        in: query
+        name: status
+        type: string
+      - description: Availability ID
+        in: query
+        name: availability_id
+        type: string
+      - description: Zero-based page
+        in: query
+        name: page
         type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
       security:
       - BearerAuth: []
-      summary: '[EXPERT] Get all slots for expert'
+      summary: '[EXPERT] Get expert slot calendar'
       tags:
       - Slots
   /booking/slots/generate:
@@ -525,6 +592,26 @@ paths:
       tags:
       - Slots
   /booking/templates:
+    get:
+      parameters:
+      - description: Filter active state
+        in: query
+        name: active
+        type: boolean
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: '[ADMIN] List templates including inactive templates'
+      tags:
+      - Schedules
     post:
       consumes:
       - application/json
@@ -612,28 +699,31 @@ paths:
       - Schedules
   /booking/time-off:
     get:
-      description: '[EXPERT] Retrieve all time-off registrations for the current expert'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
+      parameters:
+      - description: Start date YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: Processed state
+        in: query
+        name: processed
+        type: boolean
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
       security:
       - BearerAuth: []
-      summary: '[EXPERT] Get list of time-offs'
+      summary: '[EXPERT] Get time-off calendar'
       tags:
       - TimeOff
     post:
@@ -647,7 +737,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_timeoff_handler.CreateRequest'
+          $ref: '#/definitions/internal_booking_adapter_in_http_timeoff.CreateRequest'
       produces:
       - application/json
       responses:
@@ -726,7 +816,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_timeoff_handler.CreateRequest'
+          $ref: '#/definitions/internal_booking_adapter_in_http_timeoff.CreateRequest'
       produces:
       - application/json
       responses:
@@ -755,13 +845,54 @@ paths:
       summary: '[EXPERT] Confirm and force register time-off'
       tags:
       - TimeOff
-  /public/booking/appointments/webhook:
+  /internal/appointments/{id}:
+    get:
+      description: '[INTERNAL] Payment Service gọi endpoint này để lấy chi tiết lịch
+        hẹn (verify trước khi tạo Order).'
+      parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: '[INTERNAL] Lấy chi tiết lịch hẹn'
+      tags:
+      - Internal
+  /internal/appointments/{id}/webhook:
     post:
       consumes:
       - application/json
-      description: '[SYSTEM/WEBHOOK] Payment gateway calls this endpoint to notify
-        status. SUCCESS -> CONFIRMED, FAILED -> CANCELLED'
+      description: '[INTERNAL] Payment Service gọi endpoint này sau khi xử lý IPN
+        từ VNPay. Chuyển appointment → CONFIRMED hoặc CANCELLED.'
       parameters:
+      - description: Appointment ID
+        in: path
+        name: id
+        required: true
+        type: string
       - description: Kết quả thanh toán
         in: body
         name: body
@@ -786,74 +917,60 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: '[SYSTEM/WEBHOOK] Receive payment webhook'
+      summary: '[INTERNAL] Nhận kết quả thanh toán từ Payment Service'
       tags:
-      - Appointments
+      - Internal
   /public/booking/slots/available-dates:
     get:
-      description: '[PUBLIC] Returns an array of dates (YYYY-MM-DD) that have available
-        slots within next 1 month'
       parameters:
-      - description: ID của chuyên gia
+      - description: Expert ID
         in: query
         name: expert_id
         required: true
         type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: '[PUBLIC] Get dates with available slots'
+      - description: Start date YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
+      summary: '[PUBLIC] Get dates with bookable slots'
       tags:
       - Slots
   /public/booking/slots/available-times:
     get:
-      description: '[PUBLIC] Returns an array of timeslots that are AVAILABLE for
-        a specific expert on a specific date'
       parameters:
-      - description: ID của chuyên gia
+      - description: Expert ID
         in: query
         name: expert_id
         required: true
         type: string
-      - description: Ngày cần xem lịch (YYYY-MM-DD)
+      - description: Date YYYY-MM-DD
         in: query
         name: date
         required: true
         type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: '[PUBLIC] Get available timeslots for a date'
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
+      summary: '[PUBLIC] Get bookable times for a date'
       tags:
       - Slots
   /public/booking/templates:

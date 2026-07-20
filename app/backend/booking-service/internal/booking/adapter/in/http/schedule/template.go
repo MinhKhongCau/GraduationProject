@@ -1,8 +1,12 @@
 package handler
 
 import (
+	bookingquery "booking-service/internal/booking/application/query"
+	"booking-service/internal/schedule"
 	"booking-service/pkg/response"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -62,12 +66,47 @@ func (h *Handler) CreateTemplate(c *gin.Context) {
 //	@Failure      500  {object}  map[string]interface{}
 //	@Router       /public/booking/templates [get]
 func (h *Handler) GetTemplates(c *gin.Context) {
-	templates, err := h.usecase.GetTimeTemplates()
+	active := true
+	h.listTemplates(c, &active)
+}
+
+// GetAdminTemplates handles GET /api/v1/booking/templates.
+// @Summary [ADMIN] List templates including inactive templates
+// @Tags Schedules
+// @Security BearerAuth
+// @Param active query bool false "Filter active state"
+// @Param page query int false "Zero-based page"
+// @Param size query int false "Page size, 1-100"
+// @Router /booking/templates [get]
+func (h *Handler) GetAdminTemplates(c *gin.Context) {
+	if c.GetHeader("X-User-Role") != "ADMIN" {
+		response.Error(c, http.StatusForbidden, "Only admin can list all templates", "Forbidden")
+		return
+	}
+	var active *bool
+	if value := strings.TrimSpace(c.Query("active")); value != "" {
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "Invalid template filter", "active must be true or false")
+			return
+		}
+		active = &parsed
+	}
+	h.listTemplates(c, active)
+}
+
+func (h *Handler) listTemplates(c *gin.Context, active *bool) {
+	page, err := bookingquery.ParsePage(c.Query("page"), c.Query("size"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid template filter", err.Error())
+		return
+	}
+	result, err := h.usecase.ListTimeTemplates(schedule.TemplateListQuery{Active: active, Page: page})
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve shift templates", err.Error())
 		return
 	}
-	response.Success(c, "Get shift templates successfully", templates)
+	response.Success(c, "Get shift templates successfully", gin.H{"items": result.Items, "templates": result.Items, "page": result.Page, "size": result.Size, "total_items": result.TotalItems, "total_pages": result.TotalPages, "has_next": result.HasNext, "has_previous": result.HasPrevious})
 }
 
 type UpdateTemplateRequest struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
+	"payment-service/internal/payment/application/readquery"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,6 +16,11 @@ type Usecase interface {
 	ProcessIPN(ctx context.Context, params map[string][]string) (bool, error)
 	ListCompensationCases(ctx context.Context, filter CompensationCaseFilter) (*CompensationCasePage, error)
 	GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*CompensationCase, error)
+}
+
+type ReadUsecase interface {
+	ListPaymentOrders(ctx context.Context, filter PaymentOrderFilter) (*readquery.Page[PaymentOrderView], error)
+	GetPaymentOrder(ctx context.Context, payerID, orderID uuid.UUID, isAdmin bool) (*PaymentOrderView, error)
 }
 
 type PaymentGateway interface {

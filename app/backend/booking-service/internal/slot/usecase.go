@@ -1,7 +1,9 @@
 package slot
 
 import (
+	bookingquery "booking-service/internal/booking/application/query"
 	"booking-service/internal/booking/domain"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -29,6 +31,38 @@ type Usecase interface {
 	LockSlot(slotID, patientID string) error
 	GetDates(expertID string, startDate, endDate time.Time) ([]string, error)
 	GetTimes(expertID string, date string) ([]SlotTimeResult, error)
+}
+
+type ReadUsecase interface {
+	ListAvailableDates(query AvailableDateQuery) (bookingquery.Page[string], error)
+	ListAvailableTimes(query AvailableTimeQuery) (bookingquery.Page[SlotTimeResult], error)
+	ListExpertSlots(query ExpertSlotQuery) (bookingquery.Page[domain.ExpertSlot], error)
+}
+
+type readRepository interface {
+	ListAvailableDates(query AvailableDateQuery) ([]string, int64, error)
+	ListAvailableTimes(query AvailableTimeQuery) ([]SlotTimeResult, int64, error)
+	ListExpertSlots(query ExpertSlotQuery) ([]domain.ExpertSlot, int64, error)
+}
+
+type AvailableDateQuery struct {
+	ExpertID string
+	FromMs   int64
+	ToMs     int64
+	Page     bookingquery.PageRequest
+}
+type AvailableTimeQuery struct {
+	ExpertID string
+	Date     string
+	Page     bookingquery.PageRequest
+}
+type ExpertSlotQuery struct {
+	ExpertID       string
+	FromMs         int64
+	ToMs           int64
+	Status         *domain.SlotStatus
+	AvailabilityID string
+	Page           bookingquery.PageRequest
 }
 
 type slotUsecase struct {
@@ -63,6 +97,42 @@ func (u *slotUsecase) GetDates(expertID string, startDate, endDate time.Time) ([
 
 func (u *slotUsecase) GetTimes(expertID, date string) ([]SlotTimeResult, error) {
 	return u.repo.GetAvailableTimes(date, expertID)
+}
+
+func (u *slotUsecase) ListAvailableDates(filter AvailableDateQuery) (bookingquery.Page[string], error) {
+	reader, ok := u.repo.(readRepository)
+	if !ok {
+		return bookingquery.Page[string]{}, errors.New("slot reader unavailable")
+	}
+	items, total, err := reader.ListAvailableDates(filter)
+	if err != nil {
+		return bookingquery.Page[string]{}, err
+	}
+	return bookingquery.NewPage(items, filter.Page, total), nil
+}
+
+func (u *slotUsecase) ListAvailableTimes(filter AvailableTimeQuery) (bookingquery.Page[SlotTimeResult], error) {
+	reader, ok := u.repo.(readRepository)
+	if !ok {
+		return bookingquery.Page[SlotTimeResult]{}, errors.New("slot reader unavailable")
+	}
+	items, total, err := reader.ListAvailableTimes(filter)
+	if err != nil {
+		return bookingquery.Page[SlotTimeResult]{}, err
+	}
+	return bookingquery.NewPage(items, filter.Page, total), nil
+}
+
+func (u *slotUsecase) ListExpertSlots(filter ExpertSlotQuery) (bookingquery.Page[domain.ExpertSlot], error) {
+	reader, ok := u.repo.(readRepository)
+	if !ok {
+		return bookingquery.Page[domain.ExpertSlot]{}, errors.New("slot reader unavailable")
+	}
+	items, total, err := reader.ListExpertSlots(filter)
+	if err != nil {
+		return bookingquery.Page[domain.ExpertSlot]{}, err
+	}
+	return bookingquery.NewPage(items, filter.Page, total), nil
 }
 
 func (u *slotUsecase) GenerateSlotsForNextDays(expertID string, daysToGenerate int, availabilities []domain.Availability, templates []domain.TimeTemplate, timeOffs []domain.ExpertTimeOff) (GenerationResult, error) {

@@ -41,7 +41,7 @@ func TestCompensationCaseVisibilityFiltersAndExposesSafeGatewayEvidence(t *testi
 	if err != nil {
 		t.Fatal(err)
 	}
-	if page.Total != 1 || page.Page != 1 || page.Size != 20 || len(page.Items) != 1 || page.Items[0].AmountVND != 250000 || !page.Items[0].MoneyPaid || page.Items[0].PaymentStatus != "SUCCESS" {
+	if page.Total != 1 || page.Page != 0 || page.Size != 20 || len(page.Items) != 1 || page.Items[0].AmountVND != 250000 || !page.Items[0].MoneyPaid || page.Items[0].PaymentStatus != "SUCCESS" {
 		t.Fatalf("unexpected page: %+v", page)
 	}
 	detail, err := usecase.GetCompensationCase(context.Background(), caseID)

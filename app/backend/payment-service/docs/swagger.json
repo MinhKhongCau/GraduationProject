@@ -8,6 +8,58 @@
     },
     "basePath": "/api/v1",
     "paths": {
+        "/payments/admin/withdrawals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Admin - Withdrawals"
+                ],
+                "summary": "[ADMIN] List withdrawals",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expert UUID",
+                        "name": "expert_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Withdrawal status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/payments/bank-accounts": {
             "get": {
                 "security": [
@@ -97,7 +149,206 @@
                 }
             }
         },
+        "/payments/compensation-cases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Payments"
+                ],
+                "summary": "[ADMIN] List payment compensation cases",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MANUAL_REVIEW or REFUND_REQUIRED",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Appointment UUID",
+                        "name": "appointment_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Payment order UUID",
+                        "name": "payment_order_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, maximum 100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/compensation-cases/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Payments"
+                ],
+                "summary": "[ADMIN] Get a payment compensation case",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Compensation case UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/payments/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "[PATIENT] List own payment orders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment UUID",
+                        "name": "appointment_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "PENDING, SUCCESS, FAILED, EXPIRED",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fulfillment status",
+                        "name": "fulfillment_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            },
             "post": {
                 "security": [
                     {
@@ -191,6 +442,29 @@
                 }
             }
         },
+        "/payments/orders/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "[PATIENT/ADMIN] Get payment order status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment order UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/payments/vnpay-ipn": {
             "get": {
                 "description": "VNPay calls this API to update the payment status of an order. Role: Public (no token required, verifies checksum).",
@@ -229,52 +503,49 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve the list of transactions (balance changes) for the current user's wallet, sorted by latest time. Requires PATIENT or EXPERT role.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Wallets"
                 ],
-                "summary": "[PATIENT/EXPERT] Get transaction history",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/handler.TxResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
+                "summary": "[PATIENT/EXPERT] Get paginated wallet history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction type",
+                        "name": "type",
+                        "in": "query"
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
+                    {
+                        "type": "string",
+                        "description": "CREDIT or DEBIT",
+                        "name": "direction",
+                        "in": "query"
                     },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
                     }
-                }
+                ],
+                "responses": {}
             }
         },
         "/payments/wallets/me": {
@@ -375,6 +646,50 @@
             }
         },
         "/payments/withdrawals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Withdrawals"
+                ],
+                "summary": "[EXPERT] List own withdrawals",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Withdrawal status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            },
             "post": {
                 "security": [
                     {
@@ -441,6 +756,29 @@
                         }
                     }
                 }
+            }
+        },
+        "/payments/withdrawals/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Withdrawals"
+                ],
+                "summary": "[EXPERT/ADMIN] Get withdrawal detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Withdrawal UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
             }
         },
         "/payments/withdrawals/{id}/approve": {
@@ -661,38 +999,6 @@
             "properties": {
                 "amount": {
                     "type": "integer"
-                }
-            }
-        },
-        "handler.TxResponse": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "integer"
-                },
-                "balance_after": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "idempotency_key": {
-                    "type": "string"
-                },
-                "reference_id": {
-                    "type": "string"
-                },
-                "reference_type": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "wallet_id": {
-                    "type": "string"
                 }
             }
         },

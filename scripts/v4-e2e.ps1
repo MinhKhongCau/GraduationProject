@@ -385,7 +385,7 @@ try {
     $script:Results.Concurrency = [ordered]@{ lock_statuses = $lockStatuses; create_order = $createResults; ipn_codes = $concurrentIPNResults; winner = $winnerID; loser = $loserID }
 
     Write-Step "Verifying ADMIN compensation visibility and safe fields"
-    $caseList = Invoke-Api GET "/api/v1/payments/compensation-cases?status=REFUND_REQUIRED&page=1&size=100" $null $admin.Token
+    $caseList = Invoke-Api GET "/api/v1/payments/compensation-cases?status=REFUND_REQUIRED&page=0&size=100" $null $admin.Token
     Assert-Equal 200 $caseList.Status "admin compensation list"
     Assert-True ([int]$caseList.Json.data.total -ge 2) "admin sees refund-required cases"
     $caseID = [string]$caseList.Json.data.items[0].id
@@ -398,6 +398,64 @@ try {
     $patientCaseList = Invoke-Api GET "/api/v1/payments/compensation-cases" $null $patient.Token
     Assert-Equal 403 $patientCaseList.Status "non-admin compensation access denied"
     $script:Results.CompensationVisibility = "PASS"
+
+    Write-Step "Verifying V4.5 booking and payment read APIs through Kong"
+    $patientAppointments = Invoke-Api GET "/api/v1/booking/appointments?page=0&size=20" $null $patient.Token
+    Assert-Equal 200 $patientAppointments.Status "patient appointment calendar"
+    Assert-True ([int]$patientAppointments.Json.data.total_items -ge 1) "patient calendar returns owned rows"
+    Assert-Equal 0 ([int]$patientAppointments.Json.data.page) "patient pagination is zero-based"
+    $expertAppointments = Invoke-Api GET "/api/v1/booking/appointments/expert?from=$targetDateText&to=$targetDateText&status=CONFIRMED&page=0&size=20" $null $expert.Token
+    Assert-Equal 200 $expertAppointments.Status "expert appointment calendar filters"
+    Assert-True (@($expertAppointments.Json.data.items | Where-Object { $_.appointment_id -eq $happy.AppointmentID }).Count -eq 1) "expert calendar contains confirmed appointment"
+    $patientDetail = Invoke-Api GET "/api/v1/booking/appointments/$($happy.AppointmentID)" $null $patient.Token
+    Assert-Equal 200 $patientDetail.Status "patient appointment detail ownership"
+    Assert-Equal $happy.AppointmentID ([string]$patientDetail.Json.data.appointment_id) "appointment detail identity"
+    $expertDetail = Invoke-Api GET "/api/v1/booking/appointments/$($happy.AppointmentID)" $null $expert.Token
+    Assert-Equal 200 $expertDetail.Status "assigned expert appointment detail"
+    $expertSlots = Invoke-Api GET "/api/v1/booking/slots/expert?from=$targetDateText&to=$targetDateText&status=OCCUPIED&page=0&size=50" $null $expert.Token
+    Assert-Equal 200 $expertSlots.Status "expert slot calendar filters"
+    Assert-True (@($expertSlots.Json.data.items | Where-Object { $_.slot_id -eq $happy.SlotID }).Count -eq 1) "expert slot calendar contains occupied slot"
+    $badBookingPage = Invoke-Api GET "/api/v1/booking/appointments?page=-1" $null $patient.Token
+    Assert-Equal 400 $badBookingPage.Status "booking rejects negative page"
+
+    $paymentList = Invoke-Api GET "/api/v1/payments/orders?appointment_id=$($happy.AppointmentID)&page=0&size=20" $null $patient.Token
+    Assert-Equal 200 $paymentList.Status "patient payment order list"
+    Assert-Equal 1 ([int]$paymentList.Json.data.total_items) "appointment payment list has one order"
+    Assert-Equal "SUCCESS" ([string]$paymentList.Json.data.items[0].status) "payment list exposes authoritative status"
+    Assert-Equal "BOOKING_CONFIRMED" ([string]$paymentList.Json.data.items[0].fulfillment_status) "payment list exposes fulfillment"
+    $paymentDetail = Invoke-Api GET "/api/v1/payments/orders/$($happy.OrderID)" $null $patient.Token
+    Assert-Equal 200 $paymentDetail.Status "patient payment order detail"
+    Assert-Equal "CAPTURED" ([string]$paymentDetail.Json.data.gateway_capture_status) "payment detail exposes capture state"
+    Assert-True (-not $paymentDetail.Raw.ToLowerInvariant().Contains("securehash")) "payment detail hides secure hash"
+    $badPaymentSize = Invoke-Api GET "/api/v1/payments/orders?size=101" $null $patient.Token
+    Assert-Equal 400 $badPaymentSize.Status "payment rejects oversized page"
+    $walletHistory = Invoke-Api GET "/api/v1/payments/wallets/history?page=0&size=100" $null $expert.Token
+    Assert-Equal 200 $walletHistory.Status "expert wallet history pagination"
+    Assert-True ([int]$walletHistory.Json.data.total_items -ge 2) "wallet history contains settlement ledger"
+
+    $topUp = Invoke-Api POST "/api/v1/payments/wallets/top-up" @{ amount = 6000000 } $expert.Token
+    Assert-Equal 200 $topUp.Status "dev-only withdrawal fixture top-up"
+    $bankAccount = Invoke-Api POST "/api/v1/payments/bank-accounts" @{ bank_code = "VCB"; account_number = "V45TEST001"; account_holder_name = "V4 5 TEST EXPERT" } $expert.Token
+    Assert-Equal 200 $bankAccount.Status "expert links bank account"
+    $bankAccountID = [string]$bankAccount.Json.data.id
+    $withdrawal = Invoke-Api POST "/api/v1/payments/withdrawals" @{ bank_account_id = $bankAccountID; amount = 5000001 } $expert.Token
+    Assert-Equal 200 $withdrawal.Status "expert creates pending-approval withdrawal"
+    $withdrawalID = [string]$withdrawal.Json.data.id
+    Assert-Equal "PENDING_APPROVAL" ([string]$withdrawal.Json.data.status) "withdrawal requires admin approval"
+    $expertWithdrawals = Invoke-Api GET "/api/v1/payments/withdrawals?status=PENDING_APPROVAL&page=0&size=20" $null $expert.Token
+    Assert-Equal 200 $expertWithdrawals.Status "expert withdrawal list"
+    Assert-True (@($expertWithdrawals.Json.data.items | Where-Object { $_.id -eq $withdrawalID }).Count -eq 1) "expert sees owned withdrawal"
+    $withdrawalDetail = Invoke-Api GET "/api/v1/payments/withdrawals/$withdrawalID" $null $expert.Token
+    Assert-Equal 200 $withdrawalDetail.Status "expert withdrawal detail"
+    $adminWithdrawals = Invoke-Api GET "/api/v1/payments/admin/withdrawals?status=PENDING_APPROVAL&expert_id=$($expert.ID)&page=0&size=20" $null $admin.Token
+    Assert-Equal 200 $adminWithdrawals.Status "admin pending withdrawal list"
+    Assert-True (@($adminWithdrawals.Json.data.items | Where-Object { $_.id -eq $withdrawalID }).Count -eq 1) "admin can discover pending withdrawal before action"
+    $filteredCases = Invoke-Api GET "/api/v1/payments/compensation-cases?reason_code=BOOKING_CONFLICT&page=0&size=20" $null $admin.Token
+    Assert-Equal 200 $filteredCases.Status "compensation reason filter"
+    Assert-True ([int]$filteredCases.Json.data.total_items -ge 1) "compensation pagination metadata"
+    $publicInternal = Invoke-Api POST "/internal/appointments/$($happy.AppointmentID)/webhook" @{ status = "SUCCESS" } $patient.Token
+    Assert-True ($publicInternal.Status -in @(401, 403, 404)) "Kong blocks frontend access to internal webhook"
+    $script:Results.ReadCRUD = "PASS"
 
     Write-Step "Writing sanitized execution summary"
     $summaryPath = Join-Path $env:TEMP "mindcare-v4-last-run-summary.json"

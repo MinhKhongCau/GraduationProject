@@ -155,3 +155,21 @@ func (r *pgRepository) GetTimeOffs(expertID string, fromDate time.Time) ([]domai
 	err := r.db.Where("expert_id = ? AND end_datetime >= ?", expertID, fromDate.UnixMilli()).Find(&items).Error
 	return items, err
 }
+
+func (r *pgRepository) ListTimeOffs(filter TimeOffListQuery) ([]domain.ExpertTimeOff, int64, error) {
+	query := r.db.Model(&domain.ExpertTimeOff{}).Where("expert_id = ? AND start_datetime < ? AND end_datetime > ?", filter.ExpertID, filter.ToMs, filter.FromMs)
+	if filter.Processed != nil {
+		if *filter.Processed {
+			query = query.Where("processed_at IS NOT NULL")
+		} else {
+			query = query.Where("processed_at IS NULL")
+		}
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var items []domain.ExpertTimeOff
+	err := query.Order("start_datetime ASC, time_off_id ASC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&items).Error
+	return items, total, err
+}

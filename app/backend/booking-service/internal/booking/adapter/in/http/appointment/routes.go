@@ -18,6 +18,7 @@ func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, internalGroup *g
 	privateGroup.POST("/appointments", h.Create)
 	privateGroup.GET("/appointments", h.GetPatient)
 	privateGroup.GET("/appointments/expert", h.GetExpert)
+	privateGroup.GET("/appointments/:id", h.GetDetail)
 	privateGroup.PATCH("/appointments/:id/cancel", h.Cancel)
 
 	// ── Internal routes (chỉ service nội bộ mới gọi được — M2M JWT) ─────────

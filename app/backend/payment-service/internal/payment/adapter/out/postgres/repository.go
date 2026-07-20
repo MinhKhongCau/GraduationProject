@@ -60,6 +60,44 @@ func (r *pgRepository) GetByID(orderID uuid.UUID) (*entity.PaymentOrder, error) 
 	return &order, nil
 }
 
+func (r *pgRepository) GetPaymentOrder(ctx context.Context, orderID uuid.UUID) (*entity.PaymentOrder, error) {
+	var order entity.PaymentOrder
+	err := r.db.WithContext(ctx).Where("id = ?", orderID).First(&order).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, apppayment.ErrPaymentOrderNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
+}
+
+func (r *pgRepository) ListPaymentOrders(ctx context.Context, filter apppayment.PaymentOrderFilter) ([]entity.PaymentOrder, int64, error) {
+	query := r.db.WithContext(ctx).Model(&entity.PaymentOrder{}).Where("payer_id = ?", filter.PayerID)
+	if filter.AppointmentID != nil {
+		query = query.Where("appointment_id = ?", *filter.AppointmentID)
+	}
+	if filter.Status != nil {
+		query = query.Where("status = ?", *filter.Status)
+	}
+	if filter.FulfillmentStatus != "" {
+		query = query.Where("fulfillment_status = ?", filter.FulfillmentStatus)
+	}
+	if filter.FromMs > 0 {
+		query = query.Where("created_at >= ?", filter.FromMs)
+	}
+	if filter.ToMs > 0 {
+		query = query.Where("created_at < ?", filter.ToMs)
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var orders []entity.PaymentOrder
+	err := query.Order("created_at DESC, id DESC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&orders).Error
+	return orders, total, err
+}
+
 func (r *pgRepository) GetByIDForUpdate(tx *gorm.DB, orderID uuid.UUID) (*entity.PaymentOrder, error) {
 	var order entity.PaymentOrder
 	err := tx.
@@ -117,11 +155,20 @@ func (r *pgRepository) ListCompensationCases(ctx context.Context, filter apppaym
 	if filter.Status != "" {
 		query = query.Where("compensation.status = ?", filter.Status)
 	}
+	if filter.ReasonCode != "" {
+		query = query.Where("compensation.reason_code = ?", filter.ReasonCode)
+	}
 	if filter.AppointmentID != nil {
 		query = query.Where("compensation.appointment_id = ?", *filter.AppointmentID)
 	}
 	if filter.PaymentOrderID != nil {
 		query = query.Where("compensation.payment_order_id = ?", *filter.PaymentOrderID)
+	}
+	if filter.FromMs > 0 {
+		query = query.Where("compensation.created_at >= ?", filter.FromMs)
+	}
+	if filter.ToMs > 0 {
+		query = query.Where("compensation.created_at < ?", filter.ToMs)
 	}
 
 	var total int64
@@ -132,7 +179,7 @@ func (r *pgRepository) ListCompensationCases(ctx context.Context, filter apppaym
 	err := query.
 		Order("compensation.created_at DESC").
 		Order("compensation.id DESC").
-		Offset((filter.Page - 1) * filter.Size).
+		Offset(filter.Page * filter.Size).
 		Limit(filter.Size).
 		Scan(&rows).Error
 	if err != nil {

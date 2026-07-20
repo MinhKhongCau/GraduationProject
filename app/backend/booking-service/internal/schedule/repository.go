@@ -48,6 +48,40 @@ func (r *pgRepository) GetAvailabilities(expertID string) ([]domain.Availability
 	return avails, err
 }
 
+func (r *pgRepository) ListAvailabilities(filter AvailabilityListQuery) ([]domain.Availability, int64, error) {
+	query := r.db.Model(&domain.Availability{}).Where("expert_id = ?", filter.ExpertID)
+	if filter.Active != nil {
+		query = query.Where("is_enabled = ?", *filter.Active)
+	}
+	if filter.EffectiveFromMs > 0 {
+		query = query.Where("effective_until IS NULL OR effective_until >= ?", filter.EffectiveFromMs)
+	}
+	if filter.EffectiveToMs > 0 {
+		query = query.Where("effective_from < ?", filter.EffectiveToMs)
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var items []domain.Availability
+	err := query.Order("effective_from ASC, availability_id ASC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&items).Error
+	return items, total, err
+}
+
+func (r *pgRepository) ListTimeTemplates(filter TemplateListQuery) ([]domain.TimeTemplate, int64, error) {
+	query := r.db.Model(&domain.TimeTemplate{})
+	if filter.Active != nil {
+		query = query.Where("is_active = ?", *filter.Active)
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var items []domain.TimeTemplate
+	err := query.Order("start_time ASC, template_id ASC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&items).Error
+	return items, total, err
+}
+
 // 2. Lấy danh sách các ca làm việc mẫu (Time Templates) đang hoạt động
 func (r *pgRepository) GetTimeTemplates() ([]domain.TimeTemplate, error) {
 	var templates []domain.TimeTemplate
