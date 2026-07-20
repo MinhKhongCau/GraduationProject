@@ -22,17 +22,61 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "[PATIENT] Get a list of all appointments for the current patient",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Appointments"
                 ],
-                "summary": "[PATIENT] Get patient's appointments",
+                "summary": "[PATIENT] Get patient appointment calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "PENDING_PAYMENT, CONFIRMED, or CANCELLED",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Expert ID",
+                        "name": "expert_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -47,13 +91,6 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -85,7 +122,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_appointment_handler.CreateRequest"
+                            "$ref": "#/definitions/internal_booking_adapter_in_http_appointment.CreateRequest"
                         }
                     }
                 ],
@@ -128,32 +165,104 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "[EXPERT] Get a list of appointments for the current expert with optional filters",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Appointments"
                 ],
-                "summary": "[EXPERT] Get expert's appointments",
+                "summary": "[EXPERT] Get expert appointment calendar",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "From Date (Unix ms)",
-                        "name": "from_date",
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "To Date (Unix ms)",
-                        "name": "to_date",
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
                         "in": "query"
                     },
                     {
-                        "type": "integer",
-                        "description": "Status (0=PENDING, 1=CONFIRMED, 2=CANCELLED)",
+                        "type": "string",
+                        "description": "PENDING_PAYMENT, CONFIRMED, or CANCELLED",
                         "name": "status",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Patient ID",
+                        "name": "patient_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/booking/appointments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Appointments"
+                ],
+                "summary": "[PATIENT/EXPERT/ADMIN] Get appointment detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -178,8 +287,8 @@ const docTemplate = `{
                             "additionalProperties": true
                         }
                     },
-                    "500": {
-                        "description": "Internal Server Error",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -444,58 +553,49 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "[EXPERT] Retrieve all slots (AVAILABLE, LOCKED, OCCUPIED) to display on calendar",
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Slots"
                 ],
-                "summary": "[EXPERT] Get all slots for expert",
+                "summary": "[EXPERT] Get expert slot calendar",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "From Date (Unix ms)",
-                        "name": "from_date",
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "AVAILABLE, LOCKED, OCCUPIED, UNAVAILABLE",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Availability ID",
+                        "name": "availability_id",
                         "in": "query"
                     },
                     {
                         "type": "integer",
-                        "description": "To Date (Unix ms)",
-                        "name": "to_date",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
                         "in": "query"
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
+                "responses": {}
             }
         },
         "/booking/slots/generate": {
@@ -623,6 +723,38 @@ const docTemplate = `{
             }
         },
         "/booking/templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Schedules"
+                ],
+                "summary": "[ADMIN] List templates including inactive templates",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter active state",
+                        "name": "active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            },
             "post": {
                 "security": [
                     {
@@ -758,37 +890,43 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "[EXPERT] Retrieve all time-off registrations for the current expert",
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "TimeOff"
                 ],
-                "summary": "[EXPERT] Get list of time-offs",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
+                "summary": "[EXPERT] Get time-off calendar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
                     },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
                     },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
+                    {
+                        "type": "boolean",
+                        "description": "Processed state",
+                        "name": "processed",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
                     }
-                }
+                ],
+                "responses": {}
             },
             "post": {
                 "security": [
@@ -814,7 +952,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_timeoff_handler.CreateRequest"
+                            "$ref": "#/definitions/internal_booking_adapter_in_http_timeoff.CreateRequest"
                         }
                     }
                 ],
@@ -882,7 +1020,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_timeoff_handler.CreateRequest"
+                            "$ref": "#/definitions/internal_booking_adapter_in_http_timeoff.CreateRequest"
                         }
                     }
                 ],
@@ -967,9 +1105,60 @@ const docTemplate = `{
                 }
             }
         },
-        "/public/booking/appointments/webhook": {
+        "/internal/appointments/{id}": {
+            "get": {
+                "description": "[INTERNAL] Payment Service gọi endpoint này để lấy chi tiết lịch hẹn (verify trước khi tạo Order).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[INTERNAL] Lấy chi tiết lịch hẹn",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/internal/appointments/{id}/webhook": {
             "post": {
-                "description": "[SYSTEM/WEBHOOK] Payment gateway calls this endpoint to notify status. SUCCESS -\u003e CONFIRMED, FAILED -\u003e CANCELLED",
+                "description": "[INTERNAL] Payment Service gọi endpoint này sau khi xử lý IPN từ VNPay. Chuyển appointment → CONFIRMED hoặc CANCELLED.",
                 "consumes": [
                     "application/json"
                 ],
@@ -977,10 +1166,17 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Appointments"
+                    "Internal"
                 ],
-                "summary": "[SYSTEM/WEBHOOK] Receive payment webhook",
+                "summary": "[INTERNAL] Nhận kết quả thanh toán từ Payment Service",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "description": "Kết quả thanh toán",
                         "name": "body",
@@ -1018,97 +1214,81 @@ const docTemplate = `{
         },
         "/public/booking/slots/available-dates": {
             "get": {
-                "description": "[PUBLIC] Returns an array of dates (YYYY-MM-DD) that have available slots within next 1 month",
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Slots"
                 ],
-                "summary": "[PUBLIC] Get dates with available slots",
+                "summary": "[PUBLIC] Get dates with bookable slots",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID của chuyên gia",
+                        "description": "Expert ID",
                         "name": "expert_id",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
+                "responses": {}
             }
         },
         "/public/booking/slots/available-times": {
             "get": {
-                "description": "[PUBLIC] Returns an array of timeslots that are AVAILABLE for a specific expert on a specific date",
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Slots"
                 ],
-                "summary": "[PUBLIC] Get available timeslots for a date",
+                "summary": "[PUBLIC] Get bookable times for a date",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID của chuyên gia",
+                        "description": "Expert ID",
                         "name": "expert_id",
                         "in": "query",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Ngày cần xem lịch (YYYY-MM-DD)",
+                        "description": "Date YYYY-MM-DD",
                         "name": "date",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
+                "responses": {}
             }
         },
         "/public/booking/templates": {
@@ -1157,6 +1337,7 @@ const docTemplate = `{
             "required": [
                 "day_of_week",
                 "effective_from",
+                "price",
                 "template_id"
             ],
             "properties": {
@@ -1172,6 +1353,9 @@ const docTemplate = `{
                 },
                 "effective_until": {
                     "type": "integer"
+                },
+                "price": {
+                    "type": "number"
                 },
                 "template_id": {
                     "type": "string"
@@ -1233,6 +1417,9 @@ const docTemplate = `{
                 "is_enabled": {
                     "type": "boolean"
                 },
+                "price": {
+                    "type": "number"
+                },
                 "template_id": {
                     "type": "string"
                 }
@@ -1265,7 +1452,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_appointment_handler.CreateRequest": {
+        "internal_booking_adapter_in_http_appointment.CreateRequest": {
             "type": "object",
             "required": [
                 "expert_id",
@@ -1280,7 +1467,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_timeoff_handler.CreateRequest": {
+        "internal_booking_adapter_in_http_timeoff.CreateRequest": {
             "type": "object",
             "required": [
                 "end_datetime",

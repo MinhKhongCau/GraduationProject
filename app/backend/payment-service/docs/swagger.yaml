@@ -7,29 +7,17 @@ definitions:
     type: object
   handler.CreateOrderRequest:
     properties:
-      amount:
-        type: integer
       appointment_id:
-        description: |-
-          AppointmentID liên kết order này với lịch hẹn. Optional — nếu không cung cấp
-          thì đây là order nạp tiền ví trực tiếp, không liên quan đến booking.
-        type: string
-      expert_id:
-        type: string
-      gateway:
-        description: VNPAY | MOMO | MOCK
-        type: string
-      payer_id:
+        description: Booking appointment ID to pay with VNPay.
         type: string
     required:
-    - amount
-    - expert_id
-    - gateway
-    - payer_id
+    - appointment_id
     type: object
   handler.CreateOrderResponse:
     properties:
       commission_amount:
+        type: integer
+      expires_at:
         type: integer
       gross_amount:
         type: integer
@@ -72,27 +60,6 @@ definitions:
     required:
     - amount
     type: object
-  handler.TxResponse:
-    properties:
-      amount:
-        type: integer
-      balance_after:
-        type: integer
-      created_at:
-        type: integer
-      id:
-        type: string
-      idempotency_key:
-        type: string
-      reference_id:
-        type: string
-      reference_type:
-        type: string
-      type:
-        type: string
-      wallet_id:
-        type: string
-    type: object
   handler.WithdrawalResponse:
     properties:
       amount:
@@ -122,6 +89,39 @@ info:
   title: Payment Service API
   version: "1.0"
 paths:
+  /payments/admin/withdrawals:
+    get:
+      parameters:
+      - description: Expert UUID
+        in: query
+        name: expert_id
+        type: string
+      - description: Withdrawal status
+        in: query
+        name: status
+        type: string
+      - description: Start date YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: '[ADMIN] List withdrawals'
+      tags:
+      - Admin - Withdrawals
   /payments/bank-accounts:
     get:
       description: Retrieve all linked bank accounts for the current expert. Requires
@@ -179,20 +179,151 @@ paths:
       summary: '[EXPERT] Link a new bank account'
       tags:
       - Withdrawals & Bank Accounts
+  /payments/compensation-cases:
+    get:
+      parameters:
+      - description: MANUAL_REVIEW or REFUND_REQUIRED
+        in: query
+        name: status
+        type: string
+      - description: Appointment UUID
+        in: query
+        name: appointment_id
+        type: string
+      - description: Payment order UUID
+        in: query
+        name: payment_order_id
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size, maximum 100
+        in: query
+        name: size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[ADMIN] List payment compensation cases'
+      tags:
+      - Admin - Payments
+  /payments/compensation-cases/{id}:
+    get:
+      parameters:
+      - description: Compensation case UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - BearerAuth: []
+      summary: '[ADMIN] Get a payment compensation case'
+      tags:
+      - Admin - Payments
   /payments/orders:
+    get:
+      parameters:
+      - description: Appointment UUID
+        in: query
+        name: appointment_id
+        type: string
+      - description: PENDING, SUCCESS, FAILED, EXPIRED
+        in: query
+        name: status
+        type: string
+      - description: Fulfillment status
+        in: query
+        name: fulfillment_status
+        type: string
+      - description: Start date YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT] List own payment orders'
+      tags:
+      - Payments
     post:
       consumes:
       - application/json
-      description: Create a payment order for an appointment. Returns the payment
-        URL (e.g. VNPay checkout). Requires PATIENT role or internal call from Booking
-        Service.
+      description: Create a VNPay payment order for a booking appointment. Payer comes
+        from X-User-Id; expert and amount come from Booking Service.
       parameters:
-      - description: Thông tin khởi tạo giao dịch thanh toán
+      - description: Appointment payment order payload
         in: body
         name: body
         required: true
         schema:
           $ref: '#/definitions/handler.CreateOrderRequest'
+      - description: User ID populated by API Gateway from token
+        in: header
+        name: X-User-Id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -209,6 +340,22 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/response.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/response.Response'
         "500":
           description: Internal Server Error
           schema:
@@ -218,6 +365,20 @@ paths:
       summary: '[PATIENT/SYSTEM] Create a new payment order'
       tags:
       - Payment Orders
+  /payments/orders/{id}:
+    get:
+      parameters:
+      - description: Payment order UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: '[PATIENT/ADMIN] Get payment order status'
+      tags:
+      - Payments
   /payments/vnpay-ipn:
     get:
       description: 'VNPay calls this API to update the payment status of an order.
@@ -241,35 +402,35 @@ paths:
       - Payment Orders
   /payments/wallets/history:
     get:
-      consumes:
-      - application/json
-      description: Retrieve the list of transactions (balance changes) for the current
-        user's wallet, sorted by latest time. Requires PATIENT or EXPERT role.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/response.Response'
-            - properties:
-                data:
-                  items:
-                    $ref: '#/definitions/handler.TxResponse'
-                  type: array
-              type: object
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/response.Response'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/response.Response'
+      parameters:
+      - description: Transaction type
+        in: query
+        name: type
+        type: string
+      - description: CREDIT or DEBIT
+        in: query
+        name: direction
+        type: string
+      - description: Start date YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
       security:
       - BearerAuth: []
-      summary: '[PATIENT/EXPERT] Get transaction history'
+      summary: '[PATIENT/EXPERT] Get paginated wallet history'
       tags:
       - Wallets
   /payments/wallets/me:
@@ -336,6 +497,34 @@ paths:
       tags:
       - Wallets
   /payments/withdrawals:
+    get:
+      parameters:
+      - description: Withdrawal status
+        in: query
+        name: status
+        type: string
+      - description: Start date YYYY-MM-DD
+        in: query
+        name: from
+        type: string
+      - description: End date YYYY-MM-DD
+        in: query
+        name: to
+        type: string
+      - description: Zero-based page
+        in: query
+        name: page
+        type: integer
+      - description: Page size, 1-100
+        in: query
+        name: size
+        type: integer
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT] List own withdrawals'
+      tags:
+      - Withdrawals
     post:
       consumes:
       - application/json
@@ -377,6 +566,20 @@ paths:
       summary: '[EXPERT] Request a withdrawal'
       tags:
       - Withdrawals & Bank Accounts
+  /payments/withdrawals/{id}:
+    get:
+      parameters:
+      - description: Withdrawal UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: '[EXPERT/ADMIN] Get withdrawal detail'
+      tags:
+      - Withdrawals
   /payments/withdrawals/{id}/approve:
     post:
       consumes:

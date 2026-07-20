@@ -1,13 +1,13 @@
 package slot
 
 import (
-	"booking-service/internal/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"log"
 	"time"
 )
 
 // StartExpiredLockWorker khởi chạy worker chạy ngầm để dọn dẹp các slot giữ chỗ quá hạn 15 phút.
-func StartExpiredLockWorker(repo appointment.Repository) {
+func StartExpiredLockWorker(repo appappointment.Repository) {
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()

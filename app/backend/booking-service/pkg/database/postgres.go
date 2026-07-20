@@ -2,8 +2,8 @@
 package database
 
 import (
+	"booking-service/internal/booking/domain"
 	"booking-service/internal/config"
-	"booking-service/internal/domain"
 	"fmt"
 	"log"
 
@@ -146,9 +146,11 @@ func runPreMigrations(db *gorm.DB) {
 		    WHEN 'AVAILABLE' THEN 0
 		    WHEN 'LOCKED'    THEN 1
 		    WHEN 'OCCUPIED'  THEN 2
+		    WHEN 'UNAVAILABLE' THEN 3
 		    WHEN '0' THEN 0
 		    WHEN '1' THEN 1
 		    WHEN '2' THEN 2
+		    WHEN '3' THEN 3
 		    ELSE 0
 		  END
 	`)

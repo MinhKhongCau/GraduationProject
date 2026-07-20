@@ -16,7 +16,7 @@ services:
 
   # 2. POSTGRES DATABASE (shared by all services)
   postgres-db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: postgres-db
     restart: always
     environment:
@@ -27,14 +27,14 @@ services:
       PAYMENT_DB_NAME: ${PAYMENT_DB_NAME}
       BOOKING_DB_NAME: ${BOOKING_DB_NAME}
       ASSESSMENT_DB_NAME: ${ASSESSMENT_DB_NAME}
-      FORUM_DB_NAME: ${FORUM_DB_NAME}
+      FORUM_DB_NAME: ${FORUM_DB_NAME:-forum_db}
     ports:
       - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -94,7 +94,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${AUTH_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - DB_PORT=${DB_PORT}
+      - DB_PORT=5432
       - PORT=${PORT_AUTH_SERVICE}
       # RSA Keys — set trong .env bằng base64 DER. Để trống = random key (dev only)
       - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:-}
@@ -148,12 +148,37 @@ services:
       - app-network
     environment:
       - GO_ENV=${APP_ENV}
-      - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
+      - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=5432 sslmode=${DB_SSLMODE}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=5432
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - PAYMENT_DB_NAME=${PAYMENT_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
       - PORT=${PORT_PAYMENT_SERVICE}
       # Internal M2M Auth
-      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
-      - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME}
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME:-payment-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
+      - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
+      - VNP_TMN_CODE=${VNP_TMN_CODE}
+      - VNP_HASH_SECRET=${VNP_HASH_SECRET}
+      - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
+      - VNP_RETURN_URL=${VNP_RETURN_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - PAYMENT_ORDER_TTL_MINUTES=${PAYMENT_ORDER_TTL_MINUTES:-15}
+      - PAYMENT_MIN_USABLE_WINDOW_SECONDS=${PAYMENT_MIN_USABLE_WINDOW_SECONDS:-60}
+      - OUTBOX_POLL_INTERVAL_SECONDS=${OUTBOX_POLL_INTERVAL_SECONDS:-5}
+      - OUTBOX_MAX_ATTEMPTS=${OUTBOX_MAX_ATTEMPTS:-10}
+      - OUTBOX_BASE_BACKOFF_SECONDS=${OUTBOX_BASE_BACKOFF_SECONDS:-5}
+      - OUTBOX_MAX_BACKOFF_SECONDS=${OUTBOX_MAX_BACKOFF_SECONDS:-300}
+      - OUTBOX_BATCH_SIZE=${OUTBOX_BATCH_SIZE:-50}
+      - HOLD_PERIOD_MINUTES=${HOLD_PERIOD_MINUTES:-1}
 
   booking-service:
     build:
@@ -175,12 +200,13 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - BOOKING_DB_NAME=${BOOKING_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - DB_PORT=${DB_PORT}
+      - DB_PORT=5432
       - PORT=${PORT_BOOKING_SERVICE}
       # Internal M2M Auth
-      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
-      - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME}
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME:-booking-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING}
+      - ROLLING_SLOT_DAYS=${ROLLING_SLOT_DAYS:-30}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:
@@ -222,7 +248,7 @@ services:
     container_name: forum-service
     restart: always
     ports:
-      - "${PORT_FORUM_SERVICE}:${PORT_FORUM_SERVICE}"
+      - "${PORT_FORUM_SERVICE:-8084}:${PORT_FORUM_SERVICE:-8084}"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -233,15 +259,26 @@ services:
       - DB_HOST=${DB_HOST}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${FORUM_DB_NAME}
+      - DB_NAME=${FORUM_DB_NAME:-forum_db}
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
-      - PORT=${PORT_FORUM_SERVICE}
+      - PORT=${PORT_FORUM_SERVICE:-8084}
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=${RABBITMQ_PORT}
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
 
+  # 8.5. CHATBOT SERVICE (Python FastAPI)
+  chatbot-service:
+    build:
+      context: ./app/backend/chatbot-service
+      dockerfile: Dockerfile
+    container_name: chatbot-service
+    restart: always
+    ports:
+      - "${PORT_CHATBOT_SERVICE}:8000"
+    depends_on:
+      postgres-db:
   # 9. CHATROOM SERVICE (Node.js / Socket.IO)
   chatroom-service:
     build:
@@ -257,6 +294,14 @@ services:
     networks:
       - app-network
     environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_HOST=${DB_HOST}
+      - POSTGRES_PORT=${DB_PORT}
+      - POSTGRES_DB=${CHATBOT_DB_NAME}
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+
+  # 9. API GATEWAY (Kong)
       - NODE_ENV=${NODE_ENV}
       - PORT=${PORT_CHATROOM_SERVICE}
       - CORS_ORIGINS=${CORS_ORIGINS}
@@ -283,6 +328,7 @@ services:
       - payment-service
       - booking-service
       - assessment-service
+      - chatbot-service
       - chatroom-service
     networks:
       - app-network

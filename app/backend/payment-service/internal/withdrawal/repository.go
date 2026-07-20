@@ -1,6 +1,8 @@
 package withdrawal
 
 import (
+	"context"
+	"errors"
 	"payment-service/internal/domain/entity"
 
 	"github.com/google/uuid"
@@ -66,6 +68,49 @@ func (r *pgRepository) GetWithdrawalRequestsByWalletID(walletID uuid.UUID) ([]en
 	var requests []entity.WithdrawalRequest
 	err := r.db.Where("wallet_id = ?", walletID).Order("requested_at DESC").Find(&requests).Error
 	return requests, err
+}
+
+type withdrawalReadRow struct {
+	entity.WithdrawalRequest `gorm:"embedded"`
+	OwnerID                  uuid.UUID `gorm:"column:owner_id"`
+}
+
+func (r *pgRepository) ListWithdrawals(ctx context.Context, filter WithdrawalFilter) ([]WithdrawalRecord, int64, error) {
+	query := r.db.WithContext(ctx).Table("payment_withdrawal_requests withdrawal").Joins("JOIN payment_wallets wallet ON wallet.id = withdrawal.wallet_id")
+	if filter.IsAdmin {
+		if filter.ExpertID != nil {
+			query = query.Where("wallet.user_id = ?", *filter.ExpertID)
+		}
+	} else {
+		query = query.Where("wallet.user_id = ?", filter.ActorID)
+	}
+	if filter.Status != nil {
+		query = query.Where("withdrawal.status = ?", *filter.Status)
+	}
+	query = query.Where("withdrawal.requested_at >= ? AND withdrawal.requested_at < ?", filter.FromMs, filter.ToMs)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var rows []withdrawalReadRow
+	err := query.Select("withdrawal.*, wallet.user_id AS owner_id").Order("withdrawal.requested_at DESC, withdrawal.id DESC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Scan(&rows).Error
+	records := make([]WithdrawalRecord, len(rows))
+	for i := range rows {
+		records[i] = WithdrawalRecord{Request: rows[i].WithdrawalRequest, OwnerID: rows[i].OwnerID}
+	}
+	return records, total, err
+}
+
+func (r *pgRepository) GetWithdrawal(ctx context.Context, requestID uuid.UUID) (*WithdrawalRecord, error) {
+	var row withdrawalReadRow
+	err := r.db.WithContext(ctx).Table("payment_withdrawal_requests withdrawal").Select("withdrawal.*, wallet.user_id AS owner_id").Joins("JOIN payment_wallets wallet ON wallet.id = withdrawal.wallet_id").Where("withdrawal.id = ?", requestID).Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrWithdrawalNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &WithdrawalRecord{Request: row.WithdrawalRequest, OwnerID: row.OwnerID}, nil
 }
 
 func (r *pgRepository) UpdateWithdrawalRequest(req *entity.WithdrawalRequest) error {
