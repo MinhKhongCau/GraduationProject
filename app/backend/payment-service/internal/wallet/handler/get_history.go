@@ -2,7 +2,10 @@ package handler
 
 import (
 	"net/http"
+	"payment-service/internal/payment/application/readquery"
+	"payment-service/internal/wallet"
 	"payment-service/pkg/response"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -20,56 +23,60 @@ type TxResponse struct {
 	CreatedAt      int64     `json:"created_at"`
 }
 
-// GetHistory handles GET /api/v1/payments/wallets/history
-// @Summary      [PATIENT/EXPERT] Get transaction history
-// @Description  Retrieve the list of transactions (balance changes) for the current user's wallet, sorted by latest time. Requires PATIENT or EXPERT role.
-// @Tags         Wallets
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Success      200          {object}  response.Response{data=[]TxResponse}
-// @Failure      401          {object}  response.Response
-// @Failure      500          {object}  response.Response
-// @Router       /payments/wallets/history [get]
+// GetHistory handles GET /api/v1/payments/wallets/history.
+// @Summary [PATIENT/EXPERT] Get paginated wallet history
+// @Tags Wallets
+// @Security BearerAuth
+// @Param type query string false "Transaction type"
+// @Param direction query string false "CREDIT or DEBIT"
+// @Param from query string false "Start date YYYY-MM-DD"
+// @Param to query string false "End date YYYY-MM-DD"
+// @Param page query int false "Zero-based page"
+// @Param size query int false "Page size, 1-100"
+// @Router /payments/wallets/history [get]
 func (h *Handler) GetHistory(c *gin.Context) {
-	userRole := c.GetHeader("X-User-Role")
-	if userRole != "PATIENT" && userRole != "EXPERT" {
+	role := c.GetHeader("X-User-Role")
+	if role != "PATIENT" && role != "EXPERT" {
 		response.Error(c, http.StatusForbidden, "Only patients or experts can view transaction history", "forbidden")
 		return
 	}
-
-	userIDStr := c.GetHeader("X-User-Id")
-	if userIDStr == "" {
-		response.Error(c, http.StatusUnauthorized, "Missing X-User-Id header", "unauthorized")
-		return
-	}
-
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(c.GetHeader("X-User-Id"))
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid User ID format", err.Error())
+		response.Error(c, http.StatusUnauthorized, "Invalid or missing X-User-Id header", err.Error())
 		return
 	}
-
-	txs, err := h.usecase.GetTransactionHistory(c.Request.Context(), userID)
+	page, err := readquery.ParsePage(c.Query("page"), c.Query("size"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid wallet history filter", err.Error())
+		return
+	}
+	dateRange, err := readquery.ParseDateRange(c.Query("from"), c.Query("to"), time.Now())
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid wallet history filter", err.Error())
+		return
+	}
+	txType, err := wallet.ParseTransactionType(c.Query("type"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid wallet history filter", err.Error())
+		return
+	}
+	direction, err := wallet.ParseDirection(c.Query("direction"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid wallet history filter", err.Error())
+		return
+	}
+	if h.reader == nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to retrieve transaction history", "wallet reader unavailable")
+		return
+	}
+	result, err := h.reader.ListTransactionHistory(c.Request.Context(), wallet.TransactionHistoryQuery{UserID: userID, Type: txType, Direction: direction, FromMs: dateRange.FromMs, ToMs: dateRange.ToMs, Page: page})
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve transaction history", err.Error())
 		return
 	}
-
-	res := make([]TxResponse, len(txs))
-	for i, tx := range txs {
-		res[i] = TxResponse{
-			ID:             tx.ID,
-			WalletID:       tx.WalletID,
-			Type:           tx.Type.String(),
-			Amount:         tx.Amount.Int64(),
-			BalanceAfter:   tx.BalanceAfter.Int64(),
-			ReferenceType:  tx.ReferenceType,
-			ReferenceID:    tx.ReferenceID,
-			IdempotencyKey: tx.IdempotencyKey,
-			CreatedAt:      tx.CreatedAt,
-		}
+	items := make([]TxResponse, len(result.Items))
+	for i, tx := range result.Items {
+		items[i] = TxResponse{ID: tx.ID, WalletID: tx.WalletID, Type: tx.Type.String(), Amount: tx.Amount.Int64(), BalanceAfter: tx.BalanceAfter.Int64(), ReferenceType: tx.ReferenceType, ReferenceID: tx.ReferenceID, IdempotencyKey: tx.IdempotencyKey, CreatedAt: tx.CreatedAt}
 	}
-
-	response.Success(c, "Transaction history retrieved successfully", res)
+	response.Success(c, "Transaction history retrieved successfully", gin.H{"items": items, "transactions": items, "page": result.Page, "size": result.Size, "total_items": result.TotalItems, "total_pages": result.TotalPages, "has_next": result.HasNext, "has_previous": result.HasPrevious})
 }

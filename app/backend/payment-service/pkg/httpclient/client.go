@@ -31,8 +31,9 @@ type TokenProvider interface {
 
 // Options chứa cấu hình cho Client.
 type Options struct {
-	Timeout    time.Duration // default: 10s
-	MaxRetries int           // default: 3; set 0 để tắt retry
+	DisableRetries bool          // one request only; the caller owns retry policy
+	Timeout        time.Duration // default: 10s
+	MaxRetries     int           // default: 3; zero uses the default
 	// TokenProvider nếu != nil sẽ tự động inject "Authorization: Bearer <token>" vào mỗi request.
 	TokenProvider TokenProvider
 }
@@ -52,7 +53,9 @@ func New(opts Options) *Client {
 	}
 
 	maxRetries := opts.MaxRetries
-	if maxRetries == 0 {
+	if opts.DisableRetries {
+		maxRetries = 0
+	} else if maxRetries == 0 {
 		maxRetries = 3
 	}
 
@@ -99,6 +102,11 @@ func (c *Client) Do(ctx context.Context, req *http.Request) (*http.Response, err
 		}
 
 		// Token hết hạn đột ngột (401): invalidate và retry 1 lần
+		if resp.StatusCode == http.StatusUnauthorized && c.tokenProvider != nil && c.maxRetries == 0 {
+			c.tokenProvider.InvalidateToken()
+			return resp, nil
+		}
+
 		if resp.StatusCode == http.StatusUnauthorized && c.tokenProvider != nil {
 			resp.Body.Close()
 			c.tokenProvider.InvalidateToken()

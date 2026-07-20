@@ -89,6 +89,26 @@ func (r *pgRepository) GetTransactionsByWalletID(walletID uuid.UUID) ([]entity.W
 	return txs, err
 }
 
+func (r *pgRepository) ListTransactions(walletID uuid.UUID, filter TransactionHistoryQuery) ([]entity.WalletTransaction, int64, error) {
+	query := r.db.Model(&entity.WalletTransaction{}).Where("wallet_id = ? AND created_at >= ? AND created_at < ?", walletID, filter.FromMs, filter.ToMs)
+	if filter.Type != nil {
+		query = query.Where("type = ?", *filter.Type)
+	}
+	if filter.Direction == "CREDIT" {
+		query = query.Where("amount > 0")
+	}
+	if filter.Direction == "DEBIT" {
+		query = query.Where("amount < 0")
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var items []entity.WalletTransaction
+	err := query.Order("created_at DESC, id DESC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&items).Error
+	return items, total, err
+}
+
 func (r *pgRepository) WithTransaction(fn func(tx *gorm.DB) error) error {
 	return r.db.Transaction(fn)
 }
