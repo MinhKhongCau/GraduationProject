@@ -7,6 +7,7 @@ import (
 	"log"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
+	"payment-service/internal/payment/application/readquery"
 	"payment-service/internal/wallet"
 	"time"
 
@@ -22,6 +23,8 @@ type Usecase interface {
 	ApproveWithdrawal(ctx context.Context, adminID uuid.UUID, requestID uuid.UUID, note string) error
 	RejectWithdrawal(ctx context.Context, adminID uuid.UUID, requestID uuid.UUID, note string) error
 	HandlePayoutCallback(ctx context.Context, requestID uuid.UUID, payoutRef string, success bool, reason string) error
+	ListWithdrawals(ctx context.Context, filter WithdrawalFilter) (*readquery.Page[WithdrawalView], error)
+	GetWithdrawal(ctx context.Context, actorID, requestID uuid.UUID, isAdmin bool) (*WithdrawalView, error)
 }
 
 type withdrawalUsecase struct {

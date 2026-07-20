@@ -1,10 +1,14 @@
 package handler
 
 import (
+	bookingquery "booking-service/internal/booking/application/query"
 	"booking-service/internal/schedule"
 	"booking-service/pkg/response"
 	"errors"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -85,13 +89,35 @@ func (h *Handler) GetAvailabilities(c *gin.Context) {
 		return
 	}
 
-	avails, err := h.usecase.GetAvailabilities(expertID)
+	page, err := bookingquery.ParsePage(c.Query("page"), c.Query("size"))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid availability filter", err.Error())
+		return
+	}
+	var active *bool
+	if value := strings.TrimSpace(c.Query("active")); value != "" {
+		parsed, parseErr := strconv.ParseBool(value)
+		if parseErr != nil {
+			response.Error(c, http.StatusBadRequest, "Invalid availability filter", "active must be true or false")
+			return
+		}
+		active = &parsed
+	}
+	var dateRange bookingquery.DateRange
+	if c.Query("effective_from") != "" || c.Query("effective_to") != "" {
+		dateRange, err = bookingquery.ParseDateRange(c.Query("effective_from"), c.Query("effective_to"), time.Now())
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "Invalid availability filter", err.Error())
+			return
+		}
+	}
+	result, err := h.usecase.ListAvailabilities(schedule.AvailabilityListQuery{ExpertID: expertID, Active: active, EffectiveFromMs: dateRange.FromMs, EffectiveToMs: dateRange.ToMs, Page: page})
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve availability configurations", err.Error())
 		return
 	}
 
-	response.Success(c, "Get availability configurations successfully", avails)
+	response.Success(c, "Get availability configurations successfully", gin.H{"items": result.Items, "availabilities": result.Items, "page": result.Page, "size": result.Size, "total_items": result.TotalItems, "total_pages": result.TotalPages, "has_next": result.HasNext, "has_previous": result.HasPrevious})
 }
 
 type UpdateAvailabilityRequest struct {

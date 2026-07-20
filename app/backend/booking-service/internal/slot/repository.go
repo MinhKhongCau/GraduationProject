@@ -48,9 +48,10 @@ func (r *pgRepository) GetAvailableDates(expertID string, startDate, endDate tim
 
 // SlotTimeResult - Kết quả khung giờ trả về cho bệnh nhân (dùng Unix ms 13 số)
 type SlotTimeResult struct {
-	SlotID    string `json:"slot_id"`
-	StartTime int64  `json:"start_time"` // Unix timestamp 13 số (ms)
-	EndTime   int64  `json:"end_time"`   // Unix timestamp 13 số (ms)
+	SlotID    string  `json:"slot_id"`
+	Price     float64 `json:"price"`
+	StartTime int64   `json:"start_time"` // Unix timestamp 13 số (ms)
+	EndTime   int64   `json:"end_time"`   // Unix timestamp 13 số (ms)
 }
 
 // 2. Lấy danh sách KHUNG GIỜ trống của một ngày cụ thể (theo expert_id)
@@ -108,4 +109,43 @@ func (r *pgRepository) BulkInsertSlots(slots []domain.ExpertSlot) (int64, error)
 		Clauses(clause.OnConflict{DoNothing: true}).
 		CreateInBatches(slots, 100)
 	return result.RowsAffected, result.Error
+}
+
+func (r *pgRepository) ListAvailableDates(filter AvailableDateQuery) ([]string, int64, error) {
+	query := withoutActiveTimeOff(r.db.Table(`"Booking_Expert_Slots"`)).Where("expert_id = ? AND start_time >= ? AND start_time < ? AND status = ? AND start_time > ?", filter.ExpertID, filter.FromMs, filter.ToMs, domain.SlotStatusAvailable, time.Now().UnixMilli())
+	var total int64
+	if err := query.Distinct("date_slot").Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var dates []string
+	err := query.Select(`DISTINCT TO_CHAR(date_slot, 'YYYY-MM-DD') AS date_value`).Order("date_value ASC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Pluck("date_value", &dates).Error
+	return dates, total, err
+}
+
+func (r *pgRepository) ListAvailableTimes(filter AvailableTimeQuery) ([]SlotTimeResult, int64, error) {
+	query := withoutActiveTimeOff(r.db.Table(`"Booking_Expert_Slots"`)).Where(`TO_CHAR(date_slot, 'YYYY-MM-DD') = ? AND expert_id = ? AND status = ? AND start_time > ?`, filter.Date, filter.ExpertID, domain.SlotStatusAvailable, time.Now().UnixMilli())
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var items []SlotTimeResult
+	err := query.Select("slot_id, start_time, end_time, price").Order("start_time ASC, slot_id ASC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Scan(&items).Error
+	return items, total, err
+}
+
+func (r *pgRepository) ListExpertSlots(filter ExpertSlotQuery) ([]domain.ExpertSlot, int64, error) {
+	query := r.db.Model(&domain.ExpertSlot{}).Where("expert_id = ? AND start_time >= ? AND start_time < ?", filter.ExpertID, filter.FromMs, filter.ToMs)
+	if filter.Status != nil {
+		query = query.Where("status = ?", *filter.Status)
+	}
+	if filter.AvailabilityID != "" {
+		query = query.Where("availability_id = ?", filter.AvailabilityID)
+	}
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var items []domain.ExpertSlot
+	err := query.Order("start_time ASC, slot_id ASC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&items).Error
+	return items, total, err
 }

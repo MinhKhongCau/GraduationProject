@@ -16,8 +16,11 @@ const (
 
 type CompensationCaseFilter struct {
 	Status         paymentdomain.CompensationStatus
+	ReasonCode     paymentdomain.CompensationReasonCode
 	AppointmentID  *uuid.UUID
 	PaymentOrderID *uuid.UUID
+	FromMs         int64
+	ToMs           int64
 	Page           int
 	Size           int
 }
@@ -47,10 +50,14 @@ type CompensationCase struct {
 }
 
 type CompensationCasePage struct {
-	Items []CompensationCase `json:"items"`
-	Total int64              `json:"total"`
-	Page  int                `json:"page"`
-	Size  int                `json:"size"`
+	Items       []CompensationCase `json:"items"`
+	Total       int64              `json:"total"`
+	TotalItems  int64              `json:"total_items"`
+	TotalPages  int                `json:"total_pages"`
+	HasNext     bool               `json:"has_next"`
+	HasPrevious bool               `json:"has_previous"`
+	Page        int                `json:"page"`
+	Size        int                `json:"size"`
 }
 
 type CompensationCaseReader interface {
@@ -81,7 +88,11 @@ func (u *paymentUsecase) ListCompensationCases(ctx context.Context, filter Compe
 	for i := range rows {
 		items[i] = compensationCaseFromRecord(&rows[i])
 	}
-	return &CompensationCasePage{Items: items, Total: total, Page: filter.Page, Size: filter.Size}, nil
+	totalPages := 0
+	if total > 0 {
+		totalPages = int((total + int64(filter.Size) - 1) / int64(filter.Size))
+	}
+	return &CompensationCasePage{Items: items, Total: total, TotalItems: total, TotalPages: totalPages, HasNext: filter.Page+1 < totalPages, HasPrevious: filter.Page > 0, Page: filter.Page, Size: filter.Size}, nil
 }
 
 func (u *paymentUsecase) GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*CompensationCase, error) {
@@ -104,11 +115,14 @@ func normalizeCompensationFilter(filter *CompensationCaseFilter) error {
 	if filter.Status != "" && filter.Status != paymentdomain.CompensationManualReview && filter.Status != paymentdomain.CompensationRefundRequired {
 		return fmt.Errorf("%w: unsupported status", ErrInvalidCompensationFilter)
 	}
-	if filter.Page <= 0 {
-		filter.Page = 1
+	if filter.Page < 0 {
+		return fmt.Errorf("%w: page must be at least 0", ErrInvalidCompensationFilter)
 	}
-	if filter.Size <= 0 {
+	if filter.Size == 0 {
 		filter.Size = defaultCompensationPageSize
+	}
+	if filter.Size < 1 {
+		return fmt.Errorf("%w: size must be positive", ErrInvalidCompensationFilter)
 	}
 	if filter.Size > maximumCompensationPageSize {
 		return fmt.Errorf("%w: size must not exceed %d", ErrInvalidCompensationFilter, maximumCompensationPageSize)

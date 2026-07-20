@@ -12,4 +12,5 @@ var (
 	ErrPaymentEligibilityForbidden = errors.New("appointment does not belong to payer")
 	ErrPaymentEligibilityConflict  = errors.New("appointment is not eligible for payment")
 	ErrInvalidBookingPrice         = errors.New("invalid booking price")
+	ErrReadRepositoryUnavailable   = errors.New("appointment read repository unavailable")
 )

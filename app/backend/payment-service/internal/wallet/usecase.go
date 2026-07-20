@@ -5,6 +5,7 @@ import (
 	"errors"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
+	"payment-service/internal/payment/application/readquery"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -30,6 +31,10 @@ type Usecase interface {
 
 	LockFunds(ctx context.Context, userID uuid.UUID, amount vo.Money) error
 	UnlockFunds(ctx context.Context, userID uuid.UUID, amount vo.Money) error
+}
+
+type ReadUsecase interface {
+	ListTransactionHistory(ctx context.Context, query TransactionHistoryQuery) (*readquery.Page[entity.WalletTransaction], error)
 }
 
 type walletUsecase struct {

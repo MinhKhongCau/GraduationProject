@@ -175,7 +175,7 @@ function Send-IPN {
 }
 
 function Get-AvailableSlots([string]$ExpertID, [string]$Date) {
-    $response = Invoke-Api GET "/api/v1/public/booking/slots/available-times?expert_id=$ExpertID&date=$Date"
+    $response = Invoke-Api GET "/api/v1/public/booking/slots/available-times?expert_id=$ExpertID&date=$Date&page=0&size=100"
     Assert-Equal 200 $response.Status "available times query"
     return @($response.Json.data.available_times)
 }

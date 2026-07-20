@@ -14,7 +14,8 @@ type WebhookRequest struct {
 	Status        string `json:"status" binding:"required"` // "SUCCESS" hoặc "FAILED"
 }
 
-// Webhook - POST /api/v1/appointments/webhook
+// Webhook is a legacy, unregistered compatibility handler. Use the M2M-protected
+// /internal/appointments/:id/webhook route instead.
 //
 //	@Summary      [SYSTEM/WEBHOOK] Receive payment webhook
 //	@Description  [SYSTEM/WEBHOOK] Payment gateway calls this endpoint to notify status. SUCCESS -> CONFIRMED, FAILED -> CANCELLED
@@ -25,7 +26,6 @@ type WebhookRequest struct {
 //	@Success      200   {object}  map[string]interface{}
 //	@Failure      400   {object}  map[string]interface{}
 //	@Failure      500   {object}  map[string]interface{}
-//	@Router       /public/booking/appointments/webhook [post]
 func (h *Handler) Webhook(c *gin.Context) {
 	// TODO: VERIFY HMAC SIGNATURE từ VNPay/Momo tại đây
 	// Bắt buộc verify chữ ký để tránh giả mạo webhook confirm thanh toán.

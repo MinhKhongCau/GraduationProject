@@ -2,8 +2,10 @@ package timeoff
 
 import (
 	appappointment "booking-service/internal/booking/application/appointment"
+	bookingquery "booking-service/internal/booking/application/query"
 	"booking-service/internal/booking/domain"
 	"booking-service/internal/slot"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -15,8 +17,20 @@ type Usecase interface {
 	CreateTimeOff(expertID string, startDatetime, endDatetime int64, reason string) (*domain.ExpertTimeOff, []string, error)
 	ConfirmTimeOff(expertID string, startDatetime, endDatetime int64, reason string) (*domain.ExpertTimeOff, error)
 	GetTimeOffs(expertID string) ([]domain.ExpertTimeOff, error)
+	ListTimeOffs(query TimeOffListQuery) (bookingquery.Page[domain.ExpertTimeOff], error)
 	DeleteTimeOff(expertID, timeOffID string) error
 	ProcessTimeOffs()
+}
+
+type TimeOffListQuery struct {
+	ExpertID  string
+	FromMs    int64
+	ToMs      int64
+	Processed *bool
+	Page      bookingquery.PageRequest
+}
+type timeOffReader interface {
+	ListTimeOffs(query TimeOffListQuery) ([]domain.ExpertTimeOff, int64, error)
 }
 
 type timeoffUsecase struct {
@@ -56,6 +70,18 @@ func (u *timeoffUsecase) create(expertID string, startDatetime, endDatetime int6
 
 func (u *timeoffUsecase) GetTimeOffs(expertID string) ([]domain.ExpertTimeOff, error) {
 	return u.repo.GetTimeOffsByExpert(expertID)
+}
+
+func (u *timeoffUsecase) ListTimeOffs(filter TimeOffListQuery) (bookingquery.Page[domain.ExpertTimeOff], error) {
+	reader, ok := u.repo.(timeOffReader)
+	if !ok {
+		return bookingquery.Page[domain.ExpertTimeOff]{}, errors.New("time-off reader unavailable")
+	}
+	items, total, err := reader.ListTimeOffs(filter)
+	if err != nil {
+		return bookingquery.Page[domain.ExpertTimeOff]{}, err
+	}
+	return bookingquery.NewPage(items, filter.Page, total), nil
 }
 
 func (u *timeoffUsecase) DeleteTimeOff(expertID, timeOffID string) error {

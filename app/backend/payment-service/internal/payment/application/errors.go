@@ -17,4 +17,8 @@ var (
 	ErrInvalidCompensationFilter     = errors.New("invalid compensation case filter")
 	ErrCompensationCaseNotFound      = errors.New("payment compensation case not found")
 	ErrCompensationReaderUnavailable = errors.New("compensation case reader is unavailable")
+	ErrInvalidPaymentOrderFilter     = errors.New("invalid payment order filter")
+	ErrPaymentOrderNotFound          = errors.New("payment order not found")
+	ErrPaymentOrderForbidden         = errors.New("payment order access denied")
+	ErrPaymentOrderReaderUnavailable = errors.New("payment order reader unavailable")
 )

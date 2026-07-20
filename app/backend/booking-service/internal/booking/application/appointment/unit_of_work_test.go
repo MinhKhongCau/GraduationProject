@@ -351,6 +351,10 @@ func TestHandlePaymentResultUnitOfWorkRejectsInvalidTransition(t *testing.T) {
 type fakeUOWRepository struct {
 	tx            *fakeAppointmentTx
 	withinTxCalls int
+	readItems     []domain.Appointment
+	readTotal     int64
+	readFilter    AppointmentListQuery
+	detail        *domain.Appointment
 }
 
 func newUOWTestRepo(appt domain.Appointment, slot domain.ExpertSlot) *fakeUOWRepository {
@@ -381,7 +385,12 @@ func (r *fakeUOWRepository) WithinTx(ctx context.Context, fn func(tx Tx) error) 
 }
 
 func (r *fakeUOWRepository) GetAppointmentByID(appointmentID string) (*domain.Appointment, error) {
-	return nil, nil
+	return r.detail, nil
+}
+
+func (r *fakeUOWRepository) ListAppointments(filter AppointmentListQuery) ([]domain.Appointment, int64, error) {
+	r.readFilter = filter
+	return r.readItems, r.readTotal, nil
 }
 
 func (r *fakeUOWRepository) GetPaymentEligibilitySnapshot(command GetPaymentEligibilityCommand) (*PaymentEligibilitySnapshot, error) {
