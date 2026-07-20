@@ -15,6 +15,58 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/payments/admin/withdrawals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Admin - Withdrawals"
+                ],
+                "summary": "[ADMIN] List withdrawals",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Expert UUID",
+                        "name": "expert_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Withdrawal status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
         "/payments/bank-accounts": {
             "get": {
                 "security": [
@@ -104,14 +156,213 @@ const docTemplate = `{
                 }
             }
         },
+        "/payments/compensation-cases": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Payments"
+                ],
+                "summary": "[ADMIN] List payment compensation cases",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MANUAL_REVIEW or REFUND_REQUIRED",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Appointment UUID",
+                        "name": "appointment_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Payment order UUID",
+                        "name": "payment_order_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, maximum 100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/compensation-cases/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin - Payments"
+                ],
+                "summary": "[ADMIN] Get a payment compensation case",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Compensation case UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/payments/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "[PATIENT] List own payment orders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment UUID",
+                        "name": "appointment_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "PENDING, SUCCESS, FAILED, EXPIRED",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Fulfillment status",
+                        "name": "fulfillment_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            },
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a payment order for an appointment. Returns the payment URL (e.g. VNPay checkout). Requires PATIENT role or internal call from Booking Service.",
+                "description": "Create a VNPay payment order for a booking appointment. Payer comes from X-User-Id; expert and amount come from Booking Service.",
                 "consumes": [
                     "application/json"
                 ],
@@ -124,13 +375,20 @@ const docTemplate = `{
                 "summary": "[PATIENT/SYSTEM] Create a new payment order",
                 "parameters": [
                     {
-                        "description": "Thông tin khởi tạo giao dịch thanh toán",
+                        "description": "Appointment payment order payload",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/handler.CreateOrderRequest"
                         }
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID populated by API Gateway from token",
+                        "name": "X-User-Id",
+                        "in": "header",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -158,6 +416,30 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.Response"
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/response.Response"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -165,6 +447,29 @@ const docTemplate = `{
                         }
                     }
                 }
+            }
+        },
+        "/payments/orders/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Payments"
+                ],
+                "summary": "[PATIENT/ADMIN] Get payment order status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Payment order UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
             }
         },
         "/payments/vnpay-ipn": {
@@ -205,52 +510,49 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieve the list of transactions (balance changes) for the current user's wallet, sorted by latest time. Requires PATIENT or EXPERT role.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
                 "tags": [
                     "Wallets"
                 ],
-                "summary": "[PATIENT/EXPERT] Get transaction history",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/response.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/handler.TxResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
+                "summary": "[PATIENT/EXPERT] Get paginated wallet history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction type",
+                        "name": "type",
+                        "in": "query"
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
+                    {
+                        "type": "string",
+                        "description": "CREDIT or DEBIT",
+                        "name": "direction",
+                        "in": "query"
                     },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Response"
-                        }
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
                     }
-                }
+                ],
+                "responses": {}
             }
         },
         "/payments/wallets/me": {
@@ -351,6 +653,50 @@ const docTemplate = `{
             }
         },
         "/payments/withdrawals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Withdrawals"
+                ],
+                "summary": "[EXPERT] List own withdrawals",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Withdrawal status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date YYYY-MM-DD",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date YYYY-MM-DD",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Zero-based page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size, 1-100",
+                        "name": "size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            },
             "post": {
                 "security": [
                     {
@@ -417,6 +763,29 @@ const docTemplate = `{
                         }
                     }
                 }
+            }
+        },
+        "/payments/withdrawals/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Withdrawals"
+                ],
+                "summary": "[EXPERT/ADMIN] Get withdrawal detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Withdrawal UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
             }
         },
         "/payments/withdrawals/{id}/approve": {
@@ -560,27 +929,11 @@ const docTemplate = `{
         "handler.CreateOrderRequest": {
             "type": "object",
             "required": [
-                "amount",
-                "expert_id",
-                "gateway",
-                "payer_id"
+                "appointment_id"
             ],
             "properties": {
-                "amount": {
-                    "type": "integer"
-                },
                 "appointment_id": {
-                    "description": "AppointmentID liên kết order này với lịch hẹn. Optional — nếu không cung cấp\nthì đây là order nạp tiền ví trực tiếp, không liên quan đến booking.",
-                    "type": "string"
-                },
-                "expert_id": {
-                    "type": "string"
-                },
-                "gateway": {
-                    "description": "VNPAY | MOMO | MOCK",
-                    "type": "string"
-                },
-                "payer_id": {
+                    "description": "Booking appointment ID to pay with VNPay.",
                     "type": "string"
                 }
             }
@@ -589,6 +942,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "commission_amount": {
+                    "type": "integer"
+                },
+                "expires_at": {
                     "type": "integer"
                 },
                 "gross_amount": {
@@ -650,38 +1006,6 @@ const docTemplate = `{
             "properties": {
                 "amount": {
                     "type": "integer"
-                }
-            }
-        },
-        "handler.TxResponse": {
-            "type": "object",
-            "properties": {
-                "amount": {
-                    "type": "integer"
-                },
-                "balance_after": {
-                    "type": "integer"
-                },
-                "created_at": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "idempotency_key": {
-                    "type": "string"
-                },
-                "reference_id": {
-                    "type": "string"
-                },
-                "reference_type": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                },
-                "wallet_id": {
-                    "type": "string"
                 }
             }
         },

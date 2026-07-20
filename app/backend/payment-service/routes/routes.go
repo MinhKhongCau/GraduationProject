@@ -1,7 +1,7 @@
 package routes
 
 import (
-	paymentHandler "payment-service/internal/payment/handler"
+	paymentHandler "payment-service/internal/payment/adapter/in/http"
 	walletHandler "payment-service/internal/wallet/handler"
 	withdrawalHandler "payment-service/internal/withdrawal/handler"
 
@@ -26,7 +26,11 @@ func SetupRoutes(
 
 		// Đơn hàng thanh toán & VNPay Webhook
 		api.POST("/orders", pHandler.CreateOrder)
+		api.GET("/orders", pHandler.ListPaymentOrders)
+		api.GET("/orders/:id", pHandler.GetPaymentOrder)
 		api.GET("/vnpay-ipn", pHandler.HandleVNPayIPN)
+		api.GET("/compensation-cases", pHandler.ListCompensationCases)
+		api.GET("/compensation-cases/:id", pHandler.GetCompensationCase)
 
 		// Tài khoản ngân hàng
 		api.POST("/bank-accounts", wdHandler.LinkBankAccount)
@@ -34,6 +38,9 @@ func SetupRoutes(
 
 		// Phiếu rút tiền
 		api.POST("/withdrawals", wdHandler.CreateWithdrawal)
+		api.GET("/withdrawals", wdHandler.ListWithdrawals)
+		api.GET("/withdrawals/:id", wdHandler.GetWithdrawal)
+		api.GET("/admin/withdrawals", wdHandler.ListAdminWithdrawals)
 		api.POST("/withdrawals/:id/approve", wdHandler.ApproveWithdrawal)
 		api.POST("/withdrawals/:id/reject", wdHandler.RejectWithdrawal)
 	}
