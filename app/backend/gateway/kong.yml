@@ -259,7 +259,7 @@ upstreams:
 
   - name: chatbot-upstream
     targets:
-      - target: chatbot-service:8000
+      - target: chatbot-service:8086
     healthchecks:
       active:
         type: http
