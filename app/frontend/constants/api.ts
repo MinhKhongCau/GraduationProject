@@ -31,11 +31,15 @@ export const BOOKING_ENDPOINTS = {
   AVAILABLE_TIMES: "/public/booking/slots/available-times",
   LOCK_SLOT: (slotId: string) => `/booking/slots/${slotId}/lock`,
   GENERATE_SLOTS: "/booking/slots/generate",
+  EXPERT_SLOTS: "/booking/slots/expert",
   APPOINTMENTS: "/booking/appointments",
   EXPERT_APPOINTMENTS: "/booking/appointments/expert",
   CANCEL_APPOINTMENT: (appointmentId: string) => `/booking/appointments/${appointmentId}/cancel`,
-  /** Documented only — booking-service models this as templates + availabilities instead, uses /data fallback. */
-  WEEKLY_SCHEDULE: "/experts/me/schedule",
+  /** [PUBLIC] Admin-managed shift templates (e.g. "Morning shift 08:00-12:00"), expert picks from these. */
+  SHIFT_TEMPLATES: "/public/booking/templates",
+  /** [EXPERT] Weekly template — one row per weekday mapping a shift template to that day. */
+  AVAILABILITIES: "/booking/availabilities",
+  AVAILABILITY: (availabilityId: string) => `/booking/availabilities/${availabilityId}`,
   /** Documented only — booking-service has no handler yet, uses /data fallback. */
   LEAVE_REQUESTS: "/experts/leave-requests",
 };
@@ -48,6 +52,8 @@ export const PAYMENT_ENDPOINTS = {
   WITHDRAW: (ownerId: string) => `/payments/wallets/${ownerId}/withdraw`,
   PROCESS_WITHDRAWAL: (requestId: string) =>
     `/payments/wallets/withdrawals/${requestId}/process`,
+  /** Creates a VNPay/MoMo order; when appointmentId is set, server recomputes amount from the real slot price. */
+  ORDERS: "/payments/orders",
 };
 
 export const ASSESSMENT_ENDPOINTS = {
@@ -121,6 +127,9 @@ export const QUERY_KEYS = {
   myBookings: () => ["booking", "my-bookings"] as const,
   expertAppointments: (filters?: Record<string, unknown>) =>
     ["booking", "expert-appointments", filters ?? {}] as const,
+  shiftTemplates: () => ["booking", "shift-templates"] as const,
+  myAvailabilities: () => ["booking", "availabilities", "me"] as const,
+  expertSlots: (params?: Record<string, unknown>) => ["booking", "expert-slots", params ?? {}] as const,
   wallet: (ownerId: string) => ["payment", "wallet", ownerId] as const,
   assessmentTemplates: () => ["assessment", "templates"] as const,
   assessmentTemplate: (slug: string) => ["assessment", "template", slug] as const,

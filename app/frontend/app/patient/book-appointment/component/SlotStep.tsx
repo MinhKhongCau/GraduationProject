@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Clock } from "lucide-react";
+import { WeekCalendar } from "./WeekCalendar";
 import { Button, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { bookingApi } from "@/api";
@@ -42,29 +43,13 @@ export function SlotStep({
       <h1 className="mb-6 text-2xl font-bold text-foreground">Pick a date &amp; time</h1>
 
       <div className="mb-6">
-        <p className="mb-3 text-sm font-semibold text-foreground">Available dates</p>
-        {isLoadingDates ? (
-          <Spinner className="h-5 w-5" />
-        ) : availableDates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No available dates found for this expert this month.</p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {availableDates.map((date) => (
-              <button
-                key={date}
-                type="button"
-                onClick={() => onSelectDate(date)}
-                className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-                  selectedDate === date
-                    ? "border-primary bg-primary text-white"
-                    : "border-border text-foreground hover:bg-surface"
-                }`}
-              >
-                {new Date(date).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-              </button>
-            ))}
-          </div>
-        )}
+        <p className="mb-3 text-sm font-semibold text-foreground">Pick a day</p>
+        <WeekCalendar
+          availableDates={availableDates}
+          selectedDate={selectedDate}
+          onSelectDate={onSelectDate}
+          isLoading={isLoadingDates}
+        />
       </div>
 
       {selectedDate && (
