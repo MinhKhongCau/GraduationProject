@@ -18,10 +18,13 @@ const STATUS_TEXT: Record<AppointmentStatus, string> = {
 export interface BookingListItemProps {
   appointment: AppointmentWithExpert;
   onCancel: (appointment: AppointmentWithExpert) => void;
+  onPayNow: (appointment: AppointmentWithExpert) => void;
+  isPaying: boolean;
 }
 
-export function BookingListItem({ appointment, onCancel }: BookingListItemProps) {
+export function BookingListItem({ appointment, onCancel, onPayNow, isPaying }: BookingListItemProps) {
   const canCancel = appointment.statusLabel === "CONFIRMED" || appointment.statusLabel === "PENDING_PAYMENT";
+  const canPay = appointment.statusLabel === "PENDING_PAYMENT";
 
   return (
     <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -57,6 +60,11 @@ export function BookingListItem({ appointment, onCancel }: BookingListItemProps)
         >
           {STATUS_TEXT[appointment.statusLabel]}
         </span>
+        {canPay && (
+          <Button size="sm" onClick={() => onPayNow(appointment)} disabled={isPaying}>
+            {isPaying ? "Redirecting..." : "Pay now"}
+          </Button>
+        )}
         {canCancel && (
           <Button size="sm" variant="outline" onClick={() => onCancel(appointment)}>
             Cancel

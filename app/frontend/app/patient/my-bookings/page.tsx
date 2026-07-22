@@ -5,15 +5,37 @@ import { BookingListItem } from "./component/BookingListItem";
 import { CancelBookingDialog } from "./component/CancelBookingDialog";
 import { Spinner } from "@/components/ui";
 import { useMyBookings, useCancelBooking } from "@/hooks";
+import { useApiMutation } from "@/hooks";
+import { paymentApi } from "@/api";
+import { CHANNELING_FEE } from "@/constants";
 import { useErrorContext } from "@/context/ErrorContext";
 import type { AppointmentWithExpert } from "@/hooks";
 
 export default function MyBookingsPage() {
   const [cancelingAppointment, setCancelingAppointment] = useState<AppointmentWithExpert | null>(null);
+  const [payingAppointmentId, setPayingAppointmentId] = useState<string | null>(null);
   const { showSuccess } = useErrorContext();
 
   const { data: appointments = [], isLoading } = useMyBookings();
   const cancelMutation = useCancelBooking();
+
+  const payMutation = useApiMutation({
+    mutationFn: (appointment: AppointmentWithExpert) =>
+      paymentApi.createOrder({
+        expertId: appointment.expertId,
+        amount: CHANNELING_FEE,
+        gateway: "VNPAY",
+        appointmentId: appointment.appointmentId,
+      }),
+    onSuccess: (order) => {
+      window.location.href = order.paymentUrl;
+    },
+  });
+
+  function handlePayNow(appointment: AppointmentWithExpert) {
+    setPayingAppointmentId(appointment.appointmentId);
+    payMutation.mutate(appointment);
+  }
 
   function handleConfirmCancel(reason: string) {
     if (!cancelingAppointment) return;
@@ -43,6 +65,8 @@ export default function MyBookingsPage() {
               key={appointment.appointmentId}
               appointment={appointment}
               onCancel={setCancelingAppointment}
+              onPayNow={handlePayNow}
+              isPaying={payMutation.isPending && payingAppointmentId === appointment.appointmentId}
             />
           ))}
         </div>
