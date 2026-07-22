@@ -11,6 +11,13 @@ import type {
   GetExpertAppointmentsParams,
   Appointment,
   ServiceEnvelope,
+  TimeTemplate,
+  Availability,
+  CreateAvailabilityRequest,
+  UpdateAvailabilityRequest,
+  GenerateSlotsResponse,
+  GetExpertSlotsParams,
+  ExpertSlot,
 } from "@/types";
 
 export async function getAvailableDates(expertId: string): Promise<string[]> {
@@ -70,4 +77,53 @@ export async function getExpertAppointments(
 /** [PATIENT/EXPERT] `reason` is required by the backend. */
 export async function cancelAppointment(appointmentId: string, reason: string): Promise<void> {
   await bookingClient.patch(BOOKING_ENDPOINTS.CANCEL_APPOINTMENT(appointmentId), { reason });
+}
+
+/** [PUBLIC] Admin-managed shift templates an expert can attach to a weekday. */
+export async function getShiftTemplates(): Promise<TimeTemplate[]> {
+  const response = await bookingClient.get<ServiceEnvelope<TimeTemplate[]>>(
+    BOOKING_ENDPOINTS.SHIFT_TEMPLATES
+  );
+  return response.data.data ?? [];
+}
+
+/** [EXPERT] The logged-in expert's own weekly template rows (one per enabled weekday). */
+export async function getMyAvailabilities(): Promise<Availability[]> {
+  const response = await bookingClient.get<ServiceEnvelope<Availability[]>>(
+    BOOKING_ENDPOINTS.AVAILABILITIES
+  );
+  return response.data.data ?? [];
+}
+
+export async function createAvailability(payload: CreateAvailabilityRequest): Promise<Availability> {
+  const response = await bookingClient.post<ServiceEnvelope<Availability>>(
+    BOOKING_ENDPOINTS.AVAILABILITIES,
+    payload
+  );
+  return response.data.data;
+}
+
+export async function updateAvailability(
+  availabilityId: string,
+  payload: UpdateAvailabilityRequest
+): Promise<void> {
+  await bookingClient.patch(BOOKING_ENDPOINTS.AVAILABILITY(availabilityId), payload);
+}
+
+/** [EXPERT] Materializes concrete bookable slots for the next N days from the expert's weekly template. */
+export async function generateSlots(daysToGenerate: number): Promise<GenerateSlotsResponse> {
+  const response = await bookingClient.post<ServiceEnvelope<GenerateSlotsResponse>>(
+    BOOKING_ENDPOINTS.GENERATE_SLOTS,
+    { daysToGenerate }
+  );
+  return response.data.data;
+}
+
+/** [EXPERT] Own generated slots (AVAILABLE/LOCKED/OCCUPIED) for the calendar preview. */
+export async function getExpertSlots(params: GetExpertSlotsParams = {}): Promise<ExpertSlot[]> {
+  const response = await bookingClient.get<ServiceEnvelope<{ slots: ExpertSlot[]; total: number }>>(
+    BOOKING_ENDPOINTS.EXPERT_SLOTS,
+    { params }
+  );
+  return response.data.data.slots ?? [];
 }

@@ -1,6 +1,5 @@
 import { profileClient } from "./http/instances";
 import { PROFILE_ENDPOINTS } from "@/constants/api";
-import { getMockWeeklySchedule, setMockWeeklySchedule } from "@/data/schedule";
 import type {
   ExpertProfile,
   ExpertVerificationStatus,
@@ -8,8 +7,6 @@ import type {
   ServiceEnvelope,
   PaginatedResponse,
   Specialization,
-  WeeklyScheduleRequest,
-  WeeklySlotInput,
 } from "@/types";
 
 /**
@@ -133,20 +130,4 @@ export async function updateExpertVerification(
     { verificationStatus }
   );
   return toExpertProfile(response.data.data);
-}
-
-/**
- * Documented in API-document.md as POST /experts/me/schedule; booking-service
- * has no handler yet, so this reads/writes the in-memory mock instead of
- * hitting bookingClient.
- */
-export async function getWeeklySchedule(): Promise<WeeklySlotInput[]> {
-  return Promise.resolve(getMockWeeklySchedule());
-}
-
-export async function updateWeeklySchedule(
-  payload: WeeklyScheduleRequest
-): Promise<WeeklySlotInput[]> {
-  setMockWeeklySchedule(payload.weeklySlots);
-  return Promise.resolve(payload.weeklySlots);
 }
