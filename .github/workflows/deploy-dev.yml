@@ -29,6 +29,8 @@ jobs:
           cat <<EOF > .deploy/dev/.env
           DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
 
+          COMPOSE_PROJECT_NAME=${{ vars.COMPOSE_PROJECT_NAME }}
+
           APP_ENV=${{ vars.APP_ENV }}
           NODE_ENV=${{ vars.NODE_ENV }}
 
