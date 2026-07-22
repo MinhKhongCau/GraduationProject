@@ -65,6 +65,7 @@ jobs:
           PORT_FORUM_SERVICE=${{ vars.PORT_FORUM_SERVICE }}
           PORT_CHATROOM_SERVICE=${{ vars.PORT_CHATROOM_SERVICE }}
           PORT_API_GATEWAY=${{ vars.PORT_API_GATEWAY }}
+          PORT_DOZZLE=${{ vars.PORT_DOZZLE }}
 
           REACT_APP_API_URL=${{ vars.REACT_APP_API_URL }}
 

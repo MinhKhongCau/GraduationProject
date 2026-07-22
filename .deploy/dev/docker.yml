@@ -295,6 +295,22 @@ services:
     networks:
       - app-network
 
+  # 10. DOZZLE (system observer - realtime docker log viewer, observer.qmcloud.io.vn)
+  # Filtered by compose project label so logs from other projects on this host are hidden.
+  # Default project name here is the compose dir name ("dev") — override via COMPOSE_PROJECT_NAME.
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: mindcare_dozzle
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DOZZLE_FILTER=label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-dev}
+    ports:
+      - "${DOZZLE_PORT}:8080"
+    networks:
+      - app-network
+
 volumes:
   postgres_data:
   redis_data:
