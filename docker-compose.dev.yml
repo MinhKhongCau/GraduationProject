@@ -299,6 +299,17 @@ services:
       - "${PORT_CHATBOT_SERVICE}:8000"
     depends_on:
       postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_HOST=${DB_HOST}
+      - POSTGRES_PORT=${DB_PORT}
+      - POSTGRES_DB=${CHATBOT_DB_NAME}
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+
   # 9. CHATROOM SERVICE (Node.js / Socket.IO)
   chatroom-service:
     build:
@@ -314,14 +325,6 @@ services:
     networks:
       - app-network
     environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_HOST=${DB_HOST}
-      - POSTGRES_PORT=${DB_PORT}
-      - POSTGRES_DB=${CHATBOT_DB_NAME}
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
-
-  # 9. API GATEWAY (Kong)
       - NODE_ENV=${NODE_ENV}
       - PORT=${PORT_CHATROOM_SERVICE}
       - CORS_ORIGINS=${CORS_ORIGINS}
@@ -350,6 +353,21 @@ services:
       - assessment-service
       - chatbot-service
       - chatroom-service
+    networks:
+      - app-network
+
+  # 11. DOZZLE (system observer - realtime docker log viewer, observer.qmcloud.io.vn)
+  # Filtered by compose project label so logs from other projects on this host are hidden.
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: mindcare_dozzle
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DOZZLE_FILTER=label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-graduationproject}
+    ports:
+      - "${PORT_DOZZLE}:8080"
     networks:
       - app-network
 
