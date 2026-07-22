@@ -28,6 +28,24 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_DEFAULT_USER:admin}
+    password: ${RABBITMQ_DEFAULT_PASS:admin}
+    template:
+      retry:
+        enabled: true
+        initial-interval: 1000
+        multiplier: 2.0
+        max-attempts: 5
+        max-interval: 10000
+
+# ─── RabbitMQ Event Publishing (see app/backend/RABBITMQ_CONVENTION.md) ─────
+app:
+  rabbitmq:
+    user-exchange: user.exchange
+
 # ─── JWT Configuration ──────────────────────────────────────────────────────
 jwt:
   # Secret dự phòng (HMAC) - legacy, dùng RSA ký thực tế

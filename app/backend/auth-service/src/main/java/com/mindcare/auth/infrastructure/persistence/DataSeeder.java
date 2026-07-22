@@ -1,6 +1,7 @@
 package com.mindcare.auth.infrastructure.persistence;
 
 import com.mindcare.auth.application.port.out.AccountPort;
+import com.mindcare.auth.application.service.UserEventPublisher;
 import com.mindcare.auth.domain.entity.Account;
 import com.mindcare.auth.domain.enums.Role;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ public class DataSeeder implements CommandLineRunner {
 
     private final AccountPort accountPort;
     private final PasswordEncoder passwordEncoder;
+    private final UserEventPublisher userEventPublisher;
 
     @org.springframework.beans.factory.annotation.Value("${server.port:8080}")
     private String serverPort;
@@ -56,7 +58,8 @@ public class DataSeeder implements CommandLineRunner {
                     .isActive(true)
                     .dateOfBirth(LocalDate.of(1990, 1, 1))
                     .build();
-            accountPort.save(admin);
+            Account savedAdmin = accountPort.save(admin);
+            userEventPublisher.publishUserCreated(savedAdmin);
             log.info("Created Admin Account: admin@mindcare.com / admin@mindcare.com");
 
             // 2. EXPERT
@@ -69,7 +72,8 @@ public class DataSeeder implements CommandLineRunner {
                     .isActive(true)
                     .dateOfBirth(LocalDate.of(1985, 5, 15))
                     .build();
-            accountPort.save(expert);
+            Account savedExpert = accountPort.save(expert);
+            userEventPublisher.publishUserCreated(savedExpert);
             log.info("Created Expert Account: expert@mindcare.com / expert@mindcare.com");
 
             // 3. PATIENT
@@ -82,7 +86,8 @@ public class DataSeeder implements CommandLineRunner {
                     .isActive(true)
                     .dateOfBirth(LocalDate.of(2000, 10, 10))
                     .build();
-            accountPort.save(patient);
+            Account savedPatient = accountPort.save(patient);
+            userEventPublisher.publishUserCreated(savedPatient);
             log.info("Created Patient Account: patient@mindcare.com / patient@mindcare.com");
             
             log.info("===========================================");
