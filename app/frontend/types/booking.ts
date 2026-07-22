@@ -81,22 +81,53 @@ export interface GetExpertAppointmentsParams {
   status?: AppointmentStatusCode;
 }
 
-export interface WeeklySlotInput {
-  dayOfWeek:
-    | "MONDAY"
-    | "TUESDAY"
-    | "WEDNESDAY"
-    | "THURSDAY"
-    | "FRIDAY"
-    | "SATURDAY"
-    | "SUNDAY";
-  startTime: string;
-  endTime: string;
+/** Reusable shift definition (e.g. "Morning shift 08:00-12:00"). Admin-managed, expert-readable. */
+export interface TimeTemplate {
+  templateId: string;
+  shiftName: string;
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
+  slotDurationMinutes: number;
+  isActive: boolean;
 }
 
-/** Documented in API-document.md; booking-service models this as templates + availabilities instead — no handler yet for this shape. */
-export interface WeeklyScheduleRequest {
-  weeklySlots: WeeklySlotInput[];
+/** 1=Monday ... 7=Sunday. */
+export type DayOfWeek = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+/** One weekday of an expert's recurring weekly template — a full week is up to 7 of these. */
+export interface Availability {
+  availabilityId: string;
+  expertId: string;
+  templateId: string;
+  dayOfWeek: DayOfWeek;
+  isEnabled: boolean;
+  effectiveFrom: number; // Unix ms
+  effectiveUntil: number | null; // Unix ms
+}
+
+export interface CreateAvailabilityRequest {
+  templateId: string;
+  dayOfWeek: DayOfWeek;
+  effectiveFrom: number;
+  effectiveUntil?: number | null;
+}
+
+export interface UpdateAvailabilityRequest {
+  templateId?: string;
+  dayOfWeek?: DayOfWeek;
+  isEnabled?: boolean;
+  effectiveFrom?: number;
+  effectiveUntil?: number | null;
+}
+
+export interface GenerateSlotsResponse {
+  expertId: string;
+  slotsCreated: number;
+}
+
+export interface GetExpertSlotsParams {
+  fromDate?: number;
+  toDate?: number;
 }
 
 export type LeaveRequestStatus = "PENDING" | "APPROVED" | "REJECTED";

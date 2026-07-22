@@ -9,6 +9,8 @@ import type {
   ProcessWithdrawalRequest,
   WithdrawalRequestRecord,
   ServiceEnvelope,
+  CreateOrderRequest,
+  CreateOrderResponse,
 } from "@/types";
 
 // payment-service is another Go/Gin service like profile-service; assuming
@@ -59,6 +61,15 @@ export async function processWithdrawal(
 ): Promise<WithdrawalRequestRecord> {
   const response = await paymentClient.post<ServiceEnvelope<WithdrawalRequestRecord>>(
     PAYMENT_ENDPOINTS.PROCESS_WITHDRAWAL(requestId),
+    payload
+  );
+  return response.data.data;
+}
+
+/** Creates a VNPay order for a booking; redirect the patient to the returned paymentUrl. */
+export async function createOrder(payload: CreateOrderRequest): Promise<CreateOrderResponse> {
+  const response = await paymentClient.post<ServiceEnvelope<CreateOrderResponse>>(
+    PAYMENT_ENDPOINTS.ORDERS,
     payload
   );
   return response.data.data;

@@ -52,7 +52,7 @@ export function ReviewStep({ expert, slot, date, topics, onBack, onConfirm, isSu
       </Card>
 
       <p className="mb-6 max-w-xl text-xs text-muted-foreground">
-        Confirming will hold this slot for 15 minutes while you complete payment from My Bookings.
+        Confirming holds this slot for 15 minutes and takes you straight to VNPay to complete payment.
       </p>
 
       <div className="mt-auto flex justify-between border-t border-border pt-6">
