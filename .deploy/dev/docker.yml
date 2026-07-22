@@ -307,7 +307,7 @@ services:
     environment:
       - DOZZLE_FILTER=label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-dev}
     ports:
-      - "${DOZZLE_PORT}:8080"
+      - "${PORT_DOZZLE}:8080"
     networks:
       - app-network
 
