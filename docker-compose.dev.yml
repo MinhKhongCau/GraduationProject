@@ -94,17 +94,6 @@ services:
     networks:
       - app-network
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama-service
-    restart: always
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - app-network
-
   # 5. AUTH SERVICE (Java / Spring Boot)
   auth-service:
     build:
@@ -311,40 +300,6 @@ services:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
 
-  # 8.5. CHATBOT SERVICE (Python FastAPI)
-  chatbot-service:
-    build:
-      context: ./app/backend/chatbot-service
-      dockerfile: Dockerfile
-    container_name: chatbot-service
-    restart: always
-    ports:
-      - "${PORT_CHATBOT_SERVICE}:${PORT_CHATBOT_SERVICE}"
-    depends_on:
-      postgres-db:
-        condition: service_healthy
-      ollama:
-        # Thêm dependency này
-        condition: service_started
-    networks:
-      - app-network
-    environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_HOST=${DB_HOST}
-      - POSTGRES_PORT=${DB_PORT}
-      - POSTGRES_DB=${CHATBOT_DB_NAME}
-      - OLLAMA_BASE_URL=http://ollama:11434 # SỬA: dùng service name thay vì host.docker.internal
-    volumes:
-      - ./app/backend/chatbot-service/data:/workspace/data
-      - ./app/backend/chatbot-service/models:/workspace/models
-    # Thêm healthcheck
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:${PORT_CHATBOT_SERVICE}/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # 9. CHATROOM SERVICE (Node.js / Socket.IO)
   chatroom-service:
     build:
@@ -366,8 +321,7 @@ services:
       - REDIS_URL=redis://redis:${REDIS_PORT}
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
 
-  # 10. API GATEWAY (Kong)
-  # 8.5. CHATBOT SERVICE (Python FastAPI)
+  # 10. CHATBOT SERVICE (Python FastAPI)
   chatbot-service:
     build:
       context: ./app/backend/chatbot-service
@@ -401,7 +355,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # 9. API GATEWAY (Kong)
+  # 11. API GATEWAY (Kong)
   api-gateway:
     platform: linux/amd64
     build:
@@ -427,7 +381,7 @@ services:
     networks:
       - app-network
 
-  # 11. DOZZLE (system observer - realtime docker log viewer, observer.qmcloud.io.vn)
+  # 12. DOZZLE (system observer - realtime docker log viewer, observer.qmcloud.io.vn)
   # Filtered by compose project label so logs from other projects on this host are hidden.
   dozzle:
     image: amir20/dozzle:latest

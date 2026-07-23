@@ -75,6 +75,7 @@ jobs:
 
           REDIS_PORT=${{ vars.REDIS_PORT }}
 
+          RABBITMQ_HOST=${{ vars.RABBITMQ_HOST }}
           RABBITMQ_DEFAULT_USER=${{ secrets.RABBITMQ_DEFAULT_USER }}
           RABBITMQ_DEFAULT_PASS=${{ secrets.RABBITMQ_DEFAULT_PASS }}
           RABBITMQ_PORT=${{ vars.RABBITMQ_PORT }}
