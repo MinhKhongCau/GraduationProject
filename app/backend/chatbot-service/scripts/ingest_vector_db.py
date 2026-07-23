@@ -4,7 +4,7 @@ import os
 # pyrefly: ignore [missing-import]
 from langchain_core.documents import Document
 # pyrefly: ignore [missing-import]
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 # pyrefly: ignore [missing-import]
 from langchain_postgres import PGVector
 # pyrefly: ignore [missing-import]
