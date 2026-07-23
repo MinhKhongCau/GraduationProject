@@ -13,7 +13,7 @@ RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -o /mindcare-auth main.go
 
 # ---- Gateway runtime stage ----
-FROM kong:alpine
+FROM --platform=linux/amd64 kong:alpine
 
 USER root
 

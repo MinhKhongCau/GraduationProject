@@ -16,7 +16,7 @@ services:
 
   # 2. POSTGRES DATABASE (shared by all services)
   postgres-db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: postgres-db
     restart: always
     environment:
@@ -28,13 +28,14 @@ services:
       BOOKING_DB_NAME: ${BOOKING_DB_NAME}
       ASSESSMENT_DB_NAME: ${ASSESSMENT_DB_NAME}
       FORUM_DB_NAME: ${FORUM_DB_NAME}
+      CHATBOT_DB_NAME: ${CHATBOT_DB_NAME}
     ports:
       - "${DB_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${POSTGRES_DB}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -71,6 +72,17 @@ services:
       - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-service
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
     networks:
       - app-network
 
@@ -264,7 +276,43 @@ services:
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
 
   # 10. API GATEWAY (Kong)
+  # 8.5. CHATBOT SERVICE (Python FastAPI)
+  chatbot-service:
+    build:
+      context: ./app/backend/chatbot-service
+      dockerfile: Dockerfile
+    container_name: chatbot-service
+    restart: always
+    ports:
+      - "${PORT_CHATBOT_SERVICE}:${PORT_CHATBOT_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      ollama:
+        # Thêm dependency này
+        condition: service_started
+    networks:
+      - app-network
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_HOST=${DB_HOST}
+      - POSTGRES_PORT=${DB_PORT}
+      - POSTGRES_DB=${CHATBOT_DB_NAME}
+      - OLLAMA_BASE_URL=http://ollama:11434 # SỬA: dùng service name thay vì host.docker.internal
+    volumes:
+      - ./app/backend/chatbot-service/data:/workspace/data
+      - ./app/backend/chatbot-service/models:/workspace/models
+    # Thêm healthcheck
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:${PORT_CHATBOT_SERVICE}/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 9. API GATEWAY (Kong)
   api-gateway:
+    platform: linux/amd64
     build:
       context: ./app/backend/gateway
       dockerfile: Dockerfile
@@ -284,6 +332,7 @@ services:
       - booking-service
       - assessment-service
       - chatroom-service
+      - chatbot-service
     networks:
       - app-network
 
@@ -291,6 +340,7 @@ volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+  ollama_data:
 
 networks:
   app-network:
