@@ -1,7 +1,7 @@
 # app/db/postgres.py
 import os
 # pyrefly: ignore [missing-import]
-from langchain_community.embeddings import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings
 # pyrefly: ignore [missing-import]
 from langchain_postgres.vectorstores import PGVector
 
