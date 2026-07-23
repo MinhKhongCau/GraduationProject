@@ -12,9 +12,5 @@ ENV/
 env.bak/
 venv.bak/
 
-# Project-specific exclusions
-/data/
-/models/
-
 # OS metadata
 .DS_Store
