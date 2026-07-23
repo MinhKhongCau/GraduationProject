@@ -6,13 +6,13 @@ import { TopicStep } from "./component/TopicStep";
 import { ExpertStep } from "./component/ExpertStep";
 import { SlotStep } from "./component/SlotStep";
 import { ReviewStep } from "./component/ReviewStep";
-import { SuccessStep } from "./component/SuccessStep";
+import { PaymentStep } from "./component/PaymentStep";
 import { useApiQuery, useApiMutation } from "@/hooks";
-import { bookingApi, expertApi } from "@/api";
-import { QUERY_KEYS } from "@/constants";
-import type { ExpertProfile, AvailableTimeSlot } from "@/types";
+import { bookingApi, expertApi, paymentApi } from "@/api";
+import { QUERY_KEYS, CHANNELING_FEE } from "@/constants";
+import type { ExpertProfile, AvailableTimeSlot, CreateAppointmentResponse } from "@/types";
 
-type WizardStep = "topic" | "expert" | "slot" | "review" | "success";
+type WizardStep = "topic" | "expert" | "slot" | "review" | "payment";
 
 export default function BookAppointmentPage() {
   const searchParams = useSearchParams();
@@ -23,6 +23,7 @@ export default function BookAppointmentPage() {
   const [selectedExpert, setSelectedExpert] = useState<ExpertProfile | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<AvailableTimeSlot | null>(null);
+  const [createdAppointment, setCreatedAppointment] = useState<CreateAppointmentResponse | null>(null);
 
   useApiQuery({
     queryKey: QUERY_KEYS.expertProfile(preselectedExpertId ?? ""),
@@ -31,7 +32,7 @@ export default function BookAppointmentPage() {
     onSuccess: setSelectedExpert,
   });
 
-  const confirmMutation = useApiMutation({
+  const bookMutation = useApiMutation({
     mutationFn: async () => {
       if (!selectedExpert || !selectedSlot) throw new Error("Missing expert or slot selection");
       await bookingApi.lockSlot(selectedSlot.slotId);
@@ -40,7 +41,25 @@ export default function BookAppointmentPage() {
         expertId: selectedExpert.accountId,
       });
     },
-    onSuccess: () => setStep("success"),
+    onSuccess: (appointment) => {
+      setCreatedAppointment(appointment);
+      setStep("payment");
+    },
+  });
+
+  const payMutation = useApiMutation({
+    mutationFn: () => {
+      if (!selectedExpert || !createdAppointment) throw new Error("Missing appointment");
+      return paymentApi.createOrder({
+        expertId: selectedExpert.accountId,
+        amount: CHANNELING_FEE,
+        gateway: "VNPAY",
+        appointmentId: createdAppointment.appointmentId,
+      });
+    },
+    onSuccess: (order) => {
+      window.location.href = order.paymentUrl;
+    },
   });
 
   function toggleTopic(topicId: string) {
@@ -89,11 +108,17 @@ export default function BookAppointmentPage() {
           date={selectedDate}
           topics={selectedTopics}
           onBack={() => setStep("slot")}
-          onConfirm={() => confirmMutation.mutate()}
-          isSubmitting={confirmMutation.isPending}
+          onConfirm={() => bookMutation.mutate()}
+          isSubmitting={bookMutation.isPending}
         />
       )}
-      {step === "success" && <SuccessStep />}
+      {step === "payment" && (
+        <PaymentStep
+          onPay={() => payMutation.mutate()}
+          isPending={payMutation.isPending}
+          isError={payMutation.isError}
+        />
+      )}
     </div>
   );
 }

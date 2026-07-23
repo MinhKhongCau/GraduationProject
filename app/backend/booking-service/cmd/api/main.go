@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -12,18 +13,19 @@ import (
 	"booking-service/pkg/database"
 	"booking-service/pkg/internal_auth"
 
-	"booking-service/internal/appointment"
-	apptHandler "booking-service/internal/appointment/handler"
+	apptHandler "booking-service/internal/booking/adapter/in/http/appointment"
+	schedHandler "booking-service/internal/booking/adapter/in/http/schedule"
+	slotHandler "booking-service/internal/booking/adapter/in/http/slot"
+	timeoffHandler "booking-service/internal/booking/adapter/in/http/timeoff"
+	appointmentpostgres "booking-service/internal/booking/adapter/out/postgres/appointment"
+	appappointment "booking-service/internal/booking/application/appointment"
 	"booking-service/internal/schedule"
-	schedHandler "booking-service/internal/schedule/handler"
 	"booking-service/internal/slot"
-	slotHandler "booking-service/internal/slot/handler"
 	"booking-service/internal/timeoff"
-	timeoffHandler "booking-service/internal/timeoff/handler"
 
+	_ "booking-service/docs" // Ignore error if it doesn't exist yet
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	_ "booking-service/docs" // Ignore error if it doesn't exist yet
 )
 
 // @title Booking Service API
@@ -60,21 +62,24 @@ func main() {
 	// Repository
 	scheduleRepo := schedule.NewRepository(database.DB)
 	slotRepo := slot.NewRepository(database.DB)
-	appointmentRepo := appointment.NewRepository(database.DB)
+	appointmentRepo := appointmentpostgres.NewRepository(database.DB)
 	timeoffRepo := timeoff.NewRepository(database.DB)
-	
+
 	// Usecase
 	slotUsecase := slot.NewUsecase(slotRepo, appointmentRepo)
-	scheduleUsecase := schedule.NewUsecase(scheduleRepo)
+	scheduleUsecase := schedule.NewUsecaseWithReconciliation(scheduleRepo, timeoffRepo, config.AppConfig.RollingSlotDays)
 	timeoffUsecase := timeoff.NewUsecase(timeoffRepo, slotRepo, appointmentRepo)
-	appointmentUsecase := appointment.NewUsecase(appointmentRepo)
+	appointmentUsecase := appappointment.NewUsecase(appointmentRepo)
+	generationService := slot.NewGenerationService(slotUsecase, scheduleRepo, timeoffRepo)
 
 	// 3. Khai báo API Endpoints
 	publicAPI := router.Group("/api/v1/public/booking")
 	privateAPI := router.Group("/api/v1/booking")
+	// internalAPI: chỉ service khác trong Docker network gọi được (Kong đã block /internal/* từ internet)
+	internalAPI := router.Group("/internal")
 
-	slotHandler.RegisterRoutes(publicAPI, privateAPI, slotRepo, appointmentRepo, slotUsecase, scheduleRepo, timeoffRepo)
-	apptHandler.RegisterRoutes(publicAPI, privateAPI, appointmentUsecase)
+	slotHandler.RegisterRoutes(publicAPI, privateAPI, slotRepo, appointmentRepo, slotUsecase, generationService)
+	apptHandler.RegisterRoutes(publicAPI, privateAPI, internalAPI, appointmentUsecase)
 	timeoffHandler.RegisterRoutes(privateAPI, timeoffUsecase)
 	schedHandler.RegisterRoutes(publicAPI, privateAPI, scheduleUsecase)
 
@@ -91,8 +96,11 @@ func main() {
 	})
 
 	// 5. Khởi chạy Background Workers
+	workerContext := context.Background()
 	slot.StartExpiredLockWorker(appointmentRepo)
-	timeoff.StartWorker(timeoffUsecase)
+	timeoff.StartWorkerWithContext(workerContext, timeoffUsecase, timeoff.WorkerInterval)
+	go slot.RunStartupGeneration(workerContext, generationService, config.AppConfig.RollingSlotDays)
+	slot.StartRollingGenerationWorker(workerContext, generationService, config.AppConfig.RollingSlotDays)
 
 	// 6. Khởi chạy Server
 	port := config.AppConfig.ServerPort

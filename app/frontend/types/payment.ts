@@ -67,3 +67,23 @@ export interface ProcessWithdrawalRequest {
   action: "APPROVE" | "REJECT";
   adminNote?: string;
 }
+
+export type PaymentGateway = "VNPAY" | "MOMO" | "MOCK";
+export type OrderStatus = "PENDING" | "SUCCESS" | "FAILED" | "EXPIRED";
+
+export interface CreateOrderRequest {
+  expertId: string;
+  amount: number;
+  gateway: PaymentGateway;
+  /** Ties the order to a booking-service appointment; server recomputes amount from the real slot price when set. */
+  appointmentId?: string;
+}
+
+export interface CreateOrderResponse {
+  orderId: string;
+  grossAmount: number;
+  netAmount: number;
+  commissionAmount: number;
+  paymentUrl: string;
+  status: OrderStatus;
+}

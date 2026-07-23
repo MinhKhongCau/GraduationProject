@@ -21,6 +21,12 @@ export const ROUTES = {
     MEDICAL_HISTORY: "/patient/medical-history",
     MESSAGES: "/patient/messages",
     SETTINGS: "/patient/settings",
+    FORUM: "/patient/forum",
+    FORUM_POST: (slug: string) => `/patient/forum/${slug}`,
+    FORUM_NEW_POST: "/patient/forum/new",
+    FORUM_EDIT_POST: (slug: string) => `/patient/forum/${slug}/edit`,
+    FORUM_MY_BOOKMARKS: "/patient/forum/bookmarks",
+    FORUM_MY_POSTS: "/patient/forum/my-posts",
   },
 
   EXPERT: {
@@ -30,7 +36,12 @@ export const ROUTES = {
     PATIENTS: "/expert/patients",
     CLINICAL_RECORDS: "/expert/clinical-records",
     WALLET: "/expert/wallet",
+    MESSAGES: "/expert/messages",
     SETTINGS: "/expert/settings",
+    FORUM: "/expert/forum",
+    FORUM_POST: (slug: string) => `/expert/forum/${slug}`,
+    FORUM_NEW_POST: "/expert/forum/new",
+    FORUM_MY_BOOKMARKS: "/expert/forum/bookmarks",
   },
 
   ADMIN: {
@@ -45,5 +56,6 @@ export const ROUTES = {
     DIMENSIONS: "/admin/dimensions",
     OPTION_GROUPS: "/admin/option-groups",
     QUESTIONS: "/admin/questions",
+    FORUM_POSTS: "/admin/forum-posts",
   },
 } as const;

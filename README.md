@@ -13,6 +13,8 @@ Hệ thống cung cấp nền tảng tư vấn tâm lý trực tuyến, giúp k�
 - **Assessment Service API Docs**: [https://api.qmcloud.io.vn/assessment/swagger-ui](https://api.qmcloud.io.vn/assessment/swagger-ui)
 - **Profile Service API Docs**: [https://api.qmcloud.io.vn/profile/swagger-ui/index.html#/](https://api.qmcloud.io.vn/profile/swagger-ui/index.html#/)
 - **Forum Service API Docs**: [https://api.qmcloud.io.vn/forum/swagger-ui/index.html#/](https://api.qmcloud.io.vn/forum/swagger-ui/index.html#/)
+- **RabbitMQ Management UI**: [https://rabbitmq.qmcloud.io.vn](https://rabbitmq.qmcloud.io.vn) — theo dõi queue/exchange, message rate của message broker.
+- **System Observer (Dozzle)**: [https://observer.qmcloud.io.vn](https://observer.qmcloud.io.vn) — xem realtime log của các container Docker trong hệ thống qua Dozzle.
 
 Tất cả traffic đi qua **API Gateway (Kong)**, gateway route request tới 6 service backend phía trên qua các prefix `/api/v1/*`.
 

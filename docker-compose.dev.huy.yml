@@ -58,8 +58,8 @@ services:
       dockerfile: Dockerfile
     container_name: auth-service
     restart: always
-    ports:
-      - "${PORT_AUTH_SERVICE}:${PORT_AUTH_SERVICE}"
+    expose:
+      - "${PORT_AUTH_SERVICE}"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -71,7 +71,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${AUTH_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - DB_PORT=${DB_PORT}
+      - DB_PORT=5432
       - PORT=${PORT_AUTH_SERVICE}
 
   # 5. GO SERVICES (Payment, Booking)
@@ -81,8 +81,8 @@ services:
       dockerfile: Dockerfile
     container_name: payment-service
     restart: always
-    ports:
-      - "${PORT_PAYMENT_SERVICE}:${PORT_PAYMENT_SERVICE}"
+    expose:
+      - "${PORT_PAYMENT_SERVICE}"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -90,8 +90,36 @@ services:
       - app-network
     environment:
       - GO_ENV=${APP_ENV}
-      - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - PAYMENT_DB_NAME=${PAYMENT_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      - DB_PORT=5432
       - PORT=${PORT_PAYMENT_SERVICE}
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME:-payment-service}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
+      - VNP_TMN_CODE=${VNP_TMN_CODE}
+      - VNP_HASH_SECRET=${VNP_HASH_SECRET}
+      - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
+      - VNP_RETURN_URL=${VNP_RETURN_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      # URL nội bộ của Booking Service — Payment gọi sang đây sau khi IPN thành công
+      - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
+      - PAYMENT_ORDER_TTL_MINUTES=${PAYMENT_ORDER_TTL_MINUTES:-15}
+      - PAYMENT_MIN_USABLE_WINDOW_SECONDS=${PAYMENT_MIN_USABLE_WINDOW_SECONDS:-60}
+      - OUTBOX_POLL_INTERVAL_SECONDS=${OUTBOX_POLL_INTERVAL_SECONDS:-5}
+      - OUTBOX_MAX_ATTEMPTS=${OUTBOX_MAX_ATTEMPTS:-10}
+      - OUTBOX_BASE_BACKOFF_SECONDS=${OUTBOX_BASE_BACKOFF_SECONDS:-5}
+      - OUTBOX_MAX_BACKOFF_SECONDS=${OUTBOX_MAX_BACKOFF_SECONDS:-300}
+      - OUTBOX_BATCH_SIZE=${OUTBOX_BATCH_SIZE:-50}
+      - HOLD_PERIOD_MINUTES=${HOLD_PERIOD_MINUTES:-1}
 
   booking-service:
     build:
@@ -99,8 +127,8 @@ services:
       dockerfile: Dockerfile
     container_name: booking-service
     restart: always
-    ports:
-      - "${PORT_BOOKING_SERVICE}:${PORT_BOOKING_SERVICE}"
+    expose:
+      - "${PORT_BOOKING_SERVICE}"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -113,8 +141,12 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - BOOKING_DB_NAME=${BOOKING_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - DB_PORT=${DB_PORT}
+      - DB_PORT=5432
       - PORT=${PORT_BOOKING_SERVICE}
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME:-booking-service}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING}
+      - ROLLING_SLOT_DAYS=${ROLLING_SLOT_DAYS:-30}
 
   # 6. API GATEWAY (Kong)
   api-gateway:

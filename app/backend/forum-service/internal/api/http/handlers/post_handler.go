@@ -51,9 +51,7 @@ func (h *PostHandler) List(c *gin.Context) {
 		}
 	}
 	if v := c.Query("authorId"); v != "" {
-		if id, err := strconv.ParseInt(v, 10, 64); err == nil {
-			f.AuthorID = &id
-		}
+		f.AuthorID = &v
 	}
 
 	// Only the post's own author (or an ADMIN) may filter by a

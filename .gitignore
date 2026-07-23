@@ -27,3 +27,5 @@ build/
 *.tar.xz
 *.env
 docker-compose.dev.huy.yml
+**/gocache/
+**/codex-gocache/

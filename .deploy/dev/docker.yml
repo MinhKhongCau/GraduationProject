@@ -54,6 +54,11 @@ services:
       - "6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
@@ -65,9 +70,9 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
-    expose:
-      - "5672"
-      - "15672"
+    ports:
+      - "${RABBITMQ_PORT}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -103,7 +108,7 @@ services:
       - INTERNAL_SECRET_PROFILE=${INTERNAL_SECRET_PROFILE}
       - INTERNAL_SECRET_ASSESSMENT=${INTERNAL_SECRET_ASSESSMENT}
 
-  # 6. GO SERVICES (Profile, Payment, Booking)
+  # 6. GO SERVICES (Profile, Payment, Booking, Forum)
   profile-service:
     image: ${DOCKERHUB_USERNAME}/profile-service-dev:latest
     container_name: profile-service
@@ -145,6 +150,7 @@ services:
       - GO_ENV=${APP_ENV}
       - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
       - DB_USER=${DB_USER}
+      - DB_HOST=${DB_HOST}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${PAYMENT_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
@@ -155,6 +161,11 @@ services:
       - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
       - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
+      # VNPay Sandbox
+      - VNP_TMN_CODE=${VNP_TMN_CODE}
+      - VNP_HASH_SECRET=${VNP_HASH_SECRET} 
+      - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
+      - VNP_RETURN_URL=${VNP_RETURN_URL}
 
   booking-service:
     image: ${DOCKERHUB_USERNAME}/booking-service-dev:latest
@@ -210,7 +221,6 @@ services:
       - INTERNAL_CLIENT_ID=${ASSESSMENT_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_ASSESSMENT}
 
-  # 7. FORUM SERVICE (Go)
   forum-service:
     image: ${DOCKERHUB_USERNAME}/forum-service-dev:latest
     container_name: forum-service
@@ -237,7 +247,33 @@ services:
       - INTERNAL_CLIENT_ID=${FORUM_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_FORUM}
 
-  # 8. API GATEWAY (Kong)
+  # 8. CHATROOM SERVICE (Node.js / Socket.IO)
+  # Its Socket.IO transport isn't proxied through Kong (only the
+  # /api/v1/chatroom REST routes are gateway-wired, see kong.yml) — the
+  # frontend connects to it directly, so unlike the other backend services
+  # in this file it needs its port published, not just exposed internally.
+  chatroom-service:
+    image: ${DOCKERHUB_USERNAME}/chatroom-service-dev:latest
+    container_name: chatroom-service
+    restart: always
+    ports:
+      - "${PORT_CHATROOM_SERVICE}:${PORT_CHATROOM_SERVICE}"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT_CHATROOM_SERVICE}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - REDIS_URL=redis://redis:6379
+      # Verifies the same JWT auth-service signs with, at the Socket.IO
+      # handshake (no internal M2M call to auth-service, unlike the other
+      # Go services above).
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}
+
+  # 9. API GATEWAY (Kong)
   api-gateway:
     image: ${DOCKERHUB_USERNAME}/api-gateway-dev:latest
     container_name: api-gateway
@@ -255,6 +291,23 @@ services:
       - payment-service
       - booking-service
       - assessment-service
+      - chatroom-service
+    networks:
+      - app-network
+
+  # 10. DOZZLE (system observer - realtime docker log viewer, observer.qmcloud.io.vn)
+  # Filtered by compose project label so logs from other projects on this host are hidden.
+  # Default project name here is the compose dir name ("dev") — override via COMPOSE_PROJECT_NAME.
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: mindcare_dozzle
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DOZZLE_FILTER=label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-dev}
+    ports:
+      - "${PORT_DOZZLE}:8080"
     networks:
       - app-network
 

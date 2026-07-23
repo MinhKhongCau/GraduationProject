@@ -75,7 +75,10 @@ func findRoleProfileByAuthID(authIDStr string, role models.Role, preload string)
 	return &profile, nil
 }
 
-func createProfileCore(req schemas.CreateProfileRequest) (*models.Profile, error) {
+// CreateProfileCore builds a Profile + its role-specific sub-record and persists it via GORM.
+// Exported so internal/consumer can reuse the exact same logic when reacting to the
+// user.created RabbitMQ event (see RABBITMQ_CONVENTION.md), instead of duplicating it.
+func CreateProfileCore(req schemas.CreateProfileRequest) (*models.Profile, error) {
 	authID, err := uuid.Parse(req.AuthID)
 	if err != nil {
 		return nil, err
@@ -83,7 +86,7 @@ func createProfileCore(req schemas.CreateProfileRequest) (*models.Profile, error
 
 	var existing models.Profile
 	if err := config.DB.Where("auth_id = ?", authID).First(&existing).Error; err == nil {
-		return nil, gormErrConflict
+		return nil, ErrProfileConflict
 	}
 
 	profile := models.Profile{
@@ -108,7 +111,9 @@ func createProfileCore(req schemas.CreateProfileRequest) (*models.Profile, error
 	return &profile, nil
 }
 
-var gormErrConflict = &conflictError{"auth_id already has a profile"}
+// ErrProfileConflict is returned when a profile already exists for the given auth_id.
+// The user.created consumer treats this as an idempotent no-op rather than a failure.
+var ErrProfileConflict = &conflictError{"auth_id already has a profile"}
 
 type conflictError struct{ msg string }
 
@@ -135,9 +140,9 @@ func CreateProfileInternal(c *gin.Context) {
 		return
 	}
 
-	profile, err := createProfileCore(req)
+	profile, err := CreateProfileCore(req)
 	if err != nil {
-		if err == gormErrConflict {
+		if err == ErrProfileConflict {
 			response.Error(c, http.StatusConflict, "Profile cho tài khoản này đã tồn tại", err.Error())
 			return
 		}
@@ -333,9 +338,9 @@ func CreateProfile(c *gin.Context) {
 		return
 	}
 
-	profile, err := createProfileCore(req)
+	profile, err := CreateProfileCore(req)
 	if err != nil {
-		if err == gormErrConflict {
+		if err == ErrProfileConflict {
 			response.Error(c, http.StatusConflict, "Profile cho tài khoản này đã tồn tại", err.Error())
 			return
 		}

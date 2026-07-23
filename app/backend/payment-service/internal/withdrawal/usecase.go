@@ -7,6 +7,7 @@ import (
 	"log"
 	"payment-service/internal/domain/entity"
 	"payment-service/internal/domain/vo"
+	"payment-service/internal/payment/application/readquery"
 	"payment-service/internal/wallet"
 	"time"
 
@@ -22,6 +23,8 @@ type Usecase interface {
 	ApproveWithdrawal(ctx context.Context, adminID uuid.UUID, requestID uuid.UUID, note string) error
 	RejectWithdrawal(ctx context.Context, adminID uuid.UUID, requestID uuid.UUID, note string) error
 	HandlePayoutCallback(ctx context.Context, requestID uuid.UUID, payoutRef string, success bool, reason string) error
+	ListWithdrawals(ctx context.Context, filter WithdrawalFilter) (*readquery.Page[WithdrawalView], error)
+	GetWithdrawal(ctx context.Context, actorID, requestID uuid.UUID, isAdmin bool) (*WithdrawalView, error)
 }
 
 type withdrawalUsecase struct {
@@ -37,6 +40,12 @@ func NewUsecase(repo Repository, walletUsecase wallet.Usecase) Usecase {
 }
 
 func (u *withdrawalUsecase) LinkBankAccount(ctx context.Context, userID uuid.UUID, bankCode, accountNumber, accountHolderName string) (*entity.BankAccount, error) {
+	// MOCK VALIDATION: Giả lập kiểm tra tài khoản ngân hàng từ VietQR/Napas
+	// Nếu số tài khoản test là 1011223344 thì bắt buộc tên chủ thẻ phải là NGUYEN VAN B
+	if accountNumber == "1011223344" && accountHolderName != "NGUYEN VAN B" {
+		return nil, errors.New("tên chủ tài khoản không khớp với thông tin đăng ký tại ngân hàng " + bankCode)
+	}
+
 	account := &entity.BankAccount{
 		ID:                uuid.New(),
 		UserID:            userID,

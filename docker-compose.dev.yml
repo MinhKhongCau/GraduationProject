@@ -51,10 +51,16 @@ services:
       - "${REDIS_PORT}:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
 
   # 4. RABBITMQ
+  # (idempotent) declare-on-connect calls.
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: mindcare_rabbitmq
@@ -67,6 +73,24 @@ services:
       - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./app/backend/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./app/backend/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama-service
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
     networks:
       - app-network
 
@@ -93,6 +117,8 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - app-network
     environment:
@@ -101,8 +127,12 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${AUTH_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - DB_PORT=${DB_PORT}
+      - DB_PORT=5432
       - PORT=${PORT_AUTH_SERVICE}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
       # RSA Keys — set trong .env bằng base64 DER. Để trống = random key (dev only)
       - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY:-}
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
@@ -124,6 +154,8 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - app-network
     environment:
@@ -135,6 +167,10 @@ services:
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_PROFILE_SERVICE}
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
       # Internal M2M Auth
       - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
       - INTERNAL_CLIENT_ID=${PROFILE_SERVICE_NAME}
@@ -155,12 +191,37 @@ services:
       - app-network
     environment:
       - GO_ENV=${APP_ENV}
-      - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=${DB_PORT} sslmode=${DB_SSLMODE}
+      - DB_URL=host=${DB_HOST} user=${DB_USER} password=${DB_PASSWORD} dbname=${PAYMENT_DB_NAME} port=5432 sslmode=${DB_SSLMODE}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - PAYMENT_DB_NAME=${PAYMENT_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
       - PORT=${PORT_PAYMENT_SERVICE}
       # Internal M2M Auth
-      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
-      - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME}
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME:-payment-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
+      - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
+      - VNP_TMN_CODE=${VNP_TMN_CODE}
+      - VNP_HASH_SECRET=${VNP_HASH_SECRET}
+      - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
+      - VNP_RETURN_URL=${VNP_RETURN_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      - PAYMENT_ORDER_TTL_MINUTES=${PAYMENT_ORDER_TTL_MINUTES:-15}
+      - PAYMENT_MIN_USABLE_WINDOW_SECONDS=${PAYMENT_MIN_USABLE_WINDOW_SECONDS:-60}
+      - OUTBOX_POLL_INTERVAL_SECONDS=${OUTBOX_POLL_INTERVAL_SECONDS:-5}
+      - OUTBOX_MAX_ATTEMPTS=${OUTBOX_MAX_ATTEMPTS:-10}
+      - OUTBOX_BASE_BACKOFF_SECONDS=${OUTBOX_BASE_BACKOFF_SECONDS:-5}
+      - OUTBOX_MAX_BACKOFF_SECONDS=${OUTBOX_MAX_BACKOFF_SECONDS:-300}
+      - OUTBOX_BATCH_SIZE=${OUTBOX_BATCH_SIZE:-50}
+      - HOLD_PERIOD_MINUTES=${HOLD_PERIOD_MINUTES:-1}
 
   booking-service:
     build:
@@ -182,12 +243,13 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - BOOKING_DB_NAME=${BOOKING_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
-      - DB_PORT=${DB_PORT}
+      - DB_PORT=5432
       - PORT=${PORT_BOOKING_SERVICE}
       # Internal M2M Auth
-      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
-      - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME}
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME:-booking-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING}
+      - ROLLING_SLOT_DAYS=${ROLLING_SLOT_DAYS:-30}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:
@@ -229,7 +291,7 @@ services:
     container_name: forum-service
     restart: always
     ports:
-      - "${PORT_FORUM_SERVICE}:${PORT_FORUM_SERVICE}"
+      - "${PORT_FORUM_SERVICE:-8084}:${PORT_FORUM_SERVICE:-8084}"
     depends_on:
       postgres-db:
         condition: service_healthy
@@ -240,15 +302,71 @@ services:
       - DB_HOST=${DB_HOST}
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${FORUM_DB_NAME}
+      - DB_NAME=${FORUM_DB_NAME:-forum_db}
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
-      - PORT=${PORT_FORUM_SERVICE}
+      - PORT=${PORT_FORUM_SERVICE:-8084}
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=${RABBITMQ_PORT}
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
 
+  # 8.5. CHATBOT SERVICE (Python FastAPI)
+  chatbot-service:
+    build:
+      context: ./app/backend/chatbot-service
+      dockerfile: Dockerfile
+    container_name: chatbot-service
+    restart: always
+    ports:
+      - "${PORT_CHATBOT_SERVICE}:${PORT_CHATBOT_SERVICE}"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      ollama:
+        # Thêm dependency này
+        condition: service_started
+    networks:
+      - app-network
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_HOST=${DB_HOST}
+      - POSTGRES_PORT=${DB_PORT}
+      - POSTGRES_DB=${CHATBOT_DB_NAME}
+      - OLLAMA_BASE_URL=http://ollama:11434 # SỬA: dùng service name thay vì host.docker.internal
+    volumes:
+      - ./app/backend/chatbot-service/data:/workspace/data
+      - ./app/backend/chatbot-service/models:/workspace/models
+    # Thêm healthcheck
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:${PORT_CHATBOT_SERVICE}/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 9. CHATROOM SERVICE (Node.js / Socket.IO)
+  chatroom-service:
+    build:
+      context: ./app/backend/chatroom-service
+      dockerfile: Dockerfile
+    container_name: chatroom-service
+    restart: always
+    ports:
+      - "${PORT_CHATROOM_SERVICE}:${PORT_CHATROOM_SERVICE}"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT_CHATROOM_SERVICE}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - REDIS_URL=redis://redis:${REDIS_PORT}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+
+  # 10. API GATEWAY (Kong)
   # 8.5. CHATBOT SERVICE (Python FastAPI)
   chatbot-service:
     build:
@@ -305,6 +423,22 @@ services:
       - booking-service
       - assessment-service
       - chatbot-service
+      - chatroom-service
+    networks:
+      - app-network
+
+  # 11. DOZZLE (system observer - realtime docker log viewer, observer.qmcloud.io.vn)
+  # Filtered by compose project label so logs from other projects on this host are hidden.
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: mindcare_dozzle
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DOZZLE_FILTER=label=com.docker.compose.project=${COMPOSE_PROJECT_NAME:-graduationproject}
+    ports:
+      - "${PORT_DOZZLE}:8080"
     networks:
       - app-network
 

@@ -28,6 +28,24 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_DEFAULT_USER:admin}
+    password: ${RABBITMQ_DEFAULT_PASS:admin}
+    template:
+      retry:
+        enabled: true
+        initial-interval: 1000
+        multiplier: 2.0
+        max-attempts: 5
+        max-interval: 10000
+
+# ─── RabbitMQ Event Publishing (see app/backend/RABBITMQ_CONVENTION.md) ─────
+app:
+  rabbitmq:
+    user-exchange: user.exchange
+
 # ─── JWT Configuration ──────────────────────────────────────────────────────
 jwt:
   # Secret dự phòng (HMAC) - legacy, dùng RSA ký thực tế
@@ -59,7 +77,8 @@ jwt:
 #   profile-service   → plain: "profile_internal_secret_2024"
 #   assessment-service → plain: "assessment_internal_secret_2024"
 internal-clients:
-  booking-service:    ${INTERNAL_SECRET_BOOKING:$2a$10$LGepNLvn/DTB9Yepl5SVlOVbWPR.h/tC3XPQAXVVArXYdvsinTkH.}
-  payment-service:    ${INTERNAL_SECRET_PAYMENT:$2a$10$RMrOxu3QFcg.vJNCykUwMeAnNjdHPV2r9oreZuNDa2IRrEHQnPk8q}
-  profile-service:    ${INTERNAL_SECRET_PROFILE:$2a$10$mVZu8ru34TDvKpqwZdFm5ehRWdV3grAaoOpZiclHQUTT4NeNDnswO}
-  assessment-service: ${INTERNAL_SECRET_ASSESSMENT:$2a$10$El5khvnrOleBYhoSpzy.NeDW9v3gtSZuf.Py/1S97GN9SmMjq/GmC}
+  clients:
+    booking-service:    ${INTERNAL_SECRET_BOOKING:$2a$10$LGepNLvn/DTB9Yepl5SVlOVbWPR.h/tC3XPQAXVVArXYdvsinTkH.}
+    payment-service:    ${INTERNAL_SECRET_PAYMENT:$2a$10$RMrOxu3QFcg.vJNCykUwMeAnNjdHPV2r9oreZuNDa2IRrEHQnPk8q}
+    profile-service:    ${INTERNAL_SECRET_PROFILE:$2a$10$mVZu8ru34TDvKpqwZdFm5ehRWdV3grAaoOpZiclHQUTT4NeNDnswO}
+    assessment-service: ${INTERNAL_SECRET_ASSESSMENT:$2a$10$El5khvnrOleBYhoSpzy.NeDW9v3gtSZuf.Py/1S97GN9SmMjq/GmC}

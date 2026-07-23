@@ -5,6 +5,8 @@ import (
 	"os"
 
 	"profile-service/config"
+	"profile-service/internal/consumer"
+	"profile-service/internal/messaging"
 	"profile-service/routes"
 
 	"github.com/gin-gonic/gin"
@@ -31,6 +33,10 @@ func main() {
 
 	// 2. Kết nối Database & Chạy Migration
 	config.ConnectDB()
+
+	// 2b. Lắng nghe sự kiện user.created từ auth-service (RabbitMQ)
+	rabbitCfg := config.LoadRabbitMQConfig()
+	messaging.StartUserCreatedConsumer(rabbitCfg, consumer.HandleUserCreated)
 
 	// 3. Khởi tạo Gin Router
 	r := gin.Default()

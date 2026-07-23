@@ -29,6 +29,8 @@ jobs:
           cat <<EOF > .deploy/dev/.env
           DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
 
+          COMPOSE_PROJECT_NAME=${{ vars.COMPOSE_PROJECT_NAME }}
+
           APP_ENV=${{ vars.APP_ENV }}
           NODE_ENV=${{ vars.NODE_ENV }}
 
@@ -65,6 +67,7 @@ jobs:
           PORT_FORUM_SERVICE=${{ vars.PORT_FORUM_SERVICE }}
           PORT_CHATROOM_SERVICE=${{ vars.PORT_CHATROOM_SERVICE }}
           PORT_API_GATEWAY=${{ vars.PORT_API_GATEWAY }}
+          PORT_DOZZLE=${{ vars.PORT_DOZZLE }}
 
           REACT_APP_API_URL=${{ vars.REACT_APP_API_URL }}
 
@@ -92,6 +95,11 @@ jobs:
           INTERNAL_PLAIN_SECRET_PAYMENT=${{ secrets.INTERNAL_PLAIN_SECRET_PAYMENT }}
           INTERNAL_PLAIN_SECRET_PROFILE=${{ secrets.INTERNAL_PLAIN_SECRET_PROFILE }}
           INTERNAL_PLAIN_SECRET_ASSESSMENT=${{ secrets.INTERNAL_PLAIN_SECRET_ASSESSMENT }}
+
+          VNP_TMN_CODE=${{ secrets.VNP_TMN_CODE }}
+          VNP_HASH_SECRET=${{ secrets.VNP_HASH_SECRET }}
+          VNP_PAYMENT_URL=${{ secrets.VNP_PAYMENT_URL }}
+          VNP_RETURN_URL=${{ secrets.VNP_RETURN_URL }}
           EOF
 
       # Bước 3: Pull Image lasted from Docker Hub before deploy.
