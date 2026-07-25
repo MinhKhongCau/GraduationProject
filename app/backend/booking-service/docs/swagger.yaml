@@ -923,24 +923,34 @@ paths:
   /public/booking/slots/available-dates:
     get:
       parameters:
-      - description: Expert ID
+      - default: '"2c230afb-a1af-4813-8b26-b17ae7fceb26"'
+        description: Expert ID
+        example: '"2c230afb-a1af-4813-8b26-b17ae7fceb26"'
         in: query
         name: expert_id
         required: true
         type: string
-      - description: Start date YYYY-MM-DD
+      - default: '"2026-07-23"'
+        description: Start date YYYY-MM-DD
+        example: '"2026-07-23"'
         in: query
         name: from
         type: string
-      - description: End date YYYY-MM-DD
+      - default: '"2026-07-30"'
+        description: End date YYYY-MM-DD
+        example: '"2026-07-30"'
         in: query
         name: to
         type: string
-      - description: Zero-based page
+      - default: 0
+        description: Zero-based page
+        example: 0
         in: query
         name: page
         type: integer
-      - description: Page size, 1-100
+      - default: 20
+        description: Page size, 1-100
+        example: 20
         in: query
         name: size
         type: integer
@@ -951,21 +961,29 @@ paths:
   /public/booking/slots/available-times:
     get:
       parameters:
-      - description: Expert ID
+      - default: '"2c230afb-a1af-4813-8b26-b17ae7fceb26"'
+        description: Expert ID
+        example: '"2c230afb-a1af-4813-8b26-b17ae7fceb26"'
         in: query
         name: expert_id
         required: true
         type: string
-      - description: Date YYYY-MM-DD
+      - default: '"2026-07-25"'
+        description: Date YYYY-MM-DD
+        example: '"2026-07-25"'
         in: query
         name: date
         required: true
         type: string
-      - description: Zero-based page
+      - default: 0
+        description: Zero-based page
+        example: 0
         in: query
         name: page
         type: integer
-      - description: Page size, 1-100
+      - default: 20
+        description: Page size, 1-100
+        example: 20
         in: query
         name: size
         type: integer
