@@ -9,6 +9,7 @@ definitions:
     properties:
       appointment_id:
         description: Booking appointment ID to pay with VNPay.
+        example: dddddddd-dddd-4ddd-8ddd-dddddddddddd
         type: string
     required:
     - appointment_id
@@ -273,11 +274,15 @@ paths:
   /payments/orders:
     get:
       parameters:
-      - description: Appointment UUID
+      - default: '"dddddddd-dddd-4ddd-8ddd-dddddddddddd"'
+        description: Appointment UUID
+        example: '"dddddddd-dddd-4ddd-8ddd-dddddddddddd"'
         in: query
         name: appointment_id
         type: string
-      - description: PENDING, SUCCESS, FAILED, EXPIRED
+      - default: '"PENDING"'
+        description: PENDING, SUCCESS, FAILED, EXPIRED
+        example: '"PENDING"'
         in: query
         name: status
         type: string
@@ -285,19 +290,27 @@ paths:
         in: query
         name: fulfillment_status
         type: string
-      - description: Start date YYYY-MM-DD
+      - default: '"2026-07-01"'
+        description: Start date YYYY-MM-DD
+        example: '"2026-07-01"'
         in: query
         name: from
         type: string
-      - description: End date YYYY-MM-DD
+      - default: '"2026-07-30"'
+        description: End date YYYY-MM-DD
+        example: '"2026-07-30"'
         in: query
         name: to
         type: string
-      - description: Zero-based page
+      - default: 0
+        description: Zero-based page
+        example: 0
         in: query
         name: page
         type: integer
-      - description: Page size, 1-100
+      - default: 20
+        description: Page size, 1-100
+        example: 20
         in: query
         name: size
         type: integer

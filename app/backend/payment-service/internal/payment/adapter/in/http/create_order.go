@@ -13,7 +13,7 @@ import (
 
 type CreateOrderRequest struct {
 	// Booking appointment ID to pay with VNPay.
-	AppointmentID string `json:"appointment_id" binding:"required"`
+	AppointmentID string `json:"appointment_id" binding:"required" example:"dddddddd-dddd-4ddd-8ddd-dddddddddddd"`
 }
 
 type CreateOrderResponse struct {
