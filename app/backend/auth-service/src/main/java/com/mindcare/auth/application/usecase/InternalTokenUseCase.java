@@ -53,6 +53,9 @@ public class InternalTokenUseCase {
      */
     public String issueInternalToken(String clientId, String clientSecret) {
         String hashedSecret = internalClientsConfig.getHashedSecret(clientId);
+        if (hashedSecret != null) {
+            hashedSecret = hashedSecret.replace("$$", "$");
+        }
 
         if (hashedSecret == null) {
             log.warn("⛔ Internal token request for unknown client_id: {}", clientId);
