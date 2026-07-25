@@ -13,10 +13,10 @@ import (
 // GetTimes handles GET /api/v1/public/booking/slots/available-times.
 // @Summary [PUBLIC] Get bookable times for a date
 // @Tags Slots
-// @Param expert_id query string true "Expert ID"
-// @Param date query string true "Date YYYY-MM-DD"
-// @Param page query int false "Zero-based page"
-// @Param size query int false "Page size, 1-100"
+// @Param expert_id query string true "Expert ID" default("2c230afb-a1af-4813-8b26-b17ae7fceb26") example("2c230afb-a1af-4813-8b26-b17ae7fceb26")
+// @Param date query string true "Date YYYY-MM-DD" default("2026-07-25") example("2026-07-25")
+// @Param page query int false "Zero-based page" default(0) example(0)
+// @Param size query int false "Page size, 1-100" default(20) example(20)
 // @Router /public/booking/slots/available-times [get]
 func (h *Handler) GetTimes(c *gin.Context) {
 	expertID, date := c.Query("expert_id"), c.Query("date")

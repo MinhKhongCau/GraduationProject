@@ -1221,6 +1221,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "\"2c230afb-a1af-4813-8b26-b17ae7fceb26\"",
+                        "example": "\"2c230afb-a1af-4813-8b26-b17ae7fceb26\"",
                         "description": "Expert ID",
                         "name": "expert_id",
                         "in": "query",
@@ -1228,24 +1230,32 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "\"2026-07-23\"",
+                        "example": "\"2026-07-23\"",
                         "description": "Start date YYYY-MM-DD",
                         "name": "from",
                         "in": "query"
                     },
                     {
                         "type": "string",
+                        "default": "\"2026-07-30\"",
+                        "example": "\"2026-07-30\"",
                         "description": "End date YYYY-MM-DD",
                         "name": "to",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "default": 0,
+                        "example": 0,
                         "description": "Zero-based page",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "default": 20,
+                        "example": 20,
                         "description": "Page size, 1-100",
                         "name": "size",
                         "in": "query"
@@ -1263,6 +1273,8 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "\"2c230afb-a1af-4813-8b26-b17ae7fceb26\"",
+                        "example": "\"2c230afb-a1af-4813-8b26-b17ae7fceb26\"",
                         "description": "Expert ID",
                         "name": "expert_id",
                         "in": "query",
@@ -1270,6 +1282,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "\"2026-07-25\"",
+                        "example": "\"2026-07-25\"",
                         "description": "Date YYYY-MM-DD",
                         "name": "date",
                         "in": "query",
@@ -1277,12 +1291,16 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "default": 0,
+                        "example": 0,
                         "description": "Zero-based page",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "default": 20,
+                        "example": 20,
                         "description": "Page size, 1-100",
                         "name": "size",
                         "in": "query"
