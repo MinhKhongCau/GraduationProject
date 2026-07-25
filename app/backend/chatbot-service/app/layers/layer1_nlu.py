@@ -21,9 +21,12 @@ def safe_torch_load(*args, **kwargs):
 torch.load = safe_torch_load
 # --- KẾT THÚC VÁ LỖI ---
 
-MODEL_NAME = "models/wav2vec-emotion"
+import os
 
-print("[Layer 1] Loading Speech Emotion model from local storage...")
+# Bắt buộc sử dụng mô hình trực tiếp từ Hugging Face Hub (hoặc tùy chỉnh qua biến môi trường EMOTION_MODEL_NAME)
+MODEL_NAME = os.getenv("EMOTION_MODEL_NAME", "r-f/wav2vec-english-speech-emotion-recognition")
+
+print(f"[Layer 1] Loading Speech Emotion model from Hugging Face Hub ({MODEL_NAME})...")
 try:
     processor = AutoFeatureExtractor.from_pretrained(MODEL_NAME)
     model = AutoModelForAudioClassification.from_pretrained(MODEL_NAME)
@@ -32,15 +35,20 @@ except Exception as e:
     print(f"[Layer 1] Warning: Could not load model. Error: {e}")
     processor, model = None, None
 
+import warnings
+
 def analyze_audio_emotion(file_path: str) -> str:
     """
-    Read an audio file (.wav) and predict the user's emotion.
+    Read an audio file (.wav, .m4a, .mp3, etc.) and predict the user's emotion.
     """
     if model is None or processor is None:
         return "neutral"
 
     try:
-        speech, sr = librosa.load(file_path, sr=16000)
+        # Bỏ qua các cảnh báo fallback audioread không cần thiết khi đọc file .m4a / .mp3
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            speech, sr = librosa.load(file_path, sr=16000)
         
         inputs = processor(speech, sampling_rate=16000, return_tensors="pt", padding=True)
         
