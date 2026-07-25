@@ -27,7 +27,9 @@ public class RegisterUseCaseTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
-
+    
+    @Mock
+    private com.mindcare.auth.application.service.UserEventPublisher userEventPublisher;
     @InjectMocks
     private RegisterUseCase registerUseCase;
 
