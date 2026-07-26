@@ -194,10 +194,10 @@ upstreams:
         type: http
         http_path: /health
         healthy:
-          interval: 5
+          interval: 60
           successes: 2
         unhealthy:
-          interval: 5
+          interval: 60
           http_failures: 2
           timeouts: 2
       passive:
@@ -212,10 +212,10 @@ upstreams:
         type: http
         http_path: /health
         healthy:
-          interval: 5
+          interval: 60
           successes: 2
         unhealthy:
-          interval: 5
+          interval: 60
           http_failures: 2
           timeouts: 2
 
@@ -227,10 +227,10 @@ upstreams:
         type: http
         http_path: /health
         healthy:
-          interval: 5
+          interval: 60
           successes: 2
         unhealthy:
-          interval: 5
+          interval: 60
           http_failures: 2
           timeouts: 2
 
@@ -244,10 +244,10 @@ upstreams:
         type: http
         http_path: /health
         healthy:
-          interval: 5
+          interval: 60
           successes: 2
         unhealthy:
-          interval: 5
+          interval: 60
           http_failures: 2
           timeouts: 2
 
@@ -259,10 +259,10 @@ upstreams:
         type: http
         http_path: /health
         healthy:
-          interval: 5
+          interval: 60
           successes: 2
         unhealthy:
-          interval: 5
+          interval: 60
           http_failures: 2
           timeouts: 2
 
@@ -274,10 +274,10 @@ upstreams:
         type: http
         http_path: /health
         healthy:
-          interval: 5
+          interval: 60
           successes: 2
         unhealthy:
-          interval: 5
+          interval: 60
           http_failures: 2
           timeouts: 2
 
@@ -289,10 +289,10 @@ upstreams:
         type: http
         http_path: /health
         healthy:
-          interval: 5
+          interval: 60
           successes: 2
         unhealthy:
-          interval: 5
+          interval: 60
           http_failures: 2
           timeouts: 2
 
