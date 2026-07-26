@@ -38,11 +38,11 @@ export const PATIENT_NAV_ITEMS: NavItem[] = [
 ];
 
 export const PATIENT_BOTTOM_NAV_ITEMS: NavItem[] = [
-  PATIENT_NAV_ITEMS[0],
-  PATIENT_NAV_ITEMS[1],
-  PATIENT_NAV_ITEMS[2],
-  PATIENT_NAV_ITEMS[3],
-  PATIENT_NAV_ITEMS[4],
+  PATIENT_NAV_ITEMS[0], // Dashboard
+  PATIENT_NAV_ITEMS[1], // Find Experts
+  PATIENT_NAV_ITEMS[3], // My Bookings
+  PATIENT_NAV_ITEMS[7], // Messages
+  PATIENT_NAV_ITEMS[8], // Forum
 ];
 
 export const EXPERT_NAV_ITEMS: NavItem[] = [
@@ -57,10 +57,11 @@ export const EXPERT_NAV_ITEMS: NavItem[] = [
 ];
 
 export const EXPERT_BOTTOM_NAV_ITEMS: NavItem[] = [
-  EXPERT_NAV_ITEMS[0],
-  EXPERT_NAV_ITEMS[1],
-  EXPERT_NAV_ITEMS[2],
-  EXPERT_NAV_ITEMS[3],
+  EXPERT_NAV_ITEMS[0], // Dashboard
+  EXPERT_NAV_ITEMS[2], // Appointments
+  EXPERT_NAV_ITEMS[3], // My Patients
+  EXPERT_NAV_ITEMS[6], // Messages
+  EXPERT_NAV_ITEMS[7], // Forum
 ];
 
 export const ADMIN_NAV_ITEMS: NavItem[] = [

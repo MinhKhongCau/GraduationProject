@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
-import { MoreVertical, SendHorizonal, Circle } from "lucide-react";
+import { MoreVertical, SendHorizonal, Circle, ArrowLeft } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceRecorderButton } from "./VoiceRecorderButton";
 import type { ChatContact, ChatMessage } from "@/types";
@@ -20,6 +20,8 @@ export interface ChatWindowProps {
   onSendVoice: (blob: Blob, duration: number) => void;
   onReact: (messageId: string, emoji: string) => void;
   onTyping: (isTyping: boolean) => void;
+  className?: string;
+  onBack?: () => void;
 }
 
 export function ChatWindow({
@@ -33,6 +35,8 @@ export function ChatWindow({
   onSendVoice,
   onReact,
   onTyping,
+  className,
+  onBack,
 }: ChatWindowProps) {
   const [text, setText] = useState("");
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -53,9 +57,18 @@ export function ChatWindow({
   };
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col bg-background">
+    <div className={`flex min-w-0 flex-1 flex-col bg-background ${className ?? ""}`}>
       <div className="flex items-center justify-between border-b border-border p-4">
         <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="mr-1 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-surface md:hidden"
+              aria-label="Back to contacts"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+          )}
           <div className="relative">
             <Image
               src={contact.avatarUrl ?? "https://i.pravatar.cc/150?u=" + contact.id}

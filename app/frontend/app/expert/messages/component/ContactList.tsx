@@ -9,11 +9,12 @@ export interface ContactListProps {
   activeContactId: string | null;
   onlineByContactId: Record<string, boolean>;
   onSelect: (contact: ChatContact) => void;
+  className?: string;
 }
 
-export function ContactList({ contacts, activeContactId, onlineByContactId, onSelect }: ContactListProps) {
+export function ContactList({ contacts, activeContactId, onlineByContactId, onSelect, className }: ContactListProps) {
   return (
-    <div className="flex w-80 shrink-0 flex-col border-r border-border bg-background">
+    <div className={`flex w-full md:w-80 shrink-0 flex-col border-r border-border bg-background ${className ?? ""}`}>
       <div className="border-b border-border p-4">
         <h2 className="mb-4 text-xl font-bold text-foreground">Messages</h2>
         <div className="relative">

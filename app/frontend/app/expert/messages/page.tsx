@@ -12,6 +12,7 @@ export default function ExpertMessagesPage() {
   const { data: contacts = [] } = useExpertChatContacts();
   const { onlineByContactId, queryPresence } = useChatContext();
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
+  const [showChatOnMobile, setShowChatOnMobile] = useState(false);
 
   useEffect(() => {
     if (!activeContactId && contacts.length > 0) setActiveContactId(contacts[0].id);
@@ -25,13 +26,19 @@ export default function ExpertMessagesPage() {
   const thread = useDmThread(activeContactId);
   const activeContact = contacts.find((c) => c.id === activeContactId) ?? null;
 
+  const handleSelectContact = (contact: any) => {
+    setActiveContactId(contact.id);
+    setShowChatOnMobile(true);
+  };
+
   return (
-    <div className="flex h-[750px] overflow-hidden rounded-2xl border border-border bg-background shadow-card">
+    <div className="flex h-[calc(100vh-160px)] md:h-[750px] overflow-hidden rounded-2xl border border-border bg-background shadow-card">
       <ContactList
         contacts={contacts}
         activeContactId={activeContactId}
         onlineByContactId={onlineByContactId}
-        onSelect={(contact) => setActiveContactId(contact.id)}
+        onSelect={handleSelectContact}
+        className={showChatOnMobile ? "hidden md:flex" : "flex"}
       />
       {activeContact && user ? (
         <ChatWindow
@@ -45,9 +52,11 @@ export default function ExpertMessagesPage() {
           onSendVoice={thread.sendVoice}
           onReact={thread.react}
           onTyping={thread.setTyping}
+          className={showChatOnMobile ? "flex" : "hidden md:flex"}
+          onBack={() => setShowChatOnMobile(false)}
         />
       ) : (
-        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+        <div className={`flex-1 items-center justify-center text-sm text-muted-foreground ${showChatOnMobile ? "flex" : "hidden md:flex"}`}>
           {contacts.length === 0 ? "No conversations yet." : "Select a conversation"}
         </div>
       )}
