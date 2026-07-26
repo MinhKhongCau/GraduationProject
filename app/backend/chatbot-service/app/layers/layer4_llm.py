@@ -5,18 +5,21 @@ from openai import OpenAI
 # pyrefly: ignore [missing-import]
 import httpx
 
-# Khởi tạo kết nối tới Local LLM (Ollama)
-ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-
+# 1. CẬP NHẬT URL NGROK (Làm giá trị mặc định nếu biến môi trường bị trống)
+ollama_base_url = "https://encroach-granular-ridden.ngrok-free.dev"
 # Thêm timeout để không bị treo vĩnh viễn
 http_client = httpx.Client(timeout=90.0)  # 90 giây timeout
 
+# 2. BỔ SUNG HEADER ĐỂ VƯỢT LỚP CHẶN CỦA NGROK
 client = OpenAI(
     base_url=f"{ollama_base_url}/v1",
     api_key="ollama",
+    default_headers={"ngrok-skip-browser-warning": "true"}, # <--- Rất quan trọng
     http_client=http_client
 )
-MODEL_NAME = "qwen2.5:3b"  # hoặc đổi thành "qwen2.5:0.5b" nếu muốn nhanh hơn
+
+# 3. ĐỔI TÊN MODEL KHỚP VỚI BẢN GGUF BẠN VỪA TẠO
+MODEL_NAME = "qwen2.5-7b-custom:latest" 
 
 # System Prompt giữ nguyên...
 SYSTEM_PROMPT = """You are a highly empathetic, safe, and professional mental wellness support chatbot.
@@ -54,10 +57,10 @@ def generate_response_stream(user_message: str, rag_context: str):
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.4,
-            max_tokens=200,  # Giảm từ 500 xuống 200
+            max_tokens=200, 
             stop=["User:", "\n\n\n", "<|im_end|>"],
             stream=True,
-            timeout=60  # Timeout 60 giây
+            timeout=60  
         )
         
         for chunk in response:
@@ -68,7 +71,6 @@ def generate_response_stream(user_message: str, rag_context: str):
         print(f"\n[Layer 4 - LLM] ❌ Lỗi khi gọi LLM: {e}")
         yield "I'm sorry, I'm experiencing a technical issue right now."
 
-# Giữ lại hàm generate_response cho test
 def generate_response(user_message: str, rag_context: str) -> str:
     """Non-streaming version cho test"""
     return "".join(generate_response_stream(user_message, rag_context))
