@@ -29,3 +29,14 @@ build/
 docker-compose.dev.huy.yml
 **/gocache/
 **/codex-gocache/
+
+# Binary build artifacts (Go, Java)
+**/profile-service/main
+**/payment-service/payment-service
+**/booking-service/booking-service
+**/forum-service/forum-service
+**/auth-service/*.jar
+
+# Temp audio and large datasets
+**/temp_audio/
+**/data/finetune_sets/
