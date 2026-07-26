@@ -35,20 +35,15 @@ except Exception as e:
     print(f"[Layer 1] Warning: Could not load model. Error: {e}")
     processor, model = None, None
 
-import warnings
-
 def analyze_audio_emotion(file_path: str) -> str:
     """
-    Read an audio file (.wav, .m4a, .mp3, etc.) and predict the user's emotion.
+    Read an audio file (.wav) and predict the user's emotion.
     """
     if model is None or processor is None:
         return "neutral"
 
     try:
-        # Bỏ qua các cảnh báo fallback audioread không cần thiết khi đọc file .m4a / .mp3
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            speech, sr = librosa.load(file_path, sr=16000)
+        speech, sr = librosa.load(file_path, sr=16000)
         
         inputs = processor(speech, sampling_rate=16000, return_tensors="pt", padding=True)
         
