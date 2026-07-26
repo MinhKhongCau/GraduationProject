@@ -5,16 +5,13 @@ const getWsUrl = (): string => {
   if (process.env.NEXT_PUBLIC_CHATROOM_WS_URL) {
     return process.env.NEXT_PUBLIC_CHATROOM_WS_URL;
   }
-  const apiUrl = process.env.REACT_APP_API_URL;
-  if (apiUrl) {
-    try {
-      const url = new URL(apiUrl);
-      return url.origin;
-    } catch (e) {
-      // ignore
-    }
+  const apiUrl = process.env.REACT_APP_API_URL ?? "https://api.qmcloud.io.vn/api/v1";
+  try {
+    const url = new URL(apiUrl);
+    return url.origin;
+  } catch (e) {
+    return "http://localhost:8000";
   }
-  return "http://localhost:8000";
 };
 
 const WS_URL = getWsUrl();

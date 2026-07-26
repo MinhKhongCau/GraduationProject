@@ -81,18 +81,22 @@ export async function cancelAppointment(appointmentId: string, reason: string): 
 
 /** [PUBLIC] Admin-managed shift templates an expert can attach to a weekday. */
 export async function getShiftTemplates(): Promise<TimeTemplate[]> {
-  const response = await bookingClient.get<ServiceEnvelope<TimeTemplate[]>>(
+  const response = await bookingClient.get<ServiceEnvelope<any>>(
     BOOKING_ENDPOINTS.SHIFT_TEMPLATES
   );
-  return response.data.data ?? [];
+  const data = response.data.data;
+  if (Array.isArray(data)) return data;
+  return data?.templates ?? data?.items ?? [];
 }
 
 /** [EXPERT] The logged-in expert's own weekly template rows (one per enabled weekday). */
 export async function getMyAvailabilities(): Promise<Availability[]> {
-  const response = await bookingClient.get<ServiceEnvelope<Availability[]>>(
+  const response = await bookingClient.get<ServiceEnvelope<any>>(
     BOOKING_ENDPOINTS.AVAILABILITIES
   );
-  return response.data.data ?? [];
+  const data = response.data.data;
+  if (Array.isArray(data)) return data;
+  return data?.availabilities ?? data?.items ?? [];
 }
 
 export async function createAvailability(payload: CreateAvailabilityRequest): Promise<Availability> {
