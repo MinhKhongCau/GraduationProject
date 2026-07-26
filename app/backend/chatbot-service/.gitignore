@@ -13,8 +13,9 @@ env.bak/
 venv.bak/
 
 # Project-specific exclusions
-/data/
 /models/
+/data/finetune_sets/
+/temp_audio/
 
 # OS metadata
 .DS_Store
