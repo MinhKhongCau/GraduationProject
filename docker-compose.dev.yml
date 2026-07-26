@@ -93,6 +93,7 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - app-network
+
   # 5. AUTH SERVICE (Java / Spring Boot)
   auth-service:
     build:
@@ -299,7 +300,28 @@ services:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
 
-  # 8.5. CHATBOT SERVICE (Python FastAPI)
+  # 9. CHATROOM SERVICE (Node.js / Socket.IO)
+  chatroom-service:
+    build:
+      context: ./app/backend/chatroom-service
+      dockerfile: Dockerfile
+    container_name: chatroom-service
+    restart: always
+    ports:
+      - "${PORT_CHATROOM_SERVICE}:${PORT_CHATROOM_SERVICE}"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT_CHATROOM_SERVICE}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - REDIS_URL=redis://redis:${REDIS_PORT}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+
+  # 10. CHATBOT SERVICE (Python FastAPI)
   chatbot-service:
     build:
       context: ./app/backend/chatbot-service
@@ -333,28 +355,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # 9. CHATROOM SERVICE (Node.js / Socket.IO)
-  chatroom-service:
-    build:
-      context: ./app/backend/chatroom-service
-      dockerfile: Dockerfile
-    container_name: chatroom-service
-    restart: always
-    ports:
-      - "${PORT_CHATROOM_SERVICE}:${PORT_CHATROOM_SERVICE}"
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - app-network
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - PORT=${PORT_CHATROOM_SERVICE}
-      - CORS_ORIGINS=${CORS_ORIGINS}
-      - REDIS_URL=redis://redis:${REDIS_PORT}
-      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
-
-  # 10. API GATEWAY (Kong)
+  # 11. API GATEWAY (Kong)
   api-gateway:
     platform: linux/amd64
     build:
@@ -380,7 +381,7 @@ services:
     networks:
       - app-network
 
-  # 11. DOZZLE (system observer - realtime docker log viewer, observer.qmcloud.io.vn)
+  # 12. DOZZLE (system observer - realtime docker log viewer, observer.qmcloud.io.vn)
   # Filtered by compose project label so logs from other projects on this host are hidden.
   dozzle:
     image: amir20/dozzle:latest

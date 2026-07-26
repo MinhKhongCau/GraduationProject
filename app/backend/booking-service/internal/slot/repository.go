@@ -35,13 +35,12 @@ func (r *pgRepository) GetAvailableDates(expertID string, startDate, endDate tim
 	var dates []string
 	nowMs := time.Now().UnixMilli()
 
-	// DISTINCT DATE: gom tất cả các slot trong cùng ngày thành 1 dòng
-	// Lọc: chỉ lấy ngày có ít nhất 1 slot AVAILABLE, chưa bị khóa, và chưa qua (start_time > now)
 	err := withoutActiveTimeOff(r.db.Table(`"Booking_Expert_Slots"`)).
 		Where(`expert_id = ? AND date_slot >= ? AND date_slot <= ? AND status = ? AND start_time > ?`,
 			expertID, startDate, endDate, domain.SlotStatusAvailable, nowMs).
-		Select(`DISTINCT TO_CHAR(date_slot, 'YYYY-MM-DD')`).
-		Pluck(`TO_CHAR(date_slot, 'YYYY-MM-DD')`, &dates).Error
+		Group("TO_CHAR(date_slot, 'YYYY-MM-DD')").
+		Order("TO_CHAR(date_slot, 'YYYY-MM-DD') ASC").
+		Pluck("TO_CHAR(date_slot, 'YYYY-MM-DD')", &dates).Error
 
 	return dates, err
 }
@@ -112,13 +111,24 @@ func (r *pgRepository) BulkInsertSlots(slots []domain.ExpertSlot) (int64, error)
 }
 
 func (r *pgRepository) ListAvailableDates(filter AvailableDateQuery) ([]string, int64, error) {
-	query := withoutActiveTimeOff(r.db.Table(`"Booking_Expert_Slots"`)).Where("expert_id = ? AND start_time >= ? AND start_time < ? AND status = ? AND start_time > ?", filter.ExpertID, filter.FromMs, filter.ToMs, domain.SlotStatusAvailable, time.Now().UnixMilli())
+	baseQuery := withoutActiveTimeOff(r.db.Table(`"Booking_Expert_Slots"`)).
+		Where("expert_id = ? AND start_time >= ? AND start_time < ? AND status = ? AND start_time > ?",
+			filter.ExpertID, filter.FromMs, filter.ToMs, domain.SlotStatusAvailable, time.Now().UnixMilli())
+
 	var total int64
-	if err := query.Distinct("date_slot").Count(&total).Error; err != nil {
+	if err := baseQuery.Session(&gorm.Session{}).Select("COUNT(DISTINCT TO_CHAR(date_slot, 'YYYY-MM-DD'))").Scan(&total).Error; err != nil {
 		return nil, 0, err
 	}
+
 	var dates []string
-	err := query.Select(`DISTINCT TO_CHAR(date_slot, 'YYYY-MM-DD') AS date_value`).Order("date_value ASC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Pluck("date_value", &dates).Error
+	err := baseQuery.Session(&gorm.Session{}).
+		Select("TO_CHAR(date_slot, 'YYYY-MM-DD') AS date_value").
+		Group("TO_CHAR(date_slot, 'YYYY-MM-DD')").
+		Order("date_value ASC").
+		Limit(filter.Page.Size).
+		Offset(filter.Page.Offset()).
+		Pluck("date_value", &dates).Error
+
 	return dates, total, err
 }
 

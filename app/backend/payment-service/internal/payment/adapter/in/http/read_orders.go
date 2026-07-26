@@ -17,13 +17,13 @@ import (
 // @Summary [PATIENT] List own payment orders
 // @Tags Payments
 // @Security BearerAuth
-// @Param appointment_id query string false "Appointment UUID"
-// @Param status query string false "PENDING, SUCCESS, FAILED, EXPIRED"
+// @Param appointment_id query string false "Appointment UUID" default("dddddddd-dddd-4ddd-8ddd-dddddddddddd") example("dddddddd-dddd-4ddd-8ddd-dddddddddddd")
+// @Param status query string false "PENDING, SUCCESS, FAILED, EXPIRED" default("PENDING") example("PENDING")
 // @Param fulfillment_status query string false "Fulfillment status"
-// @Param from query string false "Start date YYYY-MM-DD"
-// @Param to query string false "End date YYYY-MM-DD"
-// @Param page query int false "Zero-based page"
-// @Param size query int false "Page size, 1-100"
+// @Param from query string false "Start date YYYY-MM-DD" default("2026-07-01") example("2026-07-01")
+// @Param to query string false "End date YYYY-MM-DD" default("2026-07-30") example("2026-07-30")
+// @Param page query int false "Zero-based page" default(0) example(0)
+// @Param size query int false "Page size, 1-100" default(20) example(20)
 // @Router /payments/orders [get]
 func (h *Handler) ListPaymentOrders(c *gin.Context) {
 	if c.GetHeader("X-User-Role") != "PATIENT" {

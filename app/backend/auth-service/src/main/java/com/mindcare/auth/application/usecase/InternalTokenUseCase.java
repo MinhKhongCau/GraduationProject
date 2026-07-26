@@ -52,7 +52,14 @@ public class InternalTokenUseCase {
      * @throws IllegalArgumentException nếu client_id không tồn tại hoặc secret sai
      */
     public String issueInternalToken(String clientId, String clientSecret) {
-        String hashedSecret = internalClientsConfig.getHashedSecret(clientId);
+        String rawHashedSecret = internalClientsConfig.getHashedSecret(clientId);
+        log.info("🔍 [DIAGNOSTIC] clientId: '{}', clientSecret (plain): '{}', rawHashedSecret: '{}'", clientId, clientSecret, rawHashedSecret);
+
+        String hashedSecret = rawHashedSecret;
+        if (hashedSecret != null) {
+            hashedSecret = hashedSecret.replace("$$", "$");
+            log.info("🔍 [DIAGNOSTIC] processed hashedSecret (escaped): '{}'", hashedSecret);
+        }
 
         if (hashedSecret == null) {
             log.warn("⛔ Internal token request for unknown client_id: {}", clientId);

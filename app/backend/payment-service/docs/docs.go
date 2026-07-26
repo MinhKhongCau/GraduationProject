@@ -313,12 +313,16 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
+                        "default": "\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\"",
+                        "example": "\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\"",
                         "description": "Appointment UUID",
                         "name": "appointment_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
+                        "default": "\"PENDING\"",
+                        "example": "\"PENDING\"",
                         "description": "PENDING, SUCCESS, FAILED, EXPIRED",
                         "name": "status",
                         "in": "query"
@@ -331,24 +335,32 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
+                        "default": "\"2026-07-01\"",
+                        "example": "\"2026-07-01\"",
                         "description": "Start date YYYY-MM-DD",
                         "name": "from",
                         "in": "query"
                     },
                     {
                         "type": "string",
+                        "default": "\"2026-07-30\"",
+                        "example": "\"2026-07-30\"",
                         "description": "End date YYYY-MM-DD",
                         "name": "to",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "default": 0,
+                        "example": 0,
                         "description": "Zero-based page",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "default": 20,
+                        "example": 20,
                         "description": "Page size, 1-100",
                         "name": "size",
                         "in": "query"
@@ -934,7 +946,8 @@ const docTemplate = `{
             "properties": {
                 "appointment_id": {
                     "description": "Booking appointment ID to pay with VNPay.",
-                    "type": "string"
+                    "type": "string",
+                    "example": "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
                 }
             }
         },
