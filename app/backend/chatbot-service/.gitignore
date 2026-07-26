@@ -13,7 +13,8 @@ env.bak/
 venv.bak/
 
 # Project-specific exclusions
-/data/
+/data/finetune_sets/
+/temp_audio/
 /models/
 
 # OS metadata

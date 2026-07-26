@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import librosa
 # pyrefly: ignore [missing-import]
 from transformers import AutoFeatureExtractor, AutoModelForAudioClassification
+import os
 
 # --- BẮT ĐẦU VÁ LỖI BẢO MẬT PYTORCH 2.6 ---
 # Lưu lại hàm gốc của PyTorch
@@ -21,9 +22,13 @@ def safe_torch_load(*args, **kwargs):
 torch.load = safe_torch_load
 # --- KẾT THÚC VÁ LỖI ---
 
-MODEL_NAME = "models/wav2vec-emotion"
+# MODEL_NAME = "models/wav2vec-emotion"
 
-print("[Layer 1] Loading Speech Emotion model from local storage...")
+# print("[Layer 1] Loading Speech Emotion model from local storage...")
+# Bắt buộc sử dụng mô hình trực tiếp từ Hugging Face Hub (hoặc tùy chỉnh qua biến môi trường EMOTION_MODEL_NAME)
+MODEL_NAME = os.getenv("EMOTION_MODEL_NAME", "r-f/wav2vec-english-speech-emotion-recognition")
+
+print(f"[Layer 1] Loading Speech Emotion model from Hugging Face Hub ({MODEL_NAME})...")
 try:
     processor = AutoFeatureExtractor.from_pretrained(MODEL_NAME)
     model = AutoModelForAudioClassification.from_pretrained(MODEL_NAME)
