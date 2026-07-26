@@ -45,13 +45,13 @@ export const BOOKING_ENDPOINTS = {
 };
 
 export const PAYMENT_ENDPOINTS = {
-  INIT_WALLET: "/payments/wallets/init",
-  WALLET: (ownerId: string) => `/payments/wallets/${ownerId}`,
-  TOP_UP: (ownerId: string) => `/payments/wallets/${ownerId}/top-up`,
+  INIT_WALLET: "/payments/wallets/me",
+  WALLET: "/payments/wallets/me",
+  TOP_UP: "/payments/wallets/top-up",
   PAY: "/payments/wallets/pay",
-  WITHDRAW: (ownerId: string) => `/payments/wallets/${ownerId}/withdraw`,
+  WITHDRAW: "/payments/withdrawals",
   PROCESS_WITHDRAWAL: (requestId: string) =>
-    `/payments/wallets/withdrawals/${requestId}/process`,
+    `/payments/withdrawals/${requestId}/approve`,
   /** Creates a VNPay/MoMo order; when appointmentId is set, server recomputes amount from the real slot price. */
   ORDERS: "/payments/orders",
 };
