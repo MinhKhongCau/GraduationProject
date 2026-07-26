@@ -93,6 +93,7 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - app-network
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull nomic-embed-text && tail -f /dev/null"]
 
   # 5. AUTH SERVICE (Java / Spring Boot)
   auth-service:
