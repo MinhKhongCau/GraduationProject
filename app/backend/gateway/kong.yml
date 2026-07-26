@@ -164,6 +164,10 @@ services:
         paths:
           - /api/v1/chatroom
         strip_path: false
+      - name: chatroom-socket-routes
+        paths:
+          - /socket.io
+        strip_path: false
       - name: chatroom-docs-routes
         paths:
           - /chatroom
@@ -304,6 +308,7 @@ plugins:
         - http://localhost:3000
         - http://localhost:3001
         - https://sandbox.qmcloud.io.vn
+        - http://sandbox.qmcloud.io.vn
       methods:
         - GET
         - POST

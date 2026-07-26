@@ -1,7 +1,23 @@
 import { io, type Socket } from "socket.io-client";
 import { getAccessToken } from "@/api/http/session";
 
-const WS_URL = process.env.NEXT_PUBLIC_CHATROOM_WS_URL ?? "http://localhost:8085";
+const getWsUrl = (): string => {
+  if (process.env.NEXT_PUBLIC_CHATROOM_WS_URL) {
+    return process.env.NEXT_PUBLIC_CHATROOM_WS_URL;
+  }
+  const apiUrl = process.env.REACT_APP_API_URL;
+  if (apiUrl) {
+    try {
+      const url = new URL(apiUrl);
+      return url.origin;
+    } catch (e) {
+      // ignore
+    }
+  }
+  return "http://localhost:8000";
+};
+
+const WS_URL = getWsUrl();
 const GLOBAL_KEY = "__mindcareChatSocket__";
 
 /**

@@ -6,7 +6,9 @@ from openai import OpenAI
 import httpx
 
 # Khởi tạo kết nối tới Local LLM (Ollama)
-ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+# ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+# 1. CẬP NHẬT URL NGROK (Làm giá trị mặc định nếu biến môi trường bị trống)
+ollama_base_url = "https://encroach-granular-ridden.ngrok-free.dev"
 
 # Thêm timeout để không bị treo vĩnh viễn
 http_client = httpx.Client(timeout=90.0)  # 90 giây timeout
@@ -14,9 +16,10 @@ http_client = httpx.Client(timeout=90.0)  # 90 giây timeout
 client = OpenAI(
     base_url=f"{ollama_base_url}/v1",
     api_key="ollama",
+    default_headers={"ngrok-skip-browser-warning": "true"},
     http_client=http_client
 )
-MODEL_NAME = "qwen2.5:3b"  # hoặc đổi thành "qwen2.5:0.5b" nếu muốn nhanh hơn
+MODEL_NAME = "qwen2.5-7b-custom:latest"
 
 # System Prompt giữ nguyên...
 SYSTEM_PROMPT = """You are a highly empathetic, safe, and professional mental wellness support chatbot.

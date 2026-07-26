@@ -52,7 +52,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -76,7 +76,7 @@ services:
       - ./app/backend/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
       - ./app/backend/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -93,6 +93,7 @@ services:
       - ollama_data:/root/.ollama
     networks:
       - app-network
+    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull nomic-embed-text && tail -f /dev/null" ]
 
   # 5. AUTH SERVICE (Java / Spring Boot)
   auth-service:
@@ -344,10 +345,11 @@ services:
       - POSTGRES_HOST=${DB_HOST}
       - POSTGRES_PORT=${DB_PORT}
       - POSTGRES_DB=${CHATBOT_DB_NAME}
-      - OLLAMA_BASE_URL=http://ollama:11434 # SỬA: dùng service name thay vì host.docker.internal
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - EMOTION_MODEL_NAME=r-f/wav2vec-english-speech-emotion-recognition
     volumes:
       - ./app/backend/chatbot-service/data:/workspace/data
-      - ./app/backend/chatbot-service/models:/workspace/models
+      - huggingface_cache:/root/.cache/huggingface
     # Thêm healthcheck
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:${PORT_CHATBOT_SERVICE}/health" ]
@@ -401,6 +403,7 @@ volumes:
   redis_data:
   rabbitmq_data:
   ollama_data:
+  huggingface_cache:
 
 networks:
   app-network:
