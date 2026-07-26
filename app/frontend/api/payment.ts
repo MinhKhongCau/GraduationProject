@@ -18,23 +18,22 @@ import type {
 // adjust if it turns out to return the entity directly).
 
 export async function initWallet(payload: InitWalletRequest): Promise<Wallet> {
-  const response = await paymentClient.post<ServiceEnvelope<Wallet>>(
-    PAYMENT_ENDPOINTS.INIT_WALLET,
-    payload
+  const response = await paymentClient.get<ServiceEnvelope<Wallet>>(
+    PAYMENT_ENDPOINTS.INIT_WALLET
   );
   return response.data.data;
 }
 
 export async function getWallet(ownerId: string): Promise<Wallet> {
   const response = await paymentClient.get<ServiceEnvelope<Wallet>>(
-    PAYMENT_ENDPOINTS.WALLET(ownerId)
+    PAYMENT_ENDPOINTS.WALLET
   );
   return response.data.data;
 }
 
 export async function topUpWallet(ownerId: string, payload: TopUpRequest): Promise<Wallet> {
   const response = await paymentClient.post<ServiceEnvelope<Wallet>>(
-    PAYMENT_ENDPOINTS.TOP_UP(ownerId),
+    PAYMENT_ENDPOINTS.TOP_UP,
     payload
   );
   return response.data.data;
@@ -49,7 +48,7 @@ export async function requestWithdrawal(
   payload: CreateWithdrawalRequest
 ): Promise<WithdrawalRequestRecord> {
   const response = await paymentClient.post<ServiceEnvelope<WithdrawalRequestRecord>>(
-    PAYMENT_ENDPOINTS.WITHDRAW(ownerId),
+    PAYMENT_ENDPOINTS.WITHDRAW,
     payload
   );
   return response.data.data;
