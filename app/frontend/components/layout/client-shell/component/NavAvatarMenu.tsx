@@ -4,7 +4,10 @@ import Link from "next/link";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { LogOut, Settings } from "lucide-react";
 import { useAuth, useTranslation } from "@/hooks";
+import { useQuery } from "@tanstack/react-query";
+import { patientApi, expertApi } from "@/api";
 import type { NavItem } from "@/constants/nav";
+import type { PatientProfile, ExpertProfile } from "@/types";
 
 export interface NavAvatarMenuProps {
   settingsItem: NavItem;
@@ -23,17 +26,39 @@ export function NavAvatarMenu({ settingsItem }: NavAvatarMenuProps) {
   const { user, logout } = useAuth();
   const { t } = useTranslation();
 
+  const isPatient = user?.role === "PATIENT";
+  const isExpert = user?.role === "EXPERT";
+
+  const { data: profile } = useQuery<PatientProfile | ExpertProfile>({
+    queryKey: isPatient ? ["patient", "profile", "me"] : ["expert", "profile", "me"],
+    queryFn: () => (isPatient ? patientApi.getMyProfile() : expertApi.getMyProfile()),
+    enabled: !!user && (isPatient || isExpert),
+    staleTime: 5 * 60 * 1000,
+  });
+
   if (!user) return null;
+
+  const displayAvatar = profile?.avatarUrl;
+  const displayFullName = profile?.fullName || user.fullName;
 
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-sm font-bold text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary-soft"
+          className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-surface text-sm font-bold text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary-soft"
           aria-label="Account menu"
         >
-          {initials(user.fullName) || "?"}
+          {displayAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={displayAvatar}
+              alt={displayFullName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initials(displayFullName) || "?"
+          )}
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
@@ -42,9 +67,19 @@ export function NavAvatarMenu({ settingsItem }: NavAvatarMenuProps) {
           sideOffset={8}
           className="z-50 min-w-[200px] rounded-xl border border-border bg-background p-1.5 shadow-elevated"
         >
-          <div className="px-3 py-2">
-            <p className="truncate text-sm font-bold text-foreground">{user.fullName}</p>
-            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+          <div className="px-3 py-2 flex items-center gap-3">
+            {displayAvatar && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={displayAvatar}
+                alt={displayFullName}
+                className="h-8 w-8 rounded-full object-cover border border-border"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-foreground">{displayFullName}</p>
+              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            </div>
           </div>
           <DropdownMenu.Separator className="my-1 h-px bg-border" />
           <DropdownMenu.Item asChild>

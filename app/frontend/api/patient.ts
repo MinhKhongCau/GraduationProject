@@ -41,7 +41,7 @@ function toPatientProfile(raw: RawPatientProfile): PatientProfile {
     fullName: raw.name,
     phoneNumber: detail?.phoneNumber,
     email: detail?.email ?? "",
-    avatarUrl: detail?.avatarUrl,
+    avatarUrl: detail?.avatarUrl || undefined,
     dateOfBirth: detail?.dateOfBirth ?? undefined,
     gender: detail?.gender,
     address: detail?.address,
@@ -109,6 +109,13 @@ export async function listPatients(
 export async function getPatientProfile(accountId: string): Promise<PatientProfile> {
   const response = await profileClient.get<ServiceEnvelope<RawPatientProfile>>(
     PROFILE_ENDPOINTS.PATIENT(accountId)
+  );
+  return toPatientProfile(response.data.data);
+}
+
+export async function getPatientProfilePublic(accountId: string): Promise<PatientProfile> {
+  const response = await profileClient.get<ServiceEnvelope<RawPatientProfile>>(
+    PROFILE_ENDPOINTS.PATIENT_PUBLIC(accountId)
   );
   return toPatientProfile(response.data.data);
 }

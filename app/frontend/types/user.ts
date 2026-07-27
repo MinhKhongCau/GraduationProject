@@ -29,7 +29,7 @@ export interface UpdatePatientProfileRequest {
   phoneNumber?: string;
   email?: string;
   avatarUrl?: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
   gender?: string;
   address?: string;
 }

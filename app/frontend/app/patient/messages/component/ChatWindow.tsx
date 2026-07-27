@@ -155,7 +155,7 @@ export function ChatWindow({
           )}
           <div className="relative">
             <Image
-              src={contact.avatarUrl ?? "https://i.pravatar.cc/150?u=" + contact.id}
+              src={contact.avatarUrl || "https://i.pravatar.cc/150?u=" + contact.id}
               alt={contact.fullName}
               width={40}
               height={40}

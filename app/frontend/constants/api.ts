@@ -19,6 +19,7 @@ export const PROFILE_ENDPOINTS = {
   ME_MEDICAL_HISTORIES: "/profiles/me/medical-histories",
   PATIENTS: "/profiles/patients",
   PATIENT: (accountId: string) => `/profiles/patients/${accountId}`,
+  PATIENT_PUBLIC: (accountId: string) => `/profiles/patients/${accountId}/public`,
   PATIENT_MEDICAL_HISTORIES: (accountId: string) =>
     `/profiles/patients/${accountId}/medical-histories`,
   SPECIALIZATIONS: "/profiles/specializations",
