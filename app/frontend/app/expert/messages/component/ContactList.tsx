@@ -45,7 +45,7 @@ export function ContactList({ contacts, activeContactId, onlineByContactId, onSe
             >
               <div className="relative shrink-0">
                 <Image
-                  src={contact.avatarUrl ?? "https://i.pravatar.cc/150?u=" + contact.id}
+                  src={contact.avatarUrl || "https://i.pravatar.cc/150?u=" + contact.id}
                   alt={contact.fullName}
                   width={48}
                   height={48}

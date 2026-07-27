@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { MoreVertical, SendHorizonal, Circle, ArrowLeft } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceRecorderButton } from "./VoiceRecorderButton";
@@ -22,6 +22,7 @@ export interface ChatWindowProps {
   onTyping: (isTyping: boolean) => void;
   className?: string;
   onBack?: () => void;
+  onFetchMore?: (page: number) => void;
 }
 
 export function ChatWindow({
@@ -37,9 +38,92 @@ export function ChatWindow({
   onTyping,
   className,
   onBack,
+  onFetchMore,
 }: ChatWindowProps) {
   const [text, setText] = useState("");
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [page, setPage] = useState(1);
+  const lastFetchedPageRef = useRef<number>(1);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const prevScrollHeightRef = useRef<number>(0);
+  const isPendingPageRef = useRef<boolean>(false);
+  const previousContactIdRef = useRef<string | null>(null);
+  const previousLastMessageIdRef = useRef<string | null>(null);
+  const [hasScrolledInitially, setHasScrolledInitially] = useState(false);
+
+  // Reset page state when contact.id changes
+  useEffect(() => {
+    setPage(1);
+    lastFetchedPageRef.current = 1;
+    isPendingPageRef.current = false;
+    setHasScrolledInitially(false);
+  }, [contact.id]);
+
+  // Helper to scroll the container to the bottom
+  const scrollToBottom = (behavior: "auto" | "smooth") => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior,
+      });
+    }
+  };
+
+  // Adjust scroll position after older messages are loaded/prepended
+  useEffect(() => {
+    if (isPendingPageRef.current && scrollContainerRef.current) {
+      isPendingPageRef.current = false;
+      const container = scrollContainerRef.current;
+      const newScrollHeight = container.scrollHeight;
+      container.scrollTop = newScrollHeight - prevScrollHeightRef.current;
+    }
+  }, [messages]);
+
+  // Handle scroll to top (pagination trigger)
+  const handleScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    if (container.scrollTop === 0 && messages.length >= 20 && onFetchMore) {
+      const nextPage = page + 1;
+      if (nextPage > lastFetchedPageRef.current) {
+        lastFetchedPageRef.current = nextPage;
+        setPage(nextPage);
+        
+        prevScrollHeightRef.current = container.scrollHeight;
+        isPendingPageRef.current = true;
+        
+        onFetchMore(nextPage);
+      }
+    }
+  };
+
+  // Auto-scroll to bottom on first load/contact change or new messages
+  useEffect(() => {
+    if (messages.length > 0 && !hasScrolledInitially) {
+      scrollToBottom("auto");
+      setHasScrolledInitially(true);
+      const lastMessage = messages[messages.length - 1];
+      previousLastMessageIdRef.current = lastMessage ? lastMessage.id : null;
+      return;
+    }
+
+    const isDifferentContact = previousContactIdRef.current !== contact.id;
+    previousContactIdRef.current = contact.id;
+
+    const lastMessage = messages[messages.length - 1];
+    const lastMessageId = lastMessage ? lastMessage.id : null;
+    const isNewMessage = previousLastMessageIdRef.current !== lastMessageId;
+    previousLastMessageIdRef.current = lastMessageId;
+
+    if (isDifferentContact) {
+      scrollToBottom("auto");
+    } else if (isNewMessage) {
+      scrollToBottom("smooth");
+    }
+  }, [messages, contact.id, hasScrolledInitially]);
 
   const notifyTyping = () => {
     onTyping(true);
@@ -71,7 +155,7 @@ export function ChatWindow({
           )}
           <div className="relative">
             <Image
-              src={contact.avatarUrl ?? "https://i.pravatar.cc/150?u=" + contact.id}
+              src={contact.avatarUrl || "https://i.pravatar.cc/150?u=" + contact.id}
               alt={contact.fullName}
               width={40}
               height={40}
@@ -104,7 +188,11 @@ export function ChatWindow({
         </div>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto bg-surface/30 p-6">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 space-y-6 overflow-y-auto bg-surface/30 p-6"
+      >
         <div className="flex justify-center">
           <span className="rounded-full bg-surface px-3 py-1 text-[11px] font-medium text-muted-foreground">Today</span>
         </div>

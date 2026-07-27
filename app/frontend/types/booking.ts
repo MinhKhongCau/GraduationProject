@@ -23,6 +23,7 @@ export interface AvailableTimeSlot {
   slotId: string;
   startTime: number;
   endTime: number;
+  price?: number;
 }
 
 export type AppointmentStatusCode = 0 | 1 | 2;
@@ -38,6 +39,7 @@ export interface Appointment {
   status: AppointmentStatusCode;
   statusLabel: AppointmentStatus;
   meetingLink: string;
+  price?: number;
   createdAt: number;
   updatedAt: number;
   confirmedAt: number | null;

@@ -37,7 +37,7 @@ export interface LogoutRequest {
 
 export interface ProfileUpdateRequest {
   fullName: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
 }
 
 export interface ChangePasswordRequest {

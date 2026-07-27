@@ -46,7 +46,7 @@ export function ReviewStep({ expert, slot, date, topics, onBack, onConfirm, isSu
         <div className="flex items-center justify-between border-t border-border pt-4">
           <span className="text-sm text-muted-foreground">Channeling fee</span>
           <span className="text-lg font-extrabold text-foreground">
-            {CHANNELING_FEE.toLocaleString("vi-VN")} đ
+            {(slot.price ?? CHANNELING_FEE).toLocaleString("vi-VN")} đ
           </span>
         </div>
       </Card>

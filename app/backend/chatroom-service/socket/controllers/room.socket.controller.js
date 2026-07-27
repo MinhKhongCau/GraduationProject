@@ -44,8 +44,8 @@ export function roomSocketController(io, socket) {
     io.emit("rooms:list", rooms); // Broadcast to all clients
 
     // send history to late joiner
-    const history = await getChatHistory(roomId);
-    socket.emit("chat:history", history);
+    const history = await getChatHistory(roomId, 0, 19);
+    socket.emit("chat:history", { roomId, history, page: 1, limit: 20 });
 
     // system join message
     await sysMsg(roomId, `${name} joined the room`);

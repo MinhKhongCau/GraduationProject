@@ -95,6 +95,26 @@ func GetPatient(c *gin.Context) {
 	response.Success(c, "Lấy hồ sơ thành công", profile)
 }
 
+// GetPatientPublic trả về thông tin công khai của bệnh nhân (tên, ảnh) cho chuyên gia/người dùng đã đăng nhập.
+func GetPatientPublic(c *gin.Context) {
+	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RolePatient, "PatientProfile")
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ bệnh nhân", err.Error())
+		return
+	}
+
+	if profile.PatientProfile != nil {
+		profile.PatientProfile.PhoneNumber = ""
+		profile.PatientProfile.Email = ""
+		profile.PatientProfile.Address = ""
+		profile.PatientProfile.DateOfBirth = nil
+		profile.PatientProfile.Gender = ""
+		profile.PatientProfile.MedicalHistories = nil
+	}
+
+	response.Success(c, "Lấy hồ sơ công khai thành công", profile)
+}
+
 // UpdatePatient thay thế toàn bộ (PUT) hồ sơ bệnh nhân - dành cho Admin.
 // @Summary      [Admin] Cập nhật toàn bộ hồ sơ bệnh nhân
 // @Tags         patients
