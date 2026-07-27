@@ -3,12 +3,14 @@ import { toggleReaction } from "../../services/reactions.service.js";
 
 export function chatSocketController(io, socket) {
   // ====== CHAT HISTORY ======
-  socket.on("chat:history", async () => {
+  socket.on("chat:history", async ({ page = 1, limit = 20 } = {}) => {
     const roomId = socket.data.roomId;
     if (!roomId) return;
     
-    const history = await getChatHistory(roomId);
-    socket.emit("chat:history", history);
+    const start = (page - 1) * limit;
+    const end = start + limit - 1;
+    const history = await getChatHistory(roomId, start, end);
+    socket.emit("chat:history", { roomId, history, page, limit });
   });
 
   // ====== SEND TEXT MESSAGE ======

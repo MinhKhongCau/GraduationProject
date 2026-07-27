@@ -30,7 +30,7 @@ interface ChatContextValue {
   reactionsByMessageId: MessageReactions;
   typingByContactId: Record<string, boolean>;
   onlineByContactId: Record<string, boolean>;
-  fetchHistory: (contactId: string) => void;
+  fetchHistory: (contactId: string, page?: number, limit?: number) => void;
   sendText: (contactId: string, text: string) => void;
   sendVoice: (contactId: string, blob: Blob, duration: number) => Promise<void>;
   react: (contactId: string, messageId: string, emoji: string) => void;
@@ -74,8 +74,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       });
     };
 
-    const onDmHistory = ({ dmId, history }: DmHistoryPayload) => {
-      setMessagesByDmId((prev) => ({ ...prev, [dmId]: history }));
+    const onDmHistory = ({ dmId, history, page = 1 }: DmHistoryPayload) => {
+      setMessagesByDmId((prev) => {
+        const existing = prev[dmId] ?? [];
+        if (page === 1) {
+          return { ...prev, [dmId]: history };
+        } else {
+          // Prepend older history to existing messages, avoiding duplicates
+          const existingIds = new Set(existing.map((m) => m.id));
+          const filteredHistory = history.filter((m) => !existingIds.has(m.id));
+          return { ...prev, [dmId]: [...filteredHistory, ...existing] };
+        }
+      });
     };
 
     const onDmReaction = ({ messageId, emoji, userId }: DmReactionPayload) => {
@@ -128,7 +138,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, socket]);
 
   const fetchHistory = useCallback(
-    (contactId: string) => socket.emit("dm:history", { toUser: contactId }),
+    (contactId: string, page = 1, limit = 20) => socket.emit("dm:history", { toUser: contactId, page, limit }),
     [socket]
   );
 

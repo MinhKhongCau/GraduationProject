@@ -17,6 +17,8 @@ export interface ChatMessage {
 export interface DmHistoryPayload {
   dmId: string;
   history: ChatMessage[];
+  page?: number;
+  limit?: number;
 }
 
 export interface DmReactionPayload {
