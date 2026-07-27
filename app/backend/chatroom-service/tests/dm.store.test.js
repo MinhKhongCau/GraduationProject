@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
-import { makeDmId, pushDM, getDMHistory } from "../stores/dm.store.js";
 import { redisPub as r } from "../config/redis.js";
+import { getDMHistory, makeDmId, pushDM } from "../stores/dm.store.js";
 
 describe("UC-19: DM Store & Redis History Management", () => {
   test("TC-CHAT-MNG-01 - Tạo DM ID đồng bộ hai chiều bất kể thứ tự tham số", () => {
