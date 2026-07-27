@@ -8,21 +8,22 @@ import { Card, Button } from "@/components/ui";
 import { Camera, User } from "lucide-react";
 import Image from "next/image";
 
-const profileSchema = z.object({
+const expertProfileSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
-  dateOfBirth: z.string().optional().or(z.literal("")),
   avatarUrl: z.string().optional(),
+  introductionVideoUrl: z.string().url("Enter a valid URL").or(z.literal("")),
+  bio: z.string().optional(),
 });
 
-export type ProfileFormValues = z.infer<typeof profileSchema>;
+export type ExpertProfileFormValues = z.infer<typeof expertProfileSchema>;
 
-export interface ProfileEditFormProps {
-  defaultValues: Partial<ProfileFormValues>;
-  onSubmit: (values: ProfileFormValues) => void;
+export interface ExpertProfileEditFormProps {
+  defaultValues: Partial<ExpertProfileFormValues>;
+  onSubmit: (values: ExpertProfileFormValues) => void;
   isSubmitting: boolean;
 }
 
-export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: ProfileEditFormProps) {
+export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }: ExpertProfileEditFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const {
@@ -32,8 +33,8 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
     setValue,
     watch,
     formState: { errors },
-  } = useForm<ProfileFormValues>({ 
-    resolver: zodResolver(profileSchema), 
+  } = useForm<ExpertProfileFormValues>({ 
+    resolver: zodResolver(expertProfileSchema), 
     defaultValues 
   });
 
@@ -42,7 +43,7 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
   useEffect(() => {
     reset(defaultValues);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultValues.fullName, defaultValues.avatarUrl, defaultValues.dateOfBirth]);
+  }, [defaultValues.fullName, defaultValues.avatarUrl, defaultValues.introductionVideoUrl, defaultValues.bio]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -73,7 +74,7 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
                 alt="Avatar Preview"
                 fill
                 className="object-cover"
-                unoptimized // to support base64 strings correctly in Next.js Image
+                unoptimized
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -112,7 +113,7 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4">
           <div>
             <label className="mb-1 block text-xs font-bold text-foreground">Full Name</label>
             <input
@@ -123,13 +124,24 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold text-foreground">Date of Birth</label>
+            <label className="mb-1 block text-xs font-bold text-foreground">Introduction URL</label>
             <input
-              type="date"
+              placeholder="e.g. https://www.youtube.com/watch?v=..."
               className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-              {...register("dateOfBirth")}
+              {...register("introductionVideoUrl")}
             />
-            {errors.dateOfBirth && <p className="mt-1 text-xs text-danger">{errors.dateOfBirth.message}</p>}
+            {errors.introductionVideoUrl && <p className="mt-1 text-xs text-danger">{errors.introductionVideoUrl.message}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-bold text-foreground">Bio</label>
+            <textarea
+              rows={4}
+              placeholder="Tell patients about your background, experience and philosophy..."
+              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              {...register("bio")}
+            />
+            {errors.bio && <p className="mt-1 text-xs text-danger">{errors.bio.message}</p>}
           </div>
         </div>
 

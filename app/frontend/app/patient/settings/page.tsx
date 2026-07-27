@@ -25,13 +25,14 @@ export default function PatientSettingsPage() {
 
   const updateProfileMutation = useApiMutation({
     mutationFn: async (values: ProfileFormValues) => {
-      await authApi.updateProfile({ fullName: values.fullName, dateOfBirth: values.dateOfBirth });
+      await authApi.updateProfile({
+        fullName: values.fullName,
+        dateOfBirth: values.dateOfBirth || undefined,
+      });
       return patientApi.updateMyProfile({
         fullName: values.fullName,
-        dateOfBirth: values.dateOfBirth,
-        phoneNumber: values.phoneNumber || undefined,
-        gender: values.gender || undefined,
-        address: values.address || undefined,
+        dateOfBirth: values.dateOfBirth || undefined,
+        avatarUrl: values.avatarUrl,
       });
     },
     onSuccess: () => {
@@ -53,9 +54,7 @@ export default function PatientSettingsPage() {
         defaultValues={{
           fullName: user?.fullName ?? "",
           dateOfBirth: profile?.dateOfBirth ?? "",
-          phoneNumber: profile?.phoneNumber ?? "",
-          gender: profile?.gender ?? "",
-          address: profile?.address ?? "",
+          avatarUrl: profile?.avatarUrl ?? "",
         }}
         onSubmit={(values) => updateProfileMutation.mutate(values)}
         isSubmitting={updateProfileMutation.isPending}

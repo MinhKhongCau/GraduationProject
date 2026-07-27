@@ -52,7 +52,7 @@ export default function BookAppointmentPage() {
       if (!selectedExpert || !createdAppointment) throw new Error("Missing appointment");
       return paymentApi.createOrder({
         expertId: selectedExpert.accountId,
-        amount: CHANNELING_FEE,
+        amount: selectedSlot?.price ?? CHANNELING_FEE,
         gateway: "VNPAY",
         appointmentId: createdAppointment.appointmentId,
       });

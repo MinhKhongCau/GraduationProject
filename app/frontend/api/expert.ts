@@ -41,7 +41,7 @@ function toExpertProfile(raw: RawExpertProfile): ExpertProfile {
     fullName: raw.name,
     phoneNumber: detail?.phoneNumber,
     email: detail?.email ?? "",
-    avatarUrl: detail?.avatarUrl,
+    avatarUrl: detail?.avatarUrl || undefined,
     introductionVideoUrl: detail?.introductionVideoUrl,
     bio: detail?.bio,
     verificationStatus: detail?.verificationStatus ?? "UNVERIFIED",
@@ -53,6 +53,19 @@ function toExpertProfile(raw: RawExpertProfile): ExpertProfile {
 function toUpsertPayload(payload: UpdateExpertProfileRequest) {
   const { fullName, ...rest } = payload;
   return { name: fullName, ...rest };
+}
+
+export async function getMyProfile(): Promise<ExpertProfile> {
+  const response = await profileClient.get<ServiceEnvelope<RawExpertProfile>>(PROFILE_ENDPOINTS.ME);
+  return toExpertProfile(response.data.data);
+}
+
+export async function updateMyProfile(payload: UpdateExpertProfileRequest): Promise<ExpertProfile> {
+  const response = await profileClient.put<ServiceEnvelope<RawExpertProfile>>(
+    PROFILE_ENDPOINTS.ME,
+    toUpsertPayload(payload)
+  );
+  return toExpertProfile(response.data.data);
 }
 
 export interface ListExpertsParams {

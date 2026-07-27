@@ -23,7 +23,7 @@ export default function MyBookingsPage() {
     mutationFn: (appointment: AppointmentWithExpert) =>
       paymentApi.createOrder({
         expertId: appointment.expertId,
-        amount: CHANNELING_FEE,
+        amount: appointment.price ?? CHANNELING_FEE,
         gateway: "VNPAY",
         appointmentId: appointment.appointmentId,
       }),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useApiQuery } from "./useApiQuery";
-import { bookingApi, expertApi } from "@/api";
+import { bookingApi, expertApi, patientApi } from "@/api";
 import type { ChatContact } from "@/types";
 
 /**
@@ -30,14 +30,8 @@ export function usePatientChatContacts() {
 }
 
 /**
- * [EXPERT] Chat contacts = patients from booking history. GAP: unlike
- * experts, profile-service has no public/expert-permitted endpoint to
- * resolve a patient's display name (GET /profiles/patients/:id is
- * ADMIN-only — see profile-service's routes/routes.go) so this falls back
- * to a placeholder label. DM addressing still works correctly since it's
- * accountId-keyed, not name-keyed. Follow-up: add a patient-lookup
- * endpoint scoped to a patient's assigned expert, or denormalize
- * patientName onto Appointment in booking-service.
+ * [EXPERT] Chat contacts = patients from booking history.
+ * We resolve patient public details (name, avatar) using the public patient lookup.
  */
 export function useExpertChatContacts() {
   return useApiQuery({
@@ -45,10 +39,14 @@ export function useExpertChatContacts() {
     queryFn: async (): Promise<ChatContact[]> => {
       const appointments = await bookingApi.getExpertAppointments();
       const patientIds = Array.from(new Set(appointments.map((a) => a.patientId)));
-      return patientIds.map((id) => ({
+      const profiles = await Promise.all(
+        patientIds.map((id) => patientApi.getPatientProfilePublic(id).catch(() => null))
+      );
+      return patientIds.map((id, i) => ({
         id,
         role: "PATIENT" as const,
-        fullName: `Patient #${id.slice(0, 8)}`,
+        fullName: profiles[i]?.fullName ?? `Patient #${id.slice(0, 8)}`,
+        avatarUrl: profiles[i]?.avatarUrl,
       }));
     },
   });
