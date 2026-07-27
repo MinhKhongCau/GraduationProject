@@ -36,7 +36,7 @@ describe("UC-19: DM Store & Redis History Management", () => {
     await pushDM("account-111:account-222", message);
 
     expect(r.lPush).toHaveBeenCalledWith("dm:account-111:account-222:messages", JSON.stringify(message));
-    expect(r.lTrim).toHaveBeenCalledWith("dm:account-111:account-222:messages", 0, 99);
+    expect(r.lTrim).toHaveBeenCalledWith("dm:account-111:account-222:messages", 0, 499);
     expect(r.expire).toHaveBeenCalledWith("dm:account-111:account-222:messages", 604800);
 
     r.lPush.mockRestore();
@@ -54,7 +54,7 @@ describe("UC-19: DM Store & Redis History Management", () => {
 
     const history = await getDMHistory("account-111:account-222");
 
-    expect(r.lRange).toHaveBeenCalledWith("dm:account-111:account-222:messages", 0, 99);
+    expect(r.lRange).toHaveBeenCalledWith("dm:account-111:account-222:messages", 0, 19);
     expect(history).toHaveLength(2);
     // Sau khi reverse(), msg-1 (cũ) đứng trước msg-2 (mới)
     expect(history[0].id).toBe("msg-1");

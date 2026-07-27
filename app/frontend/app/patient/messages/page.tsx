@@ -54,6 +54,7 @@ export default function MessagesPage() {
           onTyping={thread.setTyping}
           className={showChatOnMobile ? "flex" : "hidden md:flex"}
           onBack={() => setShowChatOnMobile(false)}
+          onFetchMore={thread.fetchMore}
         />
       ) : (
         <div className={`flex-1 items-center justify-center text-sm text-muted-foreground ${showChatOnMobile ? "flex" : "hidden md:flex"}`}>
