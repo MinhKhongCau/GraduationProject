@@ -1,8 +1,22 @@
 import { jest } from "@jest/globals";
 import { getAllRooms, addRoom, updateUsers, removeRoom } from "../stores/room.store.js";
 import { redisPub as r } from "../config/redis.js";
+import { dataSource } from "../config/db.js";
 
 describe("Room Store Unit Tests", () => {
+  let mockRoomRepository;
+
+  beforeEach(() => {
+    mockRoomRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockImplementation((val) => Promise.resolve(val)),
+      update: jest.fn().mockResolvedValue({}),
+      delete: jest.fn().mockResolvedValue({}),
+    };
+
+    jest.spyOn(dataSource, "getRepository").mockImplementation(() => mockRoomRepository);
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
@@ -43,6 +57,9 @@ describe("Room Store Unit Tests", () => {
     jest.spyOn(r, "set").mockResolvedValue("OK");
 
     const newRoom = { id: "new-room", name: "New Room", icon: "🚀", users: 0 };
+    const expectedRooms = [...initialRooms, newRoom];
+    mockRoomRepository.find.mockResolvedValue(expectedRooms);
+
     const rooms = await addRoom(newRoom);
     
     expect(rooms).toHaveLength(2);
@@ -54,6 +71,9 @@ describe("Room Store Unit Tests", () => {
     const initialRooms = [{ id: "general", name: "General", icon: "💬", users: 0 }];
     jest.spyOn(r, "get").mockResolvedValue(JSON.stringify(initialRooms));
     jest.spyOn(r, "set").mockResolvedValue("OK");
+
+    const expectedRooms = [{ id: "general", name: "General", icon: "💬", users: 5 }];
+    mockRoomRepository.find.mockResolvedValue(expectedRooms);
 
     const rooms = await updateUsers("general", 5);
     expect(rooms[0].users).toBe(5);
@@ -67,6 +87,9 @@ describe("Room Store Unit Tests", () => {
     ];
     jest.spyOn(r, "get").mockResolvedValue(JSON.stringify(initialRooms));
     jest.spyOn(r, "set").mockResolvedValue("OK");
+
+    const expectedRooms = [{ id: "general", name: "General", icon: "💬", users: 0 }];
+    mockRoomRepository.find.mockResolvedValue(expectedRooms);
 
     const rooms = await removeRoom("gaming");
     expect(rooms).toHaveLength(1);

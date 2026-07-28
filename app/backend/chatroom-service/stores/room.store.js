@@ -1,8 +1,9 @@
+import { dataSource } from "../config/db.js";
+import { RoomEntity } from "../entities/room.entity.js";
 import { redisPub as r } from "../config/redis.js";
 
 const ROOMS_KEY = "app:rooms";
 
-// Default rooms
 const defaultRooms = [
   { id: "general", name: "General", icon: "💬", users: 0 },
   { id: "gaming", name: "Gaming", icon: "🎮", users: 0 },
@@ -10,55 +11,65 @@ const defaultRooms = [
 ];
 
 export async function getAllRooms() {
+  // Try to get from Redis cache first
   const roomsData = await r.get(ROOMS_KEY);
-  
-  if (!roomsData) {
-    // Initialize with defaults
+  if (roomsData) {
+    try {
+      return JSON.parse(roomsData);
+    } catch (err) {
+      console.error("Failed to parse rooms cache:", err);
+    }
+  }
+
+  // Fallback to TypeORM
+  const roomRepo = dataSource.getRepository(RoomEntity);
+  const rooms = await roomRepo.find();
+  if (rooms.length === 0) {
+    // Initialize with default rooms
+    await roomRepo.save(defaultRooms);
     await r.set(ROOMS_KEY, JSON.stringify(defaultRooms));
     return defaultRooms;
   }
-  
-  try {
-    return JSON.parse(roomsData);
-  } catch (err) {
-    console.error("Failed to parse rooms data:", err);
-    return defaultRooms;
-  }
+
+  // Set cache
+  await r.set(ROOMS_KEY, JSON.stringify(rooms));
+  return rooms;
 }
 
 export async function addRoom(room) {
   const rooms = await getAllRooms();
+  if (rooms.some((r) => r.id === room.id)) return rooms;
+
+  const roomRepo = dataSource.getRepository(RoomEntity);
+  await roomRepo.save({
+    id: room.id,
+    name: room.name,
+    icon: room.icon,
+    users: room.users || 0,
+  });
   
-  // Check if room already exists
-  if (rooms.some(r => r.id === room.id)) {
-    console.log("Room already exists:", room.id);
-    return rooms;
-  }
-  
-  rooms.push(room);
-  await r.set(ROOMS_KEY, JSON.stringify(rooms));
-  console.log("✅ Room added to Redis:", room.name);
-  return rooms;
+  // Refresh cache
+  const updatedRooms = await roomRepo.find();
+  await r.set(ROOMS_KEY, JSON.stringify(updatedRooms));
+  return updatedRooms;
 }
 
 export async function updateUsers(roomId, count) {
-  const rooms = await getAllRooms();
-  const room = rooms.find(r => r.id === roomId);
+  const roomRepo = dataSource.getRepository(RoomEntity);
+  await roomRepo.update(roomId, { users: count });
   
-  if (room) {
-    room.users = count;
-    await r.set(ROOMS_KEY, JSON.stringify(rooms));
-    console.log(`📊 Updated ${roomId} user count: ${count}`);
-  }
-  
+  // Refresh cache
+  const rooms = await roomRepo.find();
+  await r.set(ROOMS_KEY, JSON.stringify(rooms));
   return rooms;
 }
 
 export async function removeRoom(roomId) {
-  const rooms = await getAllRooms();
-  const filtered = rooms.filter(r => r.id !== roomId);
+  const roomRepo = dataSource.getRepository(RoomEntity);
+  await roomRepo.delete(roomId);
   
-  await r.set(ROOMS_KEY, JSON.stringify(filtered));
-  console.log("🗑️ Room removed:", roomId);
-  return filtered;
+  // Refresh cache
+  const rooms = await roomRepo.find();
+  await r.set(ROOMS_KEY, JSON.stringify(rooms));
+  return rooms;
 }

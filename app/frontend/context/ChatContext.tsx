@@ -30,7 +30,7 @@ interface ChatContextValue {
   reactionsByMessageId: MessageReactions;
   typingByContactId: Record<string, boolean>;
   onlineByContactId: Record<string, boolean>;
-  fetchHistory: (contactId: string, page?: number, limit?: number) => void;
+  fetchHistory: (contactId: string, page?: number, limit?: number, lastMessageId?: string | null) => void;
   sendText: (contactId: string, text: string) => void;
   sendVoice: (contactId: string, blob: Blob, duration: number) => Promise<void>;
   react: (contactId: string, messageId: string, emoji: string) => void;
@@ -138,7 +138,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [isAuthenticated, socket]);
 
   const fetchHistory = useCallback(
-    (contactId: string, page = 1, limit = 20) => socket.emit("dm:history", { toUser: contactId, page, limit }),
+    (contactId: string, page = 1, limit = 20, lastMessageId: string | null = null) =>
+      socket.emit("dm:history", { toUser: contactId, page, limit, lastMessageId }),
     [socket]
   );
 

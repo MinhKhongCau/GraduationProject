@@ -1,13 +1,21 @@
 import { jest } from "@jest/globals";
 import { dmSocketController } from "../socket/controllers/dm.socket.controller.js";
 import { redisPub as r } from "../config/redis.js";
+import { dataSource } from "../config/db.js";
 
 describe("UC-09 & UC-10: Socket DM Controller (Thực hiện & Nhận tư vấn)", () => {
   let io;
   let socket;
   let handlers;
+  let mockMessageRepository;
 
   beforeEach(() => {
+    mockMessageRepository = {
+      findOneBy: jest.fn().mockResolvedValue(null),
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockImplementation((val) => Promise.resolve(val)),
+    };
+    jest.spyOn(dataSource, "getRepository").mockImplementation(() => mockMessageRepository);
     handlers = {};
     socket = {
       id: "socket-sender-id",

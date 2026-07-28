@@ -30,6 +30,10 @@ export function useDmThread(contactId: string | null) {
     sendVoice: (blob: Blob, duration: number) => contactId && chat.sendVoice(contactId, blob, duration),
     react: (messageId: string, emoji: string) => contactId && chat.react(contactId, messageId, emoji),
     setTyping: (isTypingNow: boolean) => contactId && chat.setTyping(contactId, isTypingNow),
-    fetchMore: (page: number) => contactId && chat.fetchHistory(contactId, page),
+    fetchMore: (page: number) => {
+      if (!contactId) return;
+      const lastMessageId = messages[0]?.id || null;
+      chat.fetchHistory(contactId, page, 20, lastMessageId);
+    },
   };
 }

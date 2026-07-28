@@ -3,11 +3,13 @@ import { createApp } from "./app.js";
 import { ENV } from "./config/env.js";
 import { connectRedis } from "./config/redis.js";
 import { initSocket } from "./socket/socket.js";
+import { initDb } from "./config/db.js";
 
 const app = createApp();
 const server = http.createServer(app);
 
 await connectRedis();
+await initDb();
 initSocket(server);
 
 server.listen(ENV.PORT, () => {
