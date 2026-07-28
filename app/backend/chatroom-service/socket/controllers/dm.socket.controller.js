@@ -10,15 +10,13 @@ import { toggleReaction } from "../../services/reactions.service.js";
 
 export function dmSocketController(io, socket) {
   // DM history
-  socket.on("dm:history", async ({ toUser, page = 1, limit = 20 }) => {
+  socket.on("dm:history", async ({ toUser, page = 1, limit = 20, lastMessageId = null }) => {
     const fromId = socket.data.user?.id;
 
     if (!fromId || !toUser) return;
 
     const dmId = makeDmId(fromId, toUser);
-    const start = (page - 1) * limit;
-    const end = start + limit - 1;
-    const history = await getDMHistory(dmId, start, end);
+    const history = await getDMHistory(dmId, page, limit, lastMessageId);
 
     socket.emit("dm:history", { dmId, history, page, limit });
   });

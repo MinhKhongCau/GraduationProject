@@ -4,6 +4,6 @@ export async function addChat(roomId, message) {
   await store.pushMessage(roomId, message);
 }
 
-export async function getChatHistory(roomId, start = 0, end = 19) {
-  return store.getHistory(roomId, start, end);
+export async function getChatHistory(roomId, page = 1, limit = 20, lastMessageId = null) {
+  return store.getHistory(roomId, page, limit, lastMessageId);
 }

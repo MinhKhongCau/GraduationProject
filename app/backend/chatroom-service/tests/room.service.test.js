@@ -10,8 +10,22 @@ import {
   getRoomUsers 
 } from "../services/room.service.js";
 import { redisPub as r } from "../config/redis.js";
+import { dataSource } from "../config/db.js";
 
 describe("Room Service Unit Tests", () => {
+  let mockRoomRepository;
+
+  beforeEach(() => {
+    mockRoomRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockImplementation((val) => Promise.resolve(val)),
+      update: jest.fn().mockResolvedValue({}),
+      delete: jest.fn().mockResolvedValue({}),
+    };
+
+    jest.spyOn(dataSource, "getRepository").mockImplementation(() => mockRoomRepository);
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
@@ -31,6 +45,7 @@ describe("Room Service Unit Tests", () => {
   test("createRoom - should add room to Redis", async () => {
     jest.spyOn(r, "get").mockResolvedValue(JSON.stringify([]));
     jest.spyOn(r, "set").mockResolvedValue("OK");
+    mockRoomRepository.find.mockResolvedValue([{ id: "new-room", name: "New Room", icon: "🚀", users: 0 }]);
 
     await createRoom("new-room", "New Room", "🚀");
     expect(r.set).toHaveBeenCalledWith("app:rooms", expect.stringContaining("New Room"));
@@ -40,6 +55,7 @@ describe("Room Service Unit Tests", () => {
     const mockRooms = [{ id: "general", name: "General", icon: "💬", users: 0 }];
     jest.spyOn(r, "get").mockResolvedValue(JSON.stringify(mockRooms));
     jest.spyOn(r, "set").mockResolvedValue("OK");
+    mockRoomRepository.find.mockResolvedValue([{ id: "general", name: "General", icon: "💬", users: 10 }]);
 
     await updateRoomUserCount("general", 10);
     expect(r.set).toHaveBeenCalledWith("app:rooms", expect.stringContaining('"users":10'));
@@ -52,6 +68,7 @@ describe("Room Service Unit Tests", () => {
     ];
     jest.spyOn(r, "get").mockResolvedValue(JSON.stringify(mockRooms));
     jest.spyOn(r, "set").mockResolvedValue("OK");
+    mockRoomRepository.find.mockResolvedValue([{ id: "general", name: "General", icon: "💬", users: 0 }]);
 
     await deleteRoom("gaming");
     expect(r.set).toHaveBeenCalledWith("app:rooms", expect.stringContaining("general"));
