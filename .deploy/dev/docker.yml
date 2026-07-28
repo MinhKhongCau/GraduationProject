@@ -291,6 +291,12 @@ services:
       - NODE_ENV=${NODE_ENV}
       - PORT=${PORT_CHATROOM_SERVICE}
       - CORS_ORIGINS=${CORS_ORIGINS}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${CHATROOM_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
       - REDIS_URL=redis://redis:6379
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT}
