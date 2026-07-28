@@ -313,6 +313,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres-db:
+        condition: service_healthy
     networks:
       - app-network
     environment:
@@ -321,6 +323,12 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS}
       - REDIS_URL=redis://redis:${REDIS_PORT}
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${CHATROOM_DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
 
   # 10. CHATBOT SERVICE (Python FastAPI)
   chatbot-service:

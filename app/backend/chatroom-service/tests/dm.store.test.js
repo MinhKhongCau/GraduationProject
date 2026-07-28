@@ -1,8 +1,25 @@
 import { jest } from "@jest/globals";
 import { makeDmId, pushDM, getDMHistory } from "../stores/dm.store.js";
 import { redisPub as r } from "../config/redis.js";
+import { dataSource } from "../config/db.js";
 
 describe("UC-19: DM Store & Redis History Management", () => {
+  let mockMessageRepository;
+
+  beforeEach(() => {
+    mockMessageRepository = {
+      findOneBy: jest.fn().mockResolvedValue(null),
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockImplementation((val) => Promise.resolve(val)),
+    };
+
+    jest.spyOn(dataSource, "getRepository").mockImplementation(() => mockMessageRepository);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   test("TC-CHAT-MNG-01 - Tạo DM ID đồng bộ hai chiều bất kể thứ tự tham số", () => {
     const id1 = makeDmId("account-111", "account-222");
     const id2 = makeDmId("account-222", "account-111");
@@ -36,7 +53,7 @@ describe("UC-19: DM Store & Redis History Management", () => {
     await pushDM("account-111:account-222", message);
 
     expect(r.lPush).toHaveBeenCalledWith("dm:account-111:account-222:messages", JSON.stringify(message));
-    expect(r.lTrim).toHaveBeenCalledWith("dm:account-111:account-222:messages", 0, 499);
+    expect(r.lTrim).toHaveBeenCalledWith("dm:account-111:account-222:messages", 0, 99);
     expect(r.expire).toHaveBeenCalledWith("dm:account-111:account-222:messages", 604800);
 
     r.lPush.mockRestore();
