@@ -105,6 +105,7 @@ export interface Availability {
   isEnabled: boolean;
   effectiveFrom: number; // Unix ms
   effectiveUntil: number | null; // Unix ms
+  price?: number;
 }
 
 export interface CreateAvailabilityRequest {
@@ -112,6 +113,7 @@ export interface CreateAvailabilityRequest {
   dayOfWeek: DayOfWeek;
   effectiveFrom: number;
   effectiveUntil?: number | null;
+  price: number;
 }
 
 export interface UpdateAvailabilityRequest {
@@ -120,6 +122,7 @@ export interface UpdateAvailabilityRequest {
   isEnabled?: boolean;
   effectiveFrom?: number;
   effectiveUntil?: number | null;
+  price?: number;
 }
 
 export interface GenerateSlotsResponse {
