@@ -50,6 +50,7 @@ export default function ExpertSchedulePage() {
               dayOfWeek: day,
               effectiveFrom,
               effectiveUntil,
+              price: config.price,
             });
           }
 
@@ -57,7 +58,8 @@ export default function ExpertSchedulePage() {
             !existing.isEnabled ||
             existing.templateId !== config.templateId ||
             existing.effectiveFrom !== effectiveFrom ||
-            (existing.effectiveUntil ?? null) !== effectiveUntil;
+            (existing.effectiveUntil ?? null) !== effectiveUntil ||
+            existing.price !== config.price;
 
           if (!changed) return Promise.resolve();
 
@@ -66,6 +68,7 @@ export default function ExpertSchedulePage() {
             templateId: config.templateId,
             effectiveFrom,
             effectiveUntil,
+            price: config.price,
           });
         })
       );

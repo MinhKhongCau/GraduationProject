@@ -22,6 +22,7 @@ export interface DayTemplateConfig {
   templateId: string;
   effectiveFrom: Date;
   effectiveUntil: Date | null;
+  price: number;
 }
 
 export type WeekTemplateState = Record<DayOfWeek, DayTemplateConfig>;
@@ -47,8 +48,9 @@ function buildInitialState(templates: TimeTemplate[], availabilities: Availabili
           templateId: existing.templateId,
           effectiveFrom: new Date(existing.effectiveFrom),
           effectiveUntil: existing.effectiveUntil ? new Date(existing.effectiveUntil) : null,
+          price: existing.price ?? 200000,
         }
-      : { enabled: false, templateId: defaultTemplateId, effectiveFrom: today, effectiveUntil: null };
+      : { enabled: false, templateId: defaultTemplateId, effectiveFrom: today, effectiveUntil: null, price: 200000 };
   }
   return state;
 }
@@ -102,6 +104,18 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
                       </option>
                     ))}
                   </select>
+
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-semibold text-muted-foreground">Price (VND)</span>
+                    <input
+                      type="number"
+                      value={config.price}
+                      min={0}
+                      step={50000}
+                      onChange={(event) => updateDay(day.value, { price: Number(event.target.value) })}
+                      className="rounded-lg border border-border px-2 py-1 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+                    />
+                  </div>
 
                   {template && (
                     <p className="text-[11px] text-muted-foreground">
