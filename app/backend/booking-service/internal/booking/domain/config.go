@@ -3,12 +3,12 @@ package domain
 // TimeTemplate - Cấu hình khung giờ (Ca sáng, Ca chiều)
 // StartTime và EndTime lưu dưới dạng chuỗi "HH:MM" (ví dụ: "08:00", "12:00")
 type TimeTemplate struct {
-	TemplateID          string `gorm:"column:template_id;primaryKey;type:uuid"`
-	ShiftName           string `gorm:"column:shift_name"`
-	StartTime           string `gorm:"column:start_time;type:varchar(5)"` // "HH:MM", ví dụ: "08:00"
-	EndTime             string `gorm:"column:end_time;type:varchar(5)"`   // "HH:MM", ví dụ: "12:00"
-	SlotDurationMinutes int    `gorm:"column:slot_duration_minutes"`      // Thời lượng mỗi slot (phút)
-	IsActive            bool   `gorm:"column:is_active"`
+	TemplateID          string `json:"template_id"           gorm:"column:template_id;primaryKey;type:uuid"`
+	ShiftName           string `json:"shift_name"             gorm:"column:shift_name"`
+	StartTime           string `json:"start_time"             gorm:"column:start_time;type:varchar(5)"` // "HH:MM", ví dụ: "08:00"
+	EndTime             string `json:"end_time"               gorm:"column:end_time;type:varchar(5)"`   // "HH:MM", ví dụ: "12:00"
+	SlotDurationMinutes int    `json:"slot_duration_minutes" gorm:"column:slot_duration_minutes"`      // Thời lượng mỗi slot (phút)
+	IsActive            bool   `json:"is_active"             gorm:"column:is_active"`
 }
 
 func (TimeTemplate) TableName() string { return "Booking_Config_Time_Templates" }
