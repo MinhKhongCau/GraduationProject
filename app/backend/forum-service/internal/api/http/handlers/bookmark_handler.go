@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -11,6 +12,7 @@ import (
 	"forum-service/internal/api/http/middleware"
 	"forum-service/internal/api/http/response"
 	"forum-service/internal/app/service"
+	"forum-service/internal/repository/db"
 )
 
 type BookmarkHandler struct {
@@ -107,9 +109,34 @@ func (h *BookmarkHandler) ListMine(c *gin.Context) {
 		return
 	}
 
+	authorIDsMap := make(map[string]bool)
+	for _, p := range result.Items {
+		if p.AuthorID != "" {
+			authorIDsMap[p.AuthorID] = true
+		}
+	}
+	authorIDs := make([]string, 0, len(authorIDsMap))
+	for id := range authorIDsMap {
+		authorIDs = append(authorIDs, id)
+	}
+
+	profiles, err := db.FetchProfiles(authorIDs)
+	if err != nil {
+		log.Printf("forum-service: WARNING failed to fetch author profiles: %v", err)
+	}
+
 	items := make([]dto.PostResponse, 0, len(result.Items))
 	for _, p := range result.Items {
-		items = append(items, dto.NewPostResponse(p))
+		var authorDTO *dto.AuthorDTO
+		if prof, exists := profiles[p.AuthorID]; exists {
+			authorDTO = &dto.AuthorDTO{
+				ID:        prof.ID,
+				Name:      prof.Name,
+				AvatarURL: prof.AvatarURL,
+				Role:      prof.Role,
+			}
+		}
+		items = append(items, dto.NewPostResponse(p, authorDTO))
 	}
 	response.Success(c, "Bookmarks retrieved", dto.PostListResponse{
 		Items: items, Page: result.Page, PageSize: result.PageSize, Total: result.Total,

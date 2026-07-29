@@ -10,6 +10,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"profile-service/config"
+	"profile-service/internal/models"
 )
 
 // Naming follows RABBITMQ_CONVENTION.md: <domain>.exchange, <entity>.<action>, <service>.queue.
@@ -42,6 +43,24 @@ type UserCreatedEvent struct {
 	OccurredAt string               `json:"occurredAt"`
 	Source     string               `json:"source"`
 	Data       UserCreatedEventData `json:"data"`
+}
+
+// ProfileRequest structure for RPC call
+type ProfileRequest struct {
+	CorrelationID string   `json:"correlationId"`
+	AuthorIDs     []string `json:"authorIds"`
+}
+
+type AuthorProfile struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatarUrl"`
+	Role      string `json:"role"`
+}
+
+type ProfileResponse struct {
+	CorrelationID string          `json:"correlationId"`
+	Profiles      []AuthorProfile `json:"profiles"`
 }
 
 // StartUserCreatedConsumer connects to RabbitMQ, declares the durable
@@ -99,9 +118,105 @@ func StartUserCreatedConsumer(cfg config.RabbitMQConfig, handle func(UserCreated
 
 	log.Printf("profile-service: listening for %q events on queue %q", UserCreatedRoutingKey, ProfileQueue)
 
+	// Start the profile request consumer too
+	startProfileRequestConsumer()
+
 	go func() {
 		for msg := range msgs {
 			handleDelivery(msg, handle)
+		}
+	}()
+}
+
+func startProfileRequestConsumer() {
+	requestQueue := "profile.request.queue"
+	forumExchange := "forum.events"
+	requestRoutingKey := "profile.get_batch.request"
+	responseRoutingKey := "profile.get_batch.response"
+
+	if _, err := channel.QueueDeclare(requestQueue, true, false, false, false, nil); err != nil {
+		log.Printf("profile-service: WARNING failed to declare queue %q: %v", requestQueue, err)
+		return
+	}
+
+	if err := channel.QueueBind(requestQueue, requestRoutingKey, UserExchange, false, nil); err != nil {
+		log.Printf("profile-service: WARNING failed to bind queue %q to %q: %v", requestQueue, requestRoutingKey, err)
+		return
+	}
+
+	// Declare the forum.events exchange just in case it doesn't exist yet
+	if err := channel.ExchangeDeclare(forumExchange, "topic", true, false, false, false, nil); err != nil {
+		log.Printf("profile-service: WARNING failed to declare exchange %q: %v", forumExchange, err)
+	}
+
+	msgs, err := channel.Consume(requestQueue, "", false, false, false, false, nil)
+	if err != nil {
+		log.Printf("profile-service: WARNING failed to start consuming %q: %v", requestQueue, err)
+		return
+	}
+
+	log.Printf("profile-service: listening for profile request events on queue %q", requestQueue)
+
+	go func() {
+		for msg := range msgs {
+			var req ProfileRequest
+			if err := json.Unmarshal(msg.Body, &req); err != nil {
+				log.Printf("profile-service: error decoding profile request: %v", err)
+				msg.Ack(false)
+				continue
+			}
+
+			var dbProfiles []models.Profile
+			if err := config.DB.Preload("PatientProfile").Preload("ExpertProfile").Where("auth_id IN ?", req.AuthorIDs).Find(&dbProfiles).Error; err != nil {
+				log.Printf("profile-service: error querying profiles: %v", err)
+			}
+
+			authorProfiles := make([]AuthorProfile, 0, len(dbProfiles))
+			for _, p := range dbProfiles {
+				avatar := ""
+				if p.Role == models.RolePatient && p.PatientProfile != nil {
+					avatar = p.PatientProfile.AvatarURL
+				} else if p.Role == models.RoleExpert && p.ExpertProfile != nil {
+					avatar = p.ExpertProfile.AvatarURL
+				}
+				authorProfiles = append(authorProfiles, AuthorProfile{
+					ID:        p.AuthID.String(),
+					Name:      p.Name,
+					AvatarURL: avatar,
+					Role:      string(p.Role),
+				})
+			}
+
+			resp := ProfileResponse{
+				CorrelationID: req.CorrelationID,
+				Profiles:      authorProfiles,
+			}
+
+			respBytes, err := json.Marshal(resp)
+			if err != nil {
+				log.Printf("profile-service: error encoding profile response: %v", err)
+				msg.Ack(false)
+				continue
+			}
+
+			err = channel.Publish(
+				forumExchange,
+				responseRoutingKey,
+				false,
+				false,
+				amqp.Publishing{
+					ContentType:  "application/json",
+					DeliveryMode: amqp.Persistent,
+					Body:         respBytes,
+				},
+			)
+			if err != nil {
+				log.Printf("profile-service: failed to publish profile response: %v", err)
+			} else {
+				log.Printf("profile-service: published profile response for correlationId: %s", req.CorrelationID)
+			}
+
+			msg.Ack(false)
 		}
 	}()
 }
