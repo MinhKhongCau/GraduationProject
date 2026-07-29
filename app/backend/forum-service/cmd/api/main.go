@@ -29,7 +29,7 @@ func main() {
 	configs.LoadConfig()
 	cfg := configs.AppConfig
 
-	// 2. Connect to Postgres, then run golang-migrate migrations (schema +
+		// 2. Connect to Postgres, then run golang-migrate migrations (schema +
 	// seed data) before any query runs — see internal/repository/db/migrate.go
 	// and SPEC.md §6.1 for why this replaces GORM AutoMigrate here.
 	gormDB := db.ConnectDB(cfg)
