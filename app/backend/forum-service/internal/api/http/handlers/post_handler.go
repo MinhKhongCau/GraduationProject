@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -13,7 +14,9 @@ import (
 	"forum-service/internal/app/entity"
 	"forum-service/internal/app/service"
 	"forum-service/internal/repository/dao"
+	"forum-service/internal/repository/db"
 )
+
 
 type PostHandler struct {
 	svc *service.PostService
@@ -71,9 +74,34 @@ func (h *PostHandler) List(c *gin.Context) {
 		return
 	}
 
+	authorIDsMap := make(map[string]bool)
+	for _, p := range result.Items {
+		if p.AuthorID != "" {
+			authorIDsMap[p.AuthorID] = true
+		}
+	}
+	authorIDs := make([]string, 0, len(authorIDsMap))
+	for id := range authorIDsMap {
+		authorIDs = append(authorIDs, id)
+	}
+
+	profiles, err := db.FetchProfiles(authorIDs)
+	if err != nil {
+		log.Printf("forum-service: WARNING failed to fetch author profiles: %v", err)
+	}
+
 	items := make([]dto.PostResponse, 0, len(result.Items))
 	for _, p := range result.Items {
-		items = append(items, dto.NewPostResponse(p))
+		var authorDTO *dto.AuthorDTO
+		if prof, exists := profiles[p.AuthorID]; exists {
+			authorDTO = &dto.AuthorDTO{
+				ID:        prof.ID,
+				Name:      prof.Name,
+				AvatarURL: prof.AvatarURL,
+				Role:      prof.Role,
+			}
+		}
+		items = append(items, dto.NewPostResponse(p, authorDTO))
 	}
 	response.Success(c, "Posts retrieved", dto.PostListResponse{
 		Items: items, Page: result.Page, PageSize: result.PageSize, Total: result.Total,
@@ -101,7 +129,7 @@ func (h *PostHandler) GetBySlug(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, "Failed to get post", err.Error())
 		return
 	}
-	response.Success(c, "Post retrieved", dto.NewPostDetailResponse(*post))
+	response.Success(c, "Post retrieved", dto.NewPostDetailResponse(*post, getAuthorDTO(post.AuthorID)))
 }
 
 // @Summary      Create post
@@ -142,7 +170,7 @@ func (h *PostHandler) Create(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, "Failed to create post", err.Error())
 		return
 	}
-	response.Created(c, "Post created", dto.NewPostDetailResponse(*post))
+	response.Created(c, "Post created", dto.NewPostDetailResponse(*post, getAuthorDTO(post.AuthorID)))
 }
 
 // @Summary      Update post
@@ -182,7 +210,7 @@ func (h *PostHandler) Update(c *gin.Context) {
 		writePostServiceError(c, err)
 		return
 	}
-	response.Success(c, "Post updated", dto.NewPostDetailResponse(*post))
+	response.Success(c, "Post updated", dto.NewPostDetailResponse(*post, getAuthorDTO(post.AuthorID)))
 }
 
 // @Summary      Soft-delete post
@@ -249,7 +277,7 @@ func (h *PostHandler) ChangeStatus(c *gin.Context) {
 		writePostServiceError(c, err)
 		return
 	}
-	response.Success(c, "Post status updated", dto.NewPostDetailResponse(*post))
+	response.Success(c, "Post status updated", dto.NewPostDetailResponse(*post, getAuthorDTO(post.AuthorID)))
 }
 
 func writePostServiceError(c *gin.Context, err error) {
@@ -261,6 +289,25 @@ func writePostServiceError(c *gin.Context, err error) {
 	default:
 		response.Error(c, http.StatusInternalServerError, "Post operation failed", err.Error())
 	}
+}
+
+func getAuthorDTO(authorID string) *dto.AuthorDTO {
+	if authorID == "" {
+		return nil
+	}
+	profiles, err := db.FetchProfiles([]string{authorID})
+	if err != nil {
+		return nil
+	}
+	if prof, exists := profiles[authorID]; exists {
+		return &dto.AuthorDTO{
+			ID:        prof.ID,
+			Name:      prof.Name,
+			AvatarURL: prof.AvatarURL,
+			Role:      prof.Role,
+		}
+	}
+	return nil
 }
 
 func parseIntOrDefault(s string, def int) int {

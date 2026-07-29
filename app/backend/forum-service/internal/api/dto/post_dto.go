@@ -29,21 +29,29 @@ type ChangePostStatusRequest struct {
 	Status string `json:"status" binding:"required"`
 }
 
+type AuthorDTO struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatarUrl"`
+	Role      string `json:"role"`
+}
+
 type PostResponse struct {
-	ID            int64     `json:"id"`
-	Title         string    `json:"title"`
-	Slug          string    `json:"slug"`
-	Summary       string    `json:"summary"`
-	ThumbnailURL  string    `json:"thumbnailUrl"`
-	CategoryID    int64     `json:"categoryId"`
-	AuthorID      string    `json:"authorId"`
-	Status        string    `json:"status"`
-	ViewCount     int       `json:"viewCount"`
-	LikeCount     int       `json:"likeCount"`
-	BookmarkCount int       `json:"bookmarkCount"`
-	CommentCount  int       `json:"commentCount"`
-	Tags          []string  `json:"tags"`
-	CreatedAt     time.Time `json:"createdAt"`
+	ID            int64      `json:"id"`
+	Title         string     `json:"title"`
+	Slug          string     `json:"slug"`
+	Summary       string     `json:"summary"`
+	ThumbnailURL  string     `json:"thumbnailUrl"`
+	CategoryID    int64      `json:"categoryId"`
+	AuthorID      string     `json:"authorId"`
+	Author        *AuthorDTO `json:"author,omitempty"`
+	Status        string     `json:"status"`
+	ViewCount     int        `json:"viewCount"`
+	LikeCount     int        `json:"likeCount"`
+	BookmarkCount int        `json:"bookmarkCount"`
+	CommentCount  int        `json:"commentCount"`
+	Tags          []string   `json:"tags"`
+	CreatedAt     time.Time  `json:"createdAt"`
 }
 
 type PostDetailResponse struct {
@@ -52,7 +60,7 @@ type PostDetailResponse struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-func NewPostResponse(p entity.Post) PostResponse {
+func NewPostResponse(p entity.Post, author *AuthorDTO) PostResponse {
 	tags := p.Tags
 	if tags == nil {
 		tags = []string{}
@@ -65,6 +73,7 @@ func NewPostResponse(p entity.Post) PostResponse {
 		ThumbnailURL:  p.ThumbnailURL,
 		CategoryID:    p.CategoryID,
 		AuthorID:      p.AuthorID,
+		Author:        author,
 		Status:        string(p.Status),
 		ViewCount:     p.ViewCount,
 		LikeCount:     p.LikeCount,
@@ -75,9 +84,9 @@ func NewPostResponse(p entity.Post) PostResponse {
 	}
 }
 
-func NewPostDetailResponse(p entity.Post) PostDetailResponse {
+func NewPostDetailResponse(p entity.Post, author *AuthorDTO) PostDetailResponse {
 	return PostDetailResponse{
-		PostResponse: NewPostResponse(p),
+		PostResponse: NewPostResponse(p, author),
 		Content:      p.Content,
 		UpdatedAt:    p.UpdatedAt,
 	}
