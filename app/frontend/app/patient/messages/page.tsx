@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ContactList } from "./component/ContactList";
 import { ChatWindow } from "./component/ChatWindow";
-import { usePatientChatContacts, useDmThread } from "@/hooks";
+import { usePatientChatContacts, useDmThread, useKeyboardHeight } from "@/hooks";
 import { useAuthContext } from "@/context/AuthContext";
 import { useChatContext } from "@/context/ChatContext";
 
@@ -12,6 +12,7 @@ export default function MessagesPage() {
   const { data: contacts = [] } = usePatientChatContacts();
   const { onlineByContactId, queryPresence } = useChatContext();
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
+  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (!activeContactId && contacts.length > 0) setActiveContactId(contacts[0].id);
@@ -26,7 +27,10 @@ export default function MessagesPage() {
   const activeContact = contacts.find((c) => c.id === activeContactId) ?? null;
 
   return (
-    <div className="flex h-[750px] overflow-hidden rounded-2xl border border-border bg-background shadow-card">
+    <div
+      className="flex h-[calc(100dvh-9.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--keyboard-height))] overflow-hidden rounded-2xl border border-border bg-background shadow-card sm:h-[750px]"
+      style={{ "--keyboard-height": `${keyboardHeight}px` } as React.CSSProperties}
+    >
       <ContactList
         contacts={contacts}
         activeContactId={activeContactId}

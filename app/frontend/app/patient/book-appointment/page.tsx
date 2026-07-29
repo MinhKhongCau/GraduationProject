@@ -7,9 +7,10 @@ import { ExpertStep } from "./component/ExpertStep";
 import { SlotStep } from "./component/SlotStep";
 import { ReviewStep } from "./component/ReviewStep";
 import { PaymentStep } from "./component/PaymentStep";
-import { useApiQuery, useApiMutation } from "@/hooks";
+import { useApiQuery, useApiMutation, usePaymentRedirect } from "@/hooks";
 import { bookingApi, expertApi, paymentApi } from "@/api";
 import { QUERY_KEYS, CHANNELING_FEE } from "@/constants";
+import { useErrorContext } from "@/context/ErrorContext";
 import type { ExpertProfile, AvailableTimeSlot, CreateAppointmentResponse } from "@/types";
 
 type WizardStep = "topic" | "expert" | "slot" | "review" | "payment";
@@ -24,6 +25,14 @@ export default function BookAppointmentPage() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<AvailableTimeSlot | null>(null);
   const [createdAppointment, setCreatedAppointment] = useState<CreateAppointmentResponse | null>(null);
+  const { showError } = useErrorContext();
+  const { isPaymentBrowserOpen, openPayment } = usePaymentRedirect({
+    onBrowserFinished: () => {
+      showError({
+        message: "Payment browser closed. Your booking may still be pending payment; check My Bookings before trying again.",
+      });
+    },
+  });
 
   useApiQuery({
     queryKey: QUERY_KEYS.expertProfile(preselectedExpertId ?? ""),
@@ -57,8 +66,9 @@ export default function BookAppointmentPage() {
         appointmentId: createdAppointment.appointmentId,
       });
     },
-    onSuccess: (order) => {
-      window.location.href = order.paymentUrl;
+    onSuccess: async (order) => {
+      const opened = await openPayment(order.paymentUrl);
+      if (!opened) showError({ message: "Unable to open the payment page. Please try again." });
     },
   });
 
@@ -115,7 +125,7 @@ export default function BookAppointmentPage() {
       {step === "payment" && (
         <PaymentStep
           onPay={() => payMutation.mutate()}
-          isPending={payMutation.isPending}
+          isPending={payMutation.isPending || isPaymentBrowserOpen}
           isError={payMutation.isError}
         />
       )}

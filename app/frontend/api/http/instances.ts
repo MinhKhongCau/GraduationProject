@@ -1,35 +1,34 @@
 import { createHttpClient } from "./client";
-
-const baseURL = process.env.REACT_APP_API_URL ?? "https://api.qmcloud.io.vn/api/v1";
+import { API_BASE_URL } from "./config";
 
 export const authClient = createHttpClient({
-  baseURL,
+  baseURL: API_BASE_URL,
   transformCase: false, // Spring/Jackson already returns camelCase.
 });
 
 export const profileClient = createHttpClient({
-  baseURL,
+  baseURL: API_BASE_URL,
   transformCase: true, // Go/Gin returns snake_case.
 });
 
 export const paymentClient = createHttpClient({
-  baseURL,
+  baseURL: API_BASE_URL,
   transformCase: true,
 });
 
 export const bookingClient = createHttpClient({
-  baseURL,
+  baseURL: API_BASE_URL,
   transformCase: true,
 });
 
 export const assessmentClient = createHttpClient({
-  baseURL,
+  baseURL: API_BASE_URL,
   transformCase: true, // FastAPI/Pydantic returns snake_case.
   unwrapEnvelope: "result", // assessment-service wraps responses in {statusCode, result, message, ...}.
 });
 
 export const forumClient = createHttpClient({
-  baseURL,
+  baseURL: API_BASE_URL,
   transformCase: false, // forum-service DTOs are already camelCase (see internal/api/dto/*.go).
   unwrapEnvelope: "success-data", // forum-service always wraps responses in {success, message, data, error}.
 });
