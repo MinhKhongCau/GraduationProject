@@ -32,7 +32,7 @@ export default function ExpertMessagesPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-160px)] md:h-[750px] overflow-hidden rounded-2xl border border-border bg-background shadow-card">
+    <div className="flex h-[calc(100vh-160px)] md:h-[calc(100vh-140px)] overflow-hidden rounded-2xl border border-border bg-background shadow-card">
       <ContactList
         contacts={contacts}
         activeContactId={activeContactId}

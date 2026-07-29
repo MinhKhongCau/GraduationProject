@@ -2,10 +2,11 @@
 
 import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
-import { MoreVertical, SendHorizonal, Circle, ArrowLeft } from "lucide-react";
+import { MoreVertical, SendHorizonal, Circle, ArrowLeft, Video } from "lucide-react";
 import { MessageBubble } from "./MessageBubble";
 import { VoiceRecorderButton } from "./VoiceRecorderButton";
 import type { ChatContact, ChatMessage } from "@/types";
+import { useChatContext } from "@/context/ChatContext";
 
 const TYPING_IDLE_MS = 2000;
 
@@ -41,6 +42,7 @@ export function ChatWindow({
   onFetchMore,
 }: ChatWindowProps) {
   const [text, setText] = useState("");
+  const { startCall } = useChatContext();
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [page, setPage] = useState(1);
@@ -182,6 +184,13 @@ export function ChatWindow({
         </div>
 
         <div className="flex items-center gap-2 text-muted-foreground">
+          <button
+            onClick={() => startCall(contact.id, contact.fullName, contact.avatarUrl)}
+            className="rounded-full p-2 transition-colors hover:bg-surface text-primary"
+            title="Video Call"
+          >
+            <Video className="h-5 w-5" />
+          </button>
           <button className="rounded-full p-2 transition-colors hover:bg-surface">
             <MoreVertical className="h-5 w-5" />
           </button>
