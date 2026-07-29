@@ -14,6 +14,7 @@ func SetupRoutes(r *gin.Engine) {
 	internal := r.Group("/internal/api/v1/profiles")
 	{
 		internal.POST("/create", handlers.CreateProfileInternal)
+		internal.POST("/sync-seed-authors", handlers.SyncSeedAuthorsInternal)
 	}
 
 	// ---------- Public API (đi qua Gateway) ----------

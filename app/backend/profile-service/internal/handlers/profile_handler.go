@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"profile-service/config"
+	"profile-service/internal/messaging"
 	"profile-service/internal/middleware"
 	"profile-service/internal/models"
 	"profile-service/internal/schemas"
@@ -151,6 +152,36 @@ func CreateProfileInternal(c *gin.Context) {
 	}
 
 	response.Created(c, "Tạo profile thành công", profile)
+}
+
+// SyncSeedAuthorsInternal triggers an event to update seeded post authors in forum-service
+// @Summary      [Internal] Đồng bộ authorId cho các post mẫu
+// @Description  Lấy ID của expert hiện tại và publish qua RabbitMQ để forum-service cập nhật lại toàn bộ authorId của những id mặc định ban đầu.
+// @Tags         internal
+// @Produce      json
+// @Success      200 {object} response.Response
+// @Failure      500 {object} response.Response
+// @Router       /internal/api/v1/profiles/sync-seed-authors [post]
+func SyncSeedAuthorsInternal(c *gin.Context) {
+	var expertAuthID string
+	err := config.DB.Table("profiles").
+		Where("role = ?", "EXPERT").
+		Order("created_at asc").
+		Limit(1).
+		Pluck("auth_id", &expertAuthID).
+		Error
+
+	if err != nil || expertAuthID == "" {
+		expertAuthID = "00000000-0000-0000-0000-000000000002"
+	}
+
+	err = messaging.PublishSyncSeedAuthors(expertAuthID)
+	if err != nil {
+		response.Error(c, http.StatusInternalServerError, "Không thể publish event đồng bộ", err.Error())
+		return
+	}
+
+	response.Success(c, "Đã publish event đồng bộ thành công", gin.H{"expert_auth_id": expertAuthID})
 }
 
 // ---------- /api/v1/profiles/me ----------

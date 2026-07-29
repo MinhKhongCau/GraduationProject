@@ -79,8 +79,9 @@ func InitRabbitMQ(cfg *configs.Config) {
 
 	log.Printf("forum-service: connected to RabbitMQ, declared exchange %q", EventsExchange)
 
-	// Start response consumer
+	// Start consumers
 	startProfileResponseConsumer()
+	startSyncSeedAuthorsConsumer()
 }
 
 // PublishEvent publishes payload (a JSON-encoded event body) under
@@ -213,5 +214,71 @@ func FetchProfiles(authorIDs []string) (map[string]AuthorProfile, error) {
 	case <-time.After(3 * time.Second):
 		return nil, fmt.Errorf("profile request timed out after 3 seconds")
 	}
+}
+
+type SyncSeedAuthorsPayload struct {
+	ExpertID string `json:"expertId"`
+}
+
+func startSyncSeedAuthorsConsumer() {
+	syncQueue := "forum.sync_seed_authors.queue"
+	syncRoutingKey := "profile.sync_seed_authors"
+
+	if _, err := Channel.QueueDeclare(syncQueue, true, false, false, false, nil); err != nil {
+		log.Printf("forum-service: WARNING failed to declare sync queue %q: %v", syncQueue, err)
+		return
+	}
+
+	if err := Channel.QueueBind(syncQueue, syncRoutingKey, EventsExchange, false, nil); err != nil {
+		log.Printf("forum-service: WARNING failed to bind sync queue %q to exchange %q: %v", syncQueue, EventsExchange, err)
+		return
+	}
+
+	msgs, err := Channel.Consume(syncQueue, "", false, false, false, false, nil)
+	if err != nil {
+		log.Printf("forum-service: WARNING failed to start consuming sync queue %q: %v", syncQueue, err)
+		return
+	}
+
+	log.Printf("forum-service: listening for sync seed authors events on queue %q", syncQueue)
+
+	go func() {
+		for msg := range msgs {
+			var payload SyncSeedAuthorsPayload
+			if err := json.Unmarshal(msg.Body, &payload); err != nil {
+				log.Printf("forum-service: error decoding sync seed authors payload: %v", err)
+				msg.Ack(false)
+				continue
+			}
+
+			if payload.ExpertID == "" {
+				log.Printf("forum-service: received empty expertId in sync seed authors payload")
+				msg.Ack(false)
+				continue
+			}
+
+			if DB == nil {
+				log.Printf("forum-service: DB is not initialized, cannot update seed authors")
+				msg.Nack(false, true)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			err = DB.Exec("UPDATE posts SET author_id = ? WHERE author_id IN (?, ?, ?)",
+				payload.ExpertID,
+				"00000000-0000-0000-0000-0000000003e9",
+				"00000000-0000-0000-0000-0000000003ea",
+				"00000000-0000-0000-0000-0000000003eb",
+			).Error
+
+			if err != nil {
+				log.Printf("forum-service: failed to update seed post authors via RabbitMQ event: %v", err)
+				msg.Nack(false, true)
+			} else {
+				log.Printf("forum-service: successfully updated seed post authors to expert %s via RabbitMQ event", payload.ExpertID)
+				msg.Ack(false)
+			}
+		}
+	}()
 }
 
