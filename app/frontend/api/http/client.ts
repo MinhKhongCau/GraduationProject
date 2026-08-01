@@ -3,12 +3,11 @@ import { AUTH_ENDPOINTS } from "@/constants/api";
 import { ROUTES } from "@/constants/route";
 import { toCamelCase, toSnakeCase } from "./caseTransform";
 import { getAccessToken, getRefreshToken, setAccessToken, clearSession } from "./session";
+import { API_BASE_URL } from "./config";
 
 interface RetryableConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
-
-const AUTH_BASE_URL = process.env.REACT_APP_API_URL ?? "https://api.qmcloud.io.vn/api/v1";
 
 let refreshPromise: Promise<string | null> | null = null;
 
@@ -20,7 +19,7 @@ function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return Promise.resolve(null);
 
   refreshPromise = axios
-    .post(`${AUTH_BASE_URL}${AUTH_ENDPOINTS.REFRESH}`, { refreshToken })
+    .post(`${API_BASE_URL}${AUTH_ENDPOINTS.REFRESH}`, { refreshToken })
     .then((response) => {
       const accessToken = response.data?.accessToken as string | undefined;
       if (!accessToken) return null;
