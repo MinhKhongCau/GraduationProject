@@ -14,7 +14,7 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind CSS v4 · TanStack
 
 Roles are `PATIENT` / `EXPERT` / `ADMIN` — this is `auth-service`'s actual `Account.role` enum. Note that `document/API-document.md` and the root Vietnamese `README.md` say `CLIENT` instead of `PATIENT`; the running code is the source of truth here, not those docs.
 
-All services sit behind a Kong API gateway at a single base URL (`NEXT_PUBLIC_API_URL`, for example `https://api.qmcloud.io.vn/api/v1`), not on individual ports — `api/http/instances.ts` points every client at that one `baseURL`. Not every documented endpoint is implemented backend-side yet:
+All services sit behind a Kong API gateway at a single base URL (`REACT_APP_API_URL` / `https://api.qmcloud.io.vn/api/v1`), not on individual ports — `api/http/instances.ts` points every client at that one `baseURL`. Not every documented endpoint is implemented backend-side yet:
 
 | Area | Status |
 |---|---|

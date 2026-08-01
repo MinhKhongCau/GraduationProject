@@ -24,11 +24,11 @@ export interface ClientShellProps {
  */
 export function ClientShell({ navItems, bottomNavItems, settingsItem, children }: ClientShellProps) {
   return (
-    <div className="flex min-h-dvh flex-col bg-surface/30">
+    <div className="flex min-h-screen flex-col bg-surface/30">
       <DesktopHeaderNav navItems={navItems} settingsItem={settingsItem} />
       <TabletDrawerNav navItems={navItems} settingsItem={settingsItem} />
 
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur sm:hidden">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur sm:hidden">
         <Link href={ROUTES.HOME} className="flex items-center gap-2 text-base font-bold text-foreground">
           <span className="rounded-lg bg-primary p-1 text-white">🧠</span>
           MindCare
