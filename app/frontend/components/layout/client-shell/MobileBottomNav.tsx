@@ -15,7 +15,7 @@ export function MobileBottomNav({ navItems }: MobileBottomNavProps) {
   const { t } = useTranslation();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background pb-[env(safe-area-inset-bottom)] sm:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background sm:hidden">
       {navItems.map((item) => {
         const isActive = pathname === item.href;
         const Icon = item.icon;

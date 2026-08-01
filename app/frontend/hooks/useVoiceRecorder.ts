@@ -1,50 +1,19 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Capacitor } from "@capacitor/core";
 
-const WEB_MIME_CANDIDATES: Array<{ mimeType: string; bitrate: number }> = [
+const MIME_CANDIDATES: Array<{ mimeType: string; bitrate: number }> = [
   { mimeType: "audio/webm;codecs=opus", bitrate: 256_000 },
   { mimeType: "audio/webm", bitrate: 192_000 },
   { mimeType: "audio/ogg;codecs=opus", bitrate: 192_000 },
   { mimeType: "audio/mp4", bitrate: 128_000 },
 ];
 
-// Safari/WKWebView records AAC in an MP4 container when MediaRecorder supports it.
-const IOS_MIME_CANDIDATES: Array<{ mimeType: string; bitrate: number }> = [
-  { mimeType: "audio/mp4", bitrate: 128_000 },
-  ...WEB_MIME_CANDIDATES,
-];
-
 function pickMimeType(): { mimeType: string; bitrate: number } {
-  const candidates = Capacitor.getPlatform() === "ios" ? IOS_MIME_CANDIDATES : WEB_MIME_CANDIDATES;
-  for (const candidate of candidates) {
+  for (const candidate of MIME_CANDIDATES) {
     if (MediaRecorder.isTypeSupported(candidate.mimeType)) return candidate;
   }
   return { mimeType: "", bitrate: 128_000 };
-}
-
-async function ensureMicrophonePermission(): Promise<void> {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error("Voice recording is not supported by this browser.");
-  }
-
-  // Capacitor has no generic microphone-permissions plugin in v8. The native
-  // WebView requests the declared iOS/Android microphone permission through
-  // getUserMedia; query first when the browser exposes the Permissions API.
-  try {
-    const permission = await navigator.permissions?.query({ name: "microphone" as PermissionName });
-    if (permission?.state === "denied") {
-      throw new Error(
-        Capacitor.isNativePlatform()
-          ? "Microphone access is disabled. Enable it for MindCare in your device settings."
-          : "Microphone access is blocked. Enable it in your browser settings and try again."
-      );
-    }
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("Microphone")) throw error;
-    // Some WebViews do not implement navigator.permissions for microphones.
-  }
 }
 
 export interface UseVoiceRecorder {
@@ -79,7 +48,6 @@ export function useVoiceRecorder(): UseVoiceRecorder {
   const startRecording = useCallback(async () => {
     let stream: MediaStream;
     try {
-      await ensureMicrophonePermission();
       stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -89,31 +57,17 @@ export function useVoiceRecorder(): UseVoiceRecorder {
           channelCount: 1,
         },
       });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Microphone access was denied. Please allow it and try again.";
-      alert(message);
+    } catch {
+      alert("Microphone access denied. Please allow microphone permission and try again.");
       return;
     }
 
     streamRef.current = stream;
-    if (typeof MediaRecorder === "undefined") {
-      stopTracks();
-      alert("This device does not support voice recording.");
-      return;
-    }
-
     const { mimeType, bitrate } = pickMimeType();
-    let recorder: MediaRecorder;
-    try {
-      recorder = new MediaRecorder(stream, {
-        ...(mimeType ? { mimeType } : {}),
-        audioBitsPerSecond: bitrate,
-      });
-    } catch {
-      stopTracks();
-      alert("This device does not support a compatible audio recording format.");
-      return;
-    }
+    const recorder = new MediaRecorder(stream, {
+      ...(mimeType ? { mimeType } : {}),
+      audioBitsPerSecond: bitrate,
+    });
 
     chunksRef.current = [];
     recorder.ondataavailable = (event) => {

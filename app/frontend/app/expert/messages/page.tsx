@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { ContactList } from "./component/ContactList";
 import { ChatWindow } from "./component/ChatWindow";
-import { useExpertChatContacts, useDmThread, useKeyboardHeight } from "@/hooks";
+import { useExpertChatContacts, useDmThread } from "@/hooks";
 import { useAuthContext } from "@/context/AuthContext";
 import { useChatContext } from "@/context/ChatContext";
-import { ChatContact } from "@/types";
 
 export default function ExpertMessagesPage() {
   const { user } = useAuthContext();
@@ -14,7 +13,6 @@ export default function ExpertMessagesPage() {
   const { onlineByContactId, queryPresence } = useChatContext();
   const [activeContactId, setActiveContactId] = useState<string | null>(null);
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
-  const keyboardHeight = useKeyboardHeight();
 
   useEffect(() => {
     if (!activeContactId && contacts.length > 0) setActiveContactId(contacts[0].id);
@@ -28,16 +26,13 @@ export default function ExpertMessagesPage() {
   const thread = useDmThread(activeContactId);
   const activeContact = contacts.find((c) => c.id === activeContactId) ?? null;
 
-  const handleSelectContact = (contact: ChatContact) => {
+  const handleSelectContact = (contact: any) => {
     setActiveContactId(contact.id);
     setShowChatOnMobile(true);
   };
 
   return (
-    <div
-      className="flex h-[calc(100dvh-9.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--keyboard-height))] overflow-hidden rounded-2xl border border-border bg-background shadow-card sm:h-[750px]"
-      style={{ "--keyboard-height": `${keyboardHeight}px` } as React.CSSProperties}
-    >
+    <div className="flex h-[calc(100vh-160px)] md:h-[calc(100vh-140px)] overflow-hidden rounded-2xl border border-border bg-background shadow-card">
       <ContactList
         contacts={contacts}
         activeContactId={activeContactId}

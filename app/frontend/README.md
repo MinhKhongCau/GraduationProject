@@ -12,16 +12,7 @@ cp .env.local.example .env.local   # fill in service URLs / feature flags
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). By default the app expects the local Kong API gateway at port 8000 (`NEXT_PUBLIC_API_URL`) and the chatroom Socket.IO service at port 8085 (`NEXT_PUBLIC_CHATROOM_WS_URL`).
-
-### Capacitor development
-
-`package.json` is strict JSON, so it cannot contain comments. The Capacitor scripts below are documented here instead:
-
-- `npm run cap:sync:ios` syncs iOS with `http://localhost:3000`, which iOS Simulator resolves to the host machine.
-- `npm run cap:sync:android` syncs Android with `http://10.0.2.2:3000`, Android Emulator's host-machine alias.
-- `npm run cap:sync` runs both platform-specific syncs.
-- `npm run cap:dev` syncs both platforms, then starts Next.js at `0.0.0.0` so emulators and physical devices can reach it.
+Open [http://localhost:3000](http://localhost:3000). By default the app expects each backend microservice running locally on the ports in `.env.local.example` (matching `.deploy/dev/.env`) — auth on 8080, profile on 8081, payment on 8082, booking on 8083, assessment on 5000.
 
 ```bash
 npm run lint       # eslint

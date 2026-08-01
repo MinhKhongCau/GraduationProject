@@ -60,7 +60,7 @@ export default function MDXEditorWrapper({ value, onChange, placeholder, readOnl
         contentEditableClassName={
           readOnly
             ? "prose dark:prose-invert max-w-none text-sm leading-relaxed text-foreground"
-            : "prose dark:prose-invert max-w-none min-h-[180px] max-h-[min(45dvh,300px)] overflow-y-auto overscroll-contain p-4 focus:outline-none text-sm text-foreground"
+            : "prose dark:prose-invert max-w-none min-h-[180px] max-h-[300px] overflow-y-auto p-4 focus:outline-none text-sm text-foreground"
         }
         plugins={
           readOnly
