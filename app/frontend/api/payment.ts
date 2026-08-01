@@ -18,25 +18,46 @@ import type {
 // adjust if it turns out to return the entity directly).
 
 export async function initWallet(payload: InitWalletRequest): Promise<Wallet> {
-  const response = await paymentClient.get<ServiceEnvelope<Wallet>>(
+  const response = await paymentClient.get<ServiceEnvelope<any>>(
     PAYMENT_ENDPOINTS.INIT_WALLET
   );
-  return response.data.data;
+  const raw = response.data?.data;
+  return {
+    walletId: raw?.id ?? "",
+    ownerId: raw?.userId ?? payload.ownerId,
+    userType: payload.userType,
+    balance: raw?.availableBalance ?? 0,
+    updatedAt: raw?.updatedAt ? new Date(raw.updatedAt).toISOString() : new Date().toISOString(),
+  };
 }
 
 export async function getWallet(ownerId: string): Promise<Wallet> {
-  const response = await paymentClient.get<ServiceEnvelope<Wallet>>(
+  const response = await paymentClient.get<ServiceEnvelope<any>>(
     PAYMENT_ENDPOINTS.WALLET
   );
-  return response.data.data;
+  const raw = response.data?.data;
+  return {
+    walletId: raw?.id ?? "",
+    ownerId: raw?.userId ?? ownerId,
+    userType: "PATIENT",
+    balance: raw?.availableBalance ?? 0,
+    updatedAt: raw?.updatedAt ? new Date(raw.updatedAt).toISOString() : new Date().toISOString(),
+  };
 }
 
 export async function topUpWallet(ownerId: string, payload: TopUpRequest): Promise<Wallet> {
-  const response = await paymentClient.post<ServiceEnvelope<Wallet>>(
+  const response = await paymentClient.post<ServiceEnvelope<any>>(
     PAYMENT_ENDPOINTS.TOP_UP,
     payload
   );
-  return response.data.data;
+  const raw = response.data?.data;
+  return {
+    walletId: raw?.id ?? "",
+    ownerId: raw?.userId ?? ownerId,
+    userType: "PATIENT",
+    balance: raw?.availableBalance ?? 0,
+    updatedAt: raw?.updatedAt ? new Date(raw.updatedAt).toISOString() : new Date().toISOString(),
+  };
 }
 
 export async function pay(payload: PaymentRequest): Promise<void> {

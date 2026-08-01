@@ -1,6 +1,16 @@
 basePath: /
 definitions:
-  profile-service_internal_schemas.CreateMedicalHistoryRequest:
+  response.Response:
+    properties:
+      data: {}
+      error:
+        type: string
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  schemas.CreateMedicalHistoryRequest:
     properties:
       condition_name:
         type: string
@@ -15,7 +25,7 @@ definitions:
     - condition_name
     - diagnosed_at
     type: object
-  profile-service_internal_schemas.CreateProfileRequest:
+  schemas.CreateProfileRequest:
     properties:
       auth_id:
         type: string
@@ -34,7 +44,7 @@ definitions:
     - name
     - role
     type: object
-  profile-service_internal_schemas.CreateSpecializationRequest:
+  schemas.CreateSpecializationRequest:
     properties:
       description:
         type: string
@@ -45,7 +55,7 @@ definitions:
     required:
     - name
     type: object
-  profile-service_internal_schemas.PatchExpertRequest:
+  schemas.PatchExpertRequest:
     properties:
       avatar_url:
         type: string
@@ -71,7 +81,7 @@ definitions:
         - REJECTED
         type: string
     type: object
-  profile-service_internal_schemas.PatchPatientRequest:
+  schemas.PatchPatientRequest:
     properties:
       address:
         type: string
@@ -88,19 +98,19 @@ definitions:
       phone_number:
         type: string
     type: object
-  profile-service_internal_schemas.PatchProfileRequest:
+  schemas.PatchProfileRequest:
     properties:
       name:
         type: string
     type: object
-  profile-service_internal_schemas.UpdateProfileRequest:
+  schemas.UpdateProfileRequest:
     properties:
       name:
         type: string
     required:
     - name
     type: object
-  profile-service_internal_schemas.UpsertExpertRequest:
+  schemas.UpsertExpertRequest:
     properties:
       avatar_url:
         type: string
@@ -121,7 +131,7 @@ definitions:
     required:
     - name
     type: object
-  profile-service_internal_schemas.UpsertPatientRequest:
+  schemas.UpsertPatientRequest:
     properties:
       address:
         type: string
@@ -140,16 +150,6 @@ definitions:
         type: string
     required:
     - name
-    type: object
-  profile-service_pkg_response.Response:
-    properties:
-      data: {}
-      error:
-        type: string
-      message:
-        type: string
-      success:
-        type: boolean
     type: object
 info:
   contact: {}
@@ -180,7 +180,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Danh sách toàn bộ profile'
@@ -195,22 +195,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.CreateProfileRequest'
+          $ref: '#/definitions/schemas.CreateProfileRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Tạo mới một profile'
@@ -230,11 +230,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Xoá (mềm) một profile'
@@ -253,11 +253,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Xem chi tiết 1 profile'
@@ -277,22 +277,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.PatchProfileRequest'
+          $ref: '#/definitions/schemas.PatchProfileRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật một phần thông tin profile'
@@ -312,22 +312,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.UpdateProfileRequest'
+          $ref: '#/definitions/schemas.UpdateProfileRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật tên profile'
@@ -356,7 +356,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Danh sách chuyên gia
       tags:
       - experts
@@ -374,11 +374,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Xem chi tiết chuyên gia
       tags:
       - experts
@@ -396,26 +396,26 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.PatchExpertRequest'
+          $ref: '#/definitions/schemas.PatchExpertRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật một phần hồ sơ chuyên gia'
@@ -435,22 +435,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.UpsertExpertRequest'
+          $ref: '#/definitions/schemas.UpsertExpertRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật toàn bộ hồ sơ chuyên gia'
@@ -464,15 +464,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: Xem hồ sơ của chính mình
@@ -487,15 +487,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: Cập nhật một phần hồ sơ của chính mình
@@ -510,15 +510,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: Cập nhật toàn bộ hồ sơ của chính mình
@@ -532,15 +532,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: Xem tiền sử bệnh của chính mình
@@ -555,22 +555,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.CreateMedicalHistoryRequest'
+          $ref: '#/definitions/schemas.CreateMedicalHistoryRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: Thêm tiền sử bệnh cho chính mình
@@ -599,7 +599,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Danh sách bệnh nhân'
@@ -619,11 +619,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Xem chi tiết bệnh nhân'
@@ -643,22 +643,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.PatchPatientRequest'
+          $ref: '#/definitions/schemas.PatchPatientRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật một phần hồ sơ bệnh nhân'
@@ -678,22 +678,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.UpsertPatientRequest'
+          $ref: '#/definitions/schemas.UpsertPatientRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật toàn bộ hồ sơ bệnh nhân'
@@ -713,11 +713,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Xem tiền sử bệnh của một bệnh nhân'
@@ -731,7 +731,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: Danh sách chuyên khoa
       tags:
       - specializations
@@ -744,18 +744,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.CreateSpecializationRequest'
+          $ref: '#/definitions/schemas.CreateSpecializationRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       security:
       - BearerAuth: []
       summary: '[Admin] Tạo chuyên khoa mới'
@@ -773,23 +773,41 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/profile-service_internal_schemas.CreateProfileRequest'
+          $ref: '#/definitions/schemas.CreateProfileRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/profile-service_pkg_response.Response'
+            $ref: '#/definitions/response.Response'
       summary: '[Internal] Tạo profile khi có tài khoản mới'
+      tags:
+      - internal
+  /internal/api/v1/profiles/sync-seed-authors:
+    post:
+      description: Lấy ID của expert hiện tại và publish qua RabbitMQ để forum-service
+        cập nhật lại toàn bộ authorId của những id mặc định ban đầu.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: '[Internal] Đồng bộ authorId cho các post mẫu'
       tags:
       - internal
 securityDefinitions:
