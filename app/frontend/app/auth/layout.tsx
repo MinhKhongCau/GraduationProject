@@ -5,8 +5,8 @@ import { ROUTES } from "@/constants";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-surface p-4">
-      <div className="flex min-h-[700px] w-full max-w-[1000px] flex-col overflow-hidden rounded-3xl bg-background shadow-elevated md:flex-row">
+    <div className="flex min-h-dvh items-center justify-center bg-surface p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div className="flex min-h-full w-full max-w-[1000px] flex-col overflow-hidden rounded-3xl bg-background shadow-elevated md:min-h-[700px] md:flex-row">
         <div className="relative hidden md:block md:w-1/2 bg-border">
           <Image src="/images/auth-bg.png" alt="MindCare" fill className="object-cover" priority />
           <Link

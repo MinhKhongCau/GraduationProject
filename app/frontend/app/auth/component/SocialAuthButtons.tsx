@@ -1,9 +1,13 @@
 "use client";
 
 import { GoogleLogin } from "@react-oauth/google";
+import { Capacitor } from "@capacitor/core";
 import { useErrorContext } from "@/context/ErrorContext";
 
 const GOOGLE_AUTH_ENABLED = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
+// Google Identity Services is a web SDK. Native Capacitor apps must use a
+// native Google Sign-In plugin rather than run this OAuth flow in a WebView.
+const GOOGLE_AUTH_AVAILABLE = GOOGLE_AUTH_ENABLED && !Capacitor.isNativePlatform();
 
 export interface SocialAuthButtonsProps {
   onGoogleCredential: (idToken: string) => void;
@@ -30,7 +34,7 @@ export function SocialAuthButtons({ onGoogleCredential }: SocialAuthButtonsProps
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        {GOOGLE_AUTH_ENABLED ? (
+        {GOOGLE_AUTH_AVAILABLE ? (
           <div className="col-span-2 flex justify-center">
             <GoogleLogin
               onSuccess={(credential) => {
@@ -44,7 +48,7 @@ export function SocialAuthButtons({ onGoogleCredential }: SocialAuthButtonsProps
           <button
             type="button"
             disabled
-            title="Google sign-in is not available yet"
+            title={GOOGLE_AUTH_ENABLED ? "Google sign-in is available on the web only" : "Google sign-in is not available yet"}
             className="flex cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-border py-2 text-sm font-semibold text-muted-foreground opacity-60"
           >
             Google
