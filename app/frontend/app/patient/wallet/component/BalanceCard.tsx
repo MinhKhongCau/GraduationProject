@@ -17,7 +17,7 @@ export function BalanceCard({ balance, onTopUp, onWithdraw }: BalanceCardProps) 
         Total available balance
       </p>
       <h1 className="mb-8 text-5xl font-extrabold text-foreground">
-        {balance.toLocaleString("vi-VN")} <span className="text-3xl">đ</span>
+        {(balance ?? 0).toLocaleString("vi-VN")} <span className="text-3xl">đ</span>
       </h1>
 
       <div className="flex w-full max-w-md gap-4">
