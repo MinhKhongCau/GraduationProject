@@ -48,3 +48,4 @@ func RunMigrations(cfg *configs.Config) {
 
 	log.Println("forum-service: migrations up to date")
 }
+

@@ -298,3 +298,28 @@ func deadLetter(msg amqp.Delivery) {
 		log.Printf("profile-service: failed to publish event to DLQ %q: %v", ProfileDeadLetterQueue, err)
 	}
 }
+
+// PublishSyncSeedAuthors publishes the sync seed authors event to the forum.events exchange.
+func PublishSyncSeedAuthors(expertID string) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel is not initialized")
+	}
+	payload := map[string]string{
+		"expertId": expertID,
+	}
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return channel.Publish(
+		"forum.events",
+		"profile.sync_seed_authors",
+		false,
+		false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			DeliveryMode: amqp.Persistent,
+			Body:         body,
+		},
+	)
+}
