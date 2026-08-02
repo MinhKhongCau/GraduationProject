@@ -20,6 +20,13 @@ export interface Tag {
   slug: string;
 }
 
+export interface PostAuthor {
+  id: string;
+  name: string;
+  avatarUrl: string;
+  role: string;
+}
+
 export interface Post {
   id: number;
   title: string;
@@ -28,6 +35,7 @@ export interface Post {
   thumbnailUrl: string;
   categoryId: number;
   authorId: string;
+  author?: PostAuthor;
   status: PostStatus;
   viewCount: number;
   likeCount: number;
@@ -55,6 +63,7 @@ export interface Comment {
   id: number;
   postId: number;
   userId: string;
+  user?: PostAuthor;
   parentId: number | null;
   path: string;
   content: string | null; // null when deleted

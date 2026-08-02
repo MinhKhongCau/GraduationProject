@@ -10,28 +10,63 @@ export interface PostContentProps {
   post: PostDetail;
 }
 
+function initials(fullName: string): string {
+  return fullName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
 export function PostContent({ post }: PostContentProps) {
-  const authorName = useForumAuthorName(post.authorId);
+  const fallbackAuthorName = useForumAuthorName(post.authorId);
+  const authorName = post.author?.name || fallbackAuthorName;
+  const avatarUrl = post.author?.avatarUrl;
 
   return (
     <div>
-      <h1 className="mb-2 text-2xl font-bold text-foreground">{post.title}</h1>
-      <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
-        <span>{authorName}</span>
-        <span>•</span>
-        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-        <span>•</span>
-        <span>{post.viewCount} views</span>
+      <h1 className="mb-4 text-3xl font-extrabold tracking-tight text-foreground">{post.title}</h1>
+      
+      {/* Author and metadata */}
+      <div className="mb-6 flex items-center gap-3 border-b border-border pb-4">
+        <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-surface text-sm font-bold text-muted-foreground">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={authorName} className="h-full w-full object-cover" />
+          ) : (
+            initials(authorName) || "?"
+          )}
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-bold text-foreground">{authorName}</span>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span>{new Date(post.createdAt).toLocaleDateString("vi-VN")}</span>
+            <span>•</span>
+            <span>{post.viewCount} lượt xem</span>
+          </div>
+        </div>
       </div>
+
       {post.tags.length > 0 && (
         <div className="mb-6 flex flex-wrap gap-1.5">
           {post.tags.map((tag) => (
-            <span key={tag} className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary-soft-text">
+            <span key={tag} className="rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-medium text-primary-soft-text">
               {tag}
             </span>
           ))}
         </div>
       )}
+
+      {post.thumbnailUrl && (
+        <div className="mb-6 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-border">
+          <img
+            src={post.thumbnailUrl}
+            alt={post.title}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
+
       <ContentViewer value={post.content} readOnly />
     </div>
   );

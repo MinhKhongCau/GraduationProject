@@ -36,6 +36,7 @@ func SetupRoutes(r *gin.Engine) {
 		api.GET("/experts/:id", handlers.GetExpert)
 		api.GET("/specializations", handlers.GetAllSpecializations)
 		api.GET("/patients/:id/public", middleware.RequireAuth(), handlers.GetPatientPublic)
+		api.GET("/public/:id", handlers.GetPublicProfile)
 
 		// --- Quản trị: chỉ ADMIN ---
 		admin := api.Group("")

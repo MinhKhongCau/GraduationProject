@@ -97,11 +97,24 @@ func ListExperts(c *gin.Context) {
 // @Failure      404 {object} response.Response
 // @Router       /api/v1/profiles/experts/{id} [get]
 func GetExpert(c *gin.Context) {
-	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RoleExpert, "ExpertProfile.Specializations")
+	profile, err := findProfileByAuthID(c.Param("id"))
 	if err != nil {
-		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ chuyên gia", err.Error())
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ", err.Error())
 		return
 	}
+
+	// Sanitize sensitive patient/admin info if accessed through this public endpoint
+	if profile.Role == models.RolePatient && profile.PatientProfile != nil {
+		profile.PatientProfile.PhoneNumber = ""
+		profile.PatientProfile.Email = ""
+		profile.PatientProfile.Address = ""
+		profile.PatientProfile.DateOfBirth = nil
+		profile.PatientProfile.Gender = ""
+		profile.PatientProfile.MedicalHistories = nil
+	} else if profile.Role == models.RoleAdmin && profile.AdminProfile != nil {
+		profile.AdminProfile.Email = ""
+	}
+
 	response.Success(c, "Lấy thông tin thành công", profile)
 }
 

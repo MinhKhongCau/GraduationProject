@@ -102,6 +102,12 @@ func (h *TagHandler) ListPosts(c *gin.Context) {
 				AvatarURL: prof.AvatarURL,
 				Role:      prof.Role,
 			}
+		} else {
+			authorDTO = &dto.AuthorDTO{
+				ID:   p.AuthorID,
+				Name: "Community member",
+				Role: "PATIENT",
+			}
 		}
 		items = append(items, dto.NewPostResponse(p, authorDTO))
 	}
