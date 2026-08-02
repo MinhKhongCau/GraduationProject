@@ -141,24 +141,35 @@ func TestGetExpert(t *testing.T) {
 	t.Run("TC_PROF_EXP_04 - Xem chi tiết chuyên gia thành công", func(t *testing.T) {
 		_, mock := SetupTestDB(t)
 
+		profileID := uuid.New()
 		expertUUID := uuid.New()
 
 		// Mock query Find profile by ID (First)
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
-			WithArgs(expertUUID, string(models.RoleExpert), 1).
+			WithArgs(expertUUID, 1).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role", "auth_id"}).
-				AddRow(expertUUID, "dr-b", "Dr. B", string(models.RoleExpert), expertUUID))
+				AddRow(profileID, "dr-b", "Dr. B", string(models.RoleExpert), expertUUID))
+
+		// Mock preload AdminProfile
+		mock.ExpectQuery(`SELECT \* FROM "admin_profiles"`).
+			WithArgs(profileID).
+			WillReturnRows(sqlmock.NewRows([]string{"profile_id"}))
 
 		// Mock preload ExpertProfile
 		mock.ExpectQuery(`SELECT \* FROM "expert_profiles"`).
-			WithArgs(expertUUID).
+			WithArgs(profileID).
 			WillReturnRows(sqlmock.NewRows([]string{"profile_id", "email", "phone_number"}).
-				AddRow(expertUUID, "dr-b@example.com", "0987654321"))
+				AddRow(profileID, "dr-b@example.com", "0987654321"))
 
-		// Mock preloaded Specializations
+		// Mock preload ExpertProfile.Specializations
 		mock.ExpectQuery(`SELECT \* FROM "expert_specializations"`).
-			WithArgs(expertUUID).
+			WithArgs(profileID).
 			WillReturnRows(sqlmock.NewRows([]string{"expert_profile_id", "specialization_spec_id"}))
+
+		// Mock preload PatientProfile
+		mock.ExpectQuery(`SELECT \* FROM "patient_profiles"`).
+			WithArgs(profileID).
+			WillReturnRows(sqlmock.NewRows([]string{"profile_id"}))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -187,7 +198,7 @@ func TestGetExpert(t *testing.T) {
 
 		// Mock query First trả về record not found
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
-			WithArgs(expertUUID, string(models.RoleExpert), 1).
+			WithArgs(expertUUID, 1).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role"})) // Row rỗng tức là Not Found trong sqlmock
 
 		w := httptest.NewRecorder()
@@ -201,7 +212,7 @@ func TestGetExpert(t *testing.T) {
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
 		assert.False(t, resp["success"].(bool))
-		assert.Equal(t, "Không tìm thấy hồ sơ chuyên gia", resp["message"])
+		assert.Equal(t, "Không tìm thấy hồ sơ", resp["message"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})

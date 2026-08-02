@@ -19,6 +19,7 @@ type CommentResponse struct {
 	ID        int64             `json:"id"`
 	PostID    int64             `json:"postId"`
 	UserID    string            `json:"userId"`
+	User      *AuthorDTO        `json:"user,omitempty"`
 	ParentID  *int64            `json:"parentId"`
 	Path      string            `json:"path"`
 	Content   *string           `json:"content"`
@@ -30,11 +31,23 @@ type CommentResponse struct {
 // NewCommentResponse renders a soft-deleted comment as a content-less
 // placeholder ("deleted": true) rather than omitting it, so reply chains
 // under it stay visible (SPEC.md §3.6).
-func NewCommentResponse(c *entity.Comment) CommentResponse {
+func NewCommentResponse(c *entity.Comment, profiles map[string]AuthorDTO) CommentResponse {
+	var userDTO *AuthorDTO
+	if prof, exists := profiles[c.UserID]; exists {
+		userDTO = &prof
+	} else {
+		userDTO = &AuthorDTO{
+			ID:   c.UserID,
+			Name: "Community member",
+			Role: "PATIENT",
+		}
+	}
+
 	resp := CommentResponse{
 		ID:        c.ID,
 		PostID:    c.PostID,
 		UserID:    c.UserID,
+		User:      userDTO,
 		ParentID:  c.ParentID,
 		Path:      c.Path.String(),
 		CreatedAt: c.CreatedAt,
@@ -47,7 +60,7 @@ func NewCommentResponse(c *entity.Comment) CommentResponse {
 		resp.Content = &content
 	}
 	for _, r := range c.Replies {
-		resp.Replies = append(resp.Replies, NewCommentResponse(r))
+		resp.Replies = append(resp.Replies, NewCommentResponse(r, profiles))
 	}
 	return resp
 }

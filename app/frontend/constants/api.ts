@@ -25,6 +25,7 @@ export const PROFILE_ENDPOINTS = {
   SPECIALIZATIONS: "/profiles/specializations",
   EXPERTS: "/profiles/experts",
   EXPERT: (accountId: string) => `/profiles/experts/${accountId}`,
+  PROFILE: (accountId: string) => `/profiles/public/${accountId}`,
 };
 
 export const BOOKING_ENDPOINTS = {

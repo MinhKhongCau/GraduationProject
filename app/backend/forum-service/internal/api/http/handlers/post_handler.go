@@ -100,6 +100,12 @@ func (h *PostHandler) List(c *gin.Context) {
 				AvatarURL: prof.AvatarURL,
 				Role:      prof.Role,
 			}
+		} else {
+			authorDTO = &dto.AuthorDTO{
+				ID:   p.AuthorID,
+				Name: "Community member",
+				Role: "PATIENT",
+			}
 		}
 		items = append(items, dto.NewPostResponse(p, authorDTO))
 	}
@@ -297,7 +303,11 @@ func getAuthorDTO(authorID string) *dto.AuthorDTO {
 	}
 	profiles, err := db.FetchProfiles([]string{authorID})
 	if err != nil {
-		return nil
+		return &dto.AuthorDTO{
+			ID:   authorID,
+			Name: "Community member",
+			Role: "PATIENT",
+		}
 	}
 	if prof, exists := profiles[authorID]; exists {
 		return &dto.AuthorDTO{
@@ -307,7 +317,11 @@ func getAuthorDTO(authorID string) *dto.AuthorDTO {
 			Role:      prof.Role,
 		}
 	}
-	return nil
+	return &dto.AuthorDTO{
+		ID:   authorID,
+		Name: "Community member",
+		Role: "PATIENT",
+	}
 }
 
 func parseIntOrDefault(s string, def int) int {

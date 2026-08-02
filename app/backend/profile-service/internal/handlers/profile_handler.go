@@ -410,6 +410,36 @@ func GetProfile(c *gin.Context) {
 	response.Success(c, "Lấy profile thành công", profile)
 }
 
+// GetPublicProfile trả về 1 profile công khai theo auth_id cho tất cả mọi người.
+// @Summary      Xem chi tiết 1 profile công khai
+// @Tags         profiles
+// @Produce      json
+// @Param        id path string true "Auth Account ID"
+// @Success      200 {object} response.Response
+// @Failure      404 {object} response.Response
+// @Router       /api/v1/profiles/{id} [get]
+func GetPublicProfile(c *gin.Context) {
+	profile, err := findProfileByAuthID(c.Param("id"))
+	if err != nil {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy hồ sơ", err.Error())
+		return
+	}
+
+	// Tránh lộ lọt thông tin nhạy cảm của Patient/Admin nếu truy cập qua endpoint này
+	if profile.Role == models.RolePatient && profile.PatientProfile != nil {
+		profile.PatientProfile.PhoneNumber = ""
+		profile.PatientProfile.Email = ""
+		profile.PatientProfile.Address = ""
+		profile.PatientProfile.DateOfBirth = nil
+		profile.PatientProfile.Gender = ""
+		profile.PatientProfile.MedicalHistories = nil
+	} else if profile.Role == models.RoleAdmin && profile.AdminProfile != nil {
+		profile.AdminProfile.Email = ""
+	}
+
+	response.Success(c, "Lấy thông tin thành công", profile)
+}
+
 // UpdateProfile thay thế (PUT) trường chung (name) của 1 profile bất kỳ (dành cho Admin).
 // @Summary      [Admin] Cập nhật tên profile
 // @Tags         profiles
