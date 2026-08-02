@@ -121,6 +121,13 @@ export async function getExpertProfile(accountId: string): Promise<ExpertProfile
   return toExpertProfile(response.data.data);
 }
 
+export async function getPublicProfile(accountId: string): Promise<ExpertProfile> {
+  const response = await profileClient.get<ServiceEnvelope<RawExpertProfile>>(
+    PROFILE_ENDPOINTS.PROFILE(accountId)
+  );
+  return toExpertProfile(response.data.data);
+}
+
 // ---------- Admin (PUT/PATCH /profiles/experts/{accountId}) ----------
 
 export async function updateExpertProfile(

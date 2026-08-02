@@ -12,9 +12,22 @@ import { expertApi } from "@/api";
 export function useForumAuthorName(authorId: string) {
   const query = useApiQuery({
     queryKey: ["forum", "author-name", authorId],
-    queryFn: () => expertApi.getExpertProfile(authorId).catch(() => null),
+    queryFn: () => expertApi.getPublicProfile(authorId).catch(() => null),
     enabled: !!authorId,
   });
 
   return query.data?.fullName ?? "Community member";
+}
+
+export function useForumAuthor(authorId: string) {
+  const query = useApiQuery({
+    queryKey: ["forum", "author-profile", authorId],
+    queryFn: () => expertApi.getPublicProfile(authorId).catch(() => null),
+    enabled: !!authorId,
+  });
+
+  return {
+    name: query.data?.fullName ?? "Community member",
+    avatarUrl: query.data?.avatarUrl,
+  };
 }

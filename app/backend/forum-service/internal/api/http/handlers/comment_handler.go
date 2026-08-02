@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -10,7 +11,9 @@ import (
 	"forum-service/internal/api/dto"
 	"forum-service/internal/api/http/middleware"
 	"forum-service/internal/api/http/response"
+	"forum-service/internal/app/entity"
 	"forum-service/internal/app/service"
+	"forum-service/internal/repository/db"
 )
 
 type CommentHandler struct {
@@ -43,9 +46,19 @@ func (h *CommentHandler) Tree(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, "Failed to get comments", err.Error())
 		return
 	}
+
+	userIDsMap := make(map[string]bool)
+	collectUserIDs(roots, userIDsMap)
+	userIDs := make([]string, 0, len(userIDsMap))
+	for id := range userIDsMap {
+		userIDs = append(userIDs, id)
+	}
+
+	profiles := getUserProfileMap(userIDs)
+
 	resp := make([]dto.CommentResponse, 0, len(roots))
 	for _, r := range roots {
-		resp = append(resp, dto.NewCommentResponse(r))
+		resp = append(resp, dto.NewCommentResponse(r, profiles))
 	}
 	response.Success(c, "Comments retrieved", resp)
 }
@@ -87,7 +100,7 @@ func (h *CommentHandler) Create(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, "Failed to create comment", err.Error())
 		return
 	}
-	response.Created(c, "Comment created", dto.NewCommentResponse(comment))
+	response.Created(c, "Comment created", dto.NewCommentResponse(comment, getUserProfileMap([]string{comment.UserID})))
 }
 
 // @Summary      Edit comment
@@ -124,7 +137,37 @@ func (h *CommentHandler) Edit(c *gin.Context) {
 		writeCommentServiceError(c, err)
 		return
 	}
-	response.Success(c, "Comment updated", dto.NewCommentResponse(comment))
+	response.Success(c, "Comment updated", dto.NewCommentResponse(comment, getUserProfileMap([]string{comment.UserID})))
+}
+
+func collectUserIDs(comments []*entity.Comment, ids map[string]bool) {
+	for _, c := range comments {
+		if c.UserID != "" {
+			ids[c.UserID] = true
+		}
+		collectUserIDs(c.Replies, ids)
+	}
+}
+
+func getUserProfileMap(userIDs []string) map[string]dto.AuthorDTO {
+	result := make(map[string]dto.AuthorDTO)
+	if len(userIDs) == 0 {
+		return result
+	}
+	profiles, err := db.FetchProfiles(userIDs)
+	if err != nil {
+		log.Printf("forum-service: WARNING failed to fetch user profiles: %v", err)
+		return result
+	}
+	for k, v := range profiles {
+		result[k] = dto.AuthorDTO{
+			ID:        v.ID,
+			Name:      v.Name,
+			AvatarURL: v.AvatarURL,
+			Role:      v.Role,
+		}
+	}
+	return result
 }
 
 // @Summary      Soft-delete comment
