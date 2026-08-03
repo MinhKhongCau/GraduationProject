@@ -175,7 +175,7 @@ services:
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
       # VNPay Sandbox
       - VNP_TMN_CODE=${VNP_TMN_CODE}
-      - VNP_HASH_SECRET=${VNP_HASH_SECRET} 
+      - VNP_HASH_SECRET=${VNP_HASH_SECRET}
       - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
       - VNP_RETURN_URL=${VNP_RETURN_URL}
 
@@ -198,7 +198,7 @@ services:
       - BOOKING_DB_NAME=${BOOKING_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
-      - PORT=${PORT_BOOKING_SERVICE}      
+      - PORT=${PORT_BOOKING_SERVICE}
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT}
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
@@ -306,6 +306,7 @@ services:
       # handshake (no internal M2M call to auth-service, unlike the other
       # Go services above).
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}
+      - CHATBOT_URL=${CHATBOT_URL}
 
   # 9. API GATEWAY (Kong)
   api-gateway:
