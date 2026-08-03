@@ -32,7 +32,7 @@ export interface DmTypingStatusPayload {
   isTyping: boolean;
 }
 
-export type ChatRole = "PATIENT" | "EXPERT";
+export type ChatRole = "PATIENT" | "EXPERT" | "CHATBOT";
 
 export interface ChatContact {
   id: string; // accountId
@@ -40,6 +40,9 @@ export interface ChatContact {
   avatarUrl?: string;
   role: ChatRole;
 }
+
+export const CHATBOT_ID = "chatbot";
+export const CHATBOT_ROLE = "CHATBOT";
 
 export type ChatConnectionState = "idle" | "connecting" | "connected" | "error";
 

@@ -329,6 +329,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${CHATROOM_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
+      - CHATBOT_URL=${CHATBOT_URL}
 
   # 10. CHATBOT SERVICE (Python FastAPI)
   chatbot-service:

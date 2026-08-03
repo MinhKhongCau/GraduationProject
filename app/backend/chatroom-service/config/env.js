@@ -23,6 +23,7 @@ export const ENV = {
   DB_PASSWORD: process.env.DB_PASSWORD || "admin",
   DB_NAME: process.env.DB_NAME || "chatroom_db",
   DB_SSLMODE: process.env.DB_SSLMODE || "disable",
+  CHATBOT_URL: process.env.CHATBOT_URL || "http://localhost:8086",
 };
 
 if (!ENV.REDIS_URL && process.env.NODE_ENV !== "test") throw new Error("❌ Missing REDIS_URL in .env");

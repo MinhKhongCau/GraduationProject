@@ -182,7 +182,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const onDmMessage = (msg: ChatMessage) => {
       setMessagesByDmId((prev) => {
         const existing = prev[msg.dmId] ?? [];
-        if (existing.some((m) => m.id === msg.id)) return prev;
+        const index = existing.findIndex((m) => m.id === msg.id);
+        if (index > -1) {
+          const updated = [...existing];
+          updated[index] = msg;
+          return { ...prev, [msg.dmId]: updated };
+        }
         return { ...prev, [msg.dmId]: [...existing, msg] };
       });
     };
