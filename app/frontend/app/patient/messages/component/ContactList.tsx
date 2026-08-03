@@ -56,7 +56,9 @@ export function ContactList({ contacts, activeContactId, onlineByContactId, onSe
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-semibold text-foreground/80">{contact.fullName}</h3>
-                <p className="truncate text-xs text-muted-foreground">{contact.role === "EXPERT" ? "Expert" : "Patient"}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {contact.role === "EXPERT" ? "Expert" : contact.role === "CHATBOT" ? "AI Assistant" : "Patient"}
+                </p>
               </div>
             </button>
           );

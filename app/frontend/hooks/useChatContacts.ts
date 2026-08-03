@@ -2,7 +2,7 @@
 
 import { useApiQuery } from "./useApiQuery";
 import { bookingApi, expertApi, patientApi } from "@/api";
-import type { ChatContact } from "@/types";
+import { CHATBOT_ID, CHATBOT_ROLE, type ChatContact } from "@/types";
 
 /**
  * [PATIENT] Chat contacts = experts from booking history — there's no
@@ -19,12 +19,21 @@ export function usePatientChatContacts() {
       const profiles = await Promise.all(
         expertIds.map((id) => expertApi.getExpertProfile(id).catch(() => null))
       );
-      return expertIds.map((id, i) => ({
+      const expertContacts = expertIds.map((id, i) => ({
         id,
         role: "EXPERT" as const,
         fullName: profiles[i]?.fullName ?? "Expert",
         avatarUrl: profiles[i]?.avatarUrl,
       }));
+
+      const chatbotContact: ChatContact = {
+        id: CHATBOT_ID,
+        role: CHATBOT_ROLE,
+        fullName: "MindCare Assistant (AI)",
+        avatarUrl: "https://cdn-icons-png.flaticon.com/512/2040/2040946.png",
+      };
+
+      return [chatbotContact, ...expertContacts];
     },
   });
 }

@@ -164,14 +164,14 @@ export function ChatWindow({
               unoptimized
               className="h-10 w-10 rounded-full object-cover"
             />
-            {online && <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background bg-success" />}
+            {(contact.role === "CHATBOT" || online) && <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background bg-success" />}
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground">{contact.fullName}</h3>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {isTyping ? (
                 <span className="font-medium text-primary">Typing…</span>
-              ) : online ? (
+              ) : (contact.role === "CHATBOT" || online) ? (
                 <>
                   <Circle className="h-1 w-1 fill-border text-border" />
                   <span className="font-medium text-primary">Active now</span>
@@ -184,13 +184,15 @@ export function ChatWindow({
         </div>
 
         <div className="flex items-center gap-2 text-muted-foreground">
-          <button
-            onClick={() => startCall(contact.id, contact.fullName, contact.avatarUrl)}
-            className="rounded-full p-2 transition-colors hover:bg-surface text-primary"
-            title="Video Call"
-          >
-            <Video className="h-5 w-5" />
-          </button>
+          {contact.role !== "CHATBOT" && (
+            <button
+              onClick={() => startCall(contact.id, contact.fullName, contact.avatarUrl)}
+              className="rounded-full p-2 transition-colors hover:bg-surface text-primary"
+              title="Video Call"
+            >
+              <Video className="h-5 w-5" />
+            </button>
+          )}
           <button className="rounded-full p-2 transition-colors hover:bg-surface">
             <MoreVertical className="h-5 w-5" />
           </button>

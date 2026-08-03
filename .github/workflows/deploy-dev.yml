@@ -11,7 +11,7 @@ jobs:
 
     environment:
       name: dev
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -70,6 +70,7 @@ jobs:
           PORT_DOZZLE=${{ vars.PORT_DOZZLE }}
 
           REACT_APP_API_URL=${{ vars.REACT_APP_API_URL }}
+          CHATBOT_URL=${{ vars.CHATBOT_URL }}
 
           GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
 
