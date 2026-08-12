@@ -131,3 +131,54 @@ export async function getExpertSlots(params: GetExpertSlotsParams = {}): Promise
   );
   return response.data.data.slots ?? [];
 }
+
+/** [EXPERT] Save or update medical record notes for an appointment. */
+export async function saveMedicalRecord(
+  appointmentId: string,
+  payload: import("@/types").SaveMedicalRecordRequest
+): Promise<import("@/types").MedicalRecord> {
+  const response = await bookingClient.post<ServiceEnvelope<import("@/types").MedicalRecord>>(
+    BOOKING_ENDPOINTS.APPOINTMENT_MEDICAL_RECORD(appointmentId),
+    payload
+  );
+  return response.data.data;
+}
+
+/** [PATIENT/EXPERT] Get medical record for a specific appointment. */
+export async function getAppointmentMedicalRecord(
+  appointmentId: string
+): Promise<import("@/types").MedicalRecord | null> {
+  try {
+    const response = await bookingClient.get<ServiceEnvelope<import("@/types").MedicalRecord>>(
+      BOOKING_ENDPOINTS.APPOINTMENT_MEDICAL_RECORD(appointmentId)
+    );
+    return response.data.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** [PATIENT/EXPERT] List medical records of current user. */
+export async function getMedicalRecords(
+  params: { page?: number; size?: number } = {}
+): Promise<{ items: import("@/types").MedicalRecord[]; total: number }> {
+  const response = await bookingClient.get<
+    ServiceEnvelope<{ items?: import("@/types").MedicalRecord[]; total?: number; total_items?: number }>
+  >(BOOKING_ENDPOINTS.MEDICAL_RECORDS, { params });
+  const data = response.data.data;
+  return {
+    items: data.items ?? [],
+    total: data.total ?? data.total_items ?? 0,
+  };
+}
+
+/** [PATIENT/EXPERT] Get medical record detail by recordId. */
+export async function getMedicalRecordDetail(
+  recordId: string
+): Promise<import("@/types").MedicalRecord> {
+  const response = await bookingClient.get<ServiceEnvelope<import("@/types").MedicalRecord>>(
+    BOOKING_ENDPOINTS.MEDICAL_RECORD(recordId)
+  );
+  return response.data.data;
+}
+

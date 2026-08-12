@@ -28,6 +28,28 @@ async function withExpertNames(appointments: Appointment[]): Promise<Appointment
   }));
 }
 
+export interface AppointmentWithPatient extends Appointment {
+  patientName?: string;
+  patientEmail?: string;
+}
+
+async function withPatientNames(appointments: Appointment[]): Promise<AppointmentWithPatient[]> {
+  const patientIds = Array.from(new Set(appointments.map((a) => a.patientId).filter(Boolean)));
+  const profiles = await Promise.all(
+    patientIds.map((patientId) => import("@/api").then((api) => api.patientApi.getPatientProfile(patientId)).catch(() => null))
+  );
+  const map = new Map(patientIds.map((id, index) => [id, profiles[index]]));
+
+  return appointments.map((appointment) => {
+    const profile = map.get(appointment.patientId);
+    return {
+      ...appointment,
+      patientName: profile?.fullName,
+      patientEmail: profile?.email,
+    };
+  });
+}
+
 /** [PATIENT] My Bookings — GET /booking/appointments. */
 export function useMyBookings() {
   return useApiQuery({
@@ -40,7 +62,7 @@ export function useMyBookings() {
 export function useExpertAppointments(params: GetExpertAppointmentsParams = {}) {
   return useApiQuery({
     queryKey: QUERY_KEYS.expertAppointments(params as Record<string, unknown>),
-    queryFn: () => bookingApi.getExpertAppointments(params),
+    queryFn: async () => withPatientNames(await bookingApi.getExpertAppointments(params)),
   });
 }
 

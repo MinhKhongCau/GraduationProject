@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	appappointment "booking-service/internal/booking/application/appointment"
+	bookingquery "booking-service/internal/booking/application/query"
 	"booking-service/internal/booking/domain"
 	"booking-service/pkg/internal_auth"
 
@@ -202,6 +203,22 @@ func (u *fakeAppointmentUsecase) GetAppointmentsByPatient(patientID string) ([]d
 
 func (u *fakeAppointmentUsecase) GetAppointmentsByExpert(expertID string, fromDate, toDate int64, status *domain.AppointmentStatus) ([]domain.Appointment, error) {
 	return nil, nil
+}
+
+func (u *fakeAppointmentUsecase) SaveMedicalRecord(actorID, actorRole, appointmentID string, cmd appappointment.SaveMedicalRecordCommand) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (u *fakeAppointmentUsecase) GetMedicalRecordByAppointmentID(actorID, actorRole, appointmentID string) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (u *fakeAppointmentUsecase) GetMedicalRecordByID(actorID, actorRole, recordID string) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (u *fakeAppointmentUsecase) ListMedicalRecords(actorID, actorRole string, page bookingquery.PageRequest) (bookingquery.Page[domain.MedicalRecord], error) {
+	return bookingquery.Page[domain.MedicalRecord]{}, nil
 }
 
 func uuidString() string {

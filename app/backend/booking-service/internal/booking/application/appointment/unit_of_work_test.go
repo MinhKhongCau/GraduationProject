@@ -437,6 +437,30 @@ func (r *fakeUOWRepository) CancelExpiredLocks() (int64, error) {
 	return 0, nil
 }
 
+func (r *fakeUOWRepository) UpdateAppointmentStatus(appointmentID string, status domain.AppointmentStatus) error {
+	return nil
+}
+
+func (r *fakeUOWRepository) SaveMedicalRecord(record *domain.MedicalRecord) error {
+	return nil
+}
+
+func (r *fakeUOWRepository) GetMedicalRecordByAppointmentID(appointmentID string) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (r *fakeUOWRepository) GetMedicalRecordByID(recordID string) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (r *fakeUOWRepository) ListMedicalRecordsByPatient(patientID string, limit, offset int) ([]domain.MedicalRecord, int64, error) {
+	return nil, 0, nil
+}
+
+func (r *fakeUOWRepository) ListMedicalRecordsByExpert(expertID string, limit, offset int) ([]domain.MedicalRecord, int64, error) {
+	return nil, 0, nil
+}
+
 type fakeAppointmentTx struct {
 	appointment domain.Appointment
 	slot        domain.ExpertSlot

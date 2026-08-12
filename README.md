@@ -1,139 +1,256 @@
-# 🌿 Psychological Counseling System - Microservices Architecture
+# 🌿 Psychological Counseling System (MindCare) - Microservices Architecture
 
-Hệ thống cung cấp nền tảng tư vấn tâm lý trực tuyến, giúp kết nối **Client** với các **Chuyên gia (Expert)** thông qua quy trình đặt lịch, thanh toán ví nội bộ và làm bài trắc nghiệm tâm lý có đánh giá AI hỗ trợ. Hệ thống được thiết kế theo kiến trúc Microservices để đảm bảo tính sẵn sàng cao và khả năng mở rộng linh hoạt.
+Hệ thống cung cấp nền tảng tư vấn tâm lý trực tuyến (**MindCare**), giúp kết nối **Patient (Bệnh nhân/Khách hàng)** với các **Chuyên gia (Expert)** thông qua quy trình đặt lịch, thanh toán ví nội bộ/VNPay, làm bài trắc nghiệm tâm lý có đánh giá hỗ trợ bởi AI, nhắn tin và gọi thoại realtime, cùng diễn đàn thảo luận cộng đồng.
 
----
-
-## 🔗 Liên kết dịch vụ & Tài liệu API (Service Links & API Docs)
-
-- **Frontend Sandbox**: [https://sandbox.qmcloud.io.vn](https://sandbox.qmcloud.io.vn)
-- **Auth Service API Docs**: [https://api.qmcloud.io.vn/auth/swagger-ui/index.html#/](https://api.qmcloud.io.vn/auth/swagger-ui/index.html#/)
-- **Booking Service API Docs**: [https://api.qmcloud.io.vn/booking/swagger-ui/index.html#/](https://api.qmcloud.io.vn/booking/swagger-ui/index.html#/)
-- **Payment Service API Docs**: [https://api.qmcloud.io.vn/payment/swagger-ui/index.html#/](https://api.qmcloud.io.vn/payment/swagger-ui/index.html#/)
-- **Assessment Service API Docs**: [https://api.qmcloud.io.vn/assessment/swagger-ui](https://api.qmcloud.io.vn/assessment/swagger-ui)
-- **Profile Service API Docs**: [https://api.qmcloud.io.vn/profile/swagger-ui/index.html#/](https://api.qmcloud.io.vn/profile/swagger-ui/index.html#/)
-- **Forum Service API Docs**: [https://api.qmcloud.io.vn/forum/swagger-ui/index.html#/](https://api.qmcloud.io.vn/forum/swagger-ui/index.html#/)
-- **RabbitMQ Management UI**: [https://rabbitmq.qmcloud.io.vn](https://rabbitmq.qmcloud.io.vn) — theo dõi queue/exchange, message rate của message broker.
-- **System Observer (Dozzle)**: [https://observer.qmcloud.io.vn](https://observer.qmcloud.io.vn) — xem realtime log của các container Docker trong hệ thống qua Dozzle.
-
-Tất cả traffic đi qua **API Gateway (Kong)**, gateway route request tới 6 service backend phía trên qua các prefix `/api/v1/*`.
+Hệ thống được thiết kế theo kiến trúc **Microservices** đa ngôn ngữ (Java, Golang, Python, Node.js) đứng sau **Kong API Gateway** nhằm đảm bảo tính sẵn sàng cao, bảo mật chặt chẽ và khả năng mở rộng linh hoạt.
 
 ---
 
-## 1. Tổng quan hệ thống (System Overview)
+## 🔗 Liên kết Dịch vụ & Tài liệu API (Service Links & API Docs)
 
-Mục đích chính của hệ thống là cung cấp một hệ sinh thái chăm sóc sức khỏe tinh thần:
+Toàn bộ các yêu cầu từ Client (hoặc Postman) đều đi qua **API Gateway (Kong)** ở cổng `8000`, định tuyến đến các service backend tương ứng qua prefix `/api/v1/*`.
 
-- **Đặt lịch & Tư vấn:** Quy trình đặt lịch, khóa slot, quản lý ca làm việc của Expert.
-- **Ví & Thanh toán nội bộ:** Nạp/rút tiền, thanh toán buổi tư vấn qua ví (wallet) nội bộ.
-- **Khoa học & AI:** Làm bài trắc nghiệm tâm lý (PHQ, ASRS, MDQ...) và nhận đánh giá gợi ý từ AI (Google Gemini) tích hợp trong Assessment Service.
-- **Hồ sơ người dùng:** Quản lý hồ sơ Patient/Expert/Admin, lịch sử bệnh án, chuyên môn.
+### 🌐 Môi trường Production (Sandbox Demo)
+- **Frontend App**: [https://sandbox.qmcloud.io.vn](https://sandbox.qmcloud.io.vn)
+- **RabbitMQ Management**: [https://rabbitmq.qmcloud.io.vn](https://rabbitmq.qmcloud.io.vn)
+- **System Observer (Dozzle)**: [https://observer.qmcloud.io.vn](https://observer.qmcloud.io.vn)
 
-> ⚠️ **Chưa triển khai:** Chat 1-1/real-time, Diễn đàn (Forum/Community) và Thông báo (Notification) hiện **chưa có backend**, mới chỉ tồn tại dưới dạng UI/mock data ở frontend. Xem mục [9. Định hướng phát triển](#9-định-hướng-phát-triển-tương-lai-future-improvements).
-
-**Đối tượng sử dụng:** Client (Khách hàng), Expert (Chuyên gia), Admin (Quản trị viên).
-
----
-
-## 2. Mục tiêu & Giá trị cốt lõi (System Objectives)
-
-- **Tự động hóa:** Quy trình giữ chỗ (Slot locking) và ví thanh toán nội bộ minh bạch.
-- **Bảo mật:** Xác thực JWT qua Gateway (Kong custom plugin), phân quyền chi tiết (RBAC) và bảo mật dữ liệu cá nhân.
-- **Hiệu năng:** Xử lý nhiều kết nối đồng thời nhờ cơ chế Microservices, mỗi service có database riêng.
-- **Khả năng mở rộng:** Dễ dàng thêm mới service hoặc scale độc lập từng thành phần.
+### 📄 Swagger / OpenAPI UI (Bản chạy Local - Cổng `8000`)
+- **Auth Service**: [http://localhost:8000/auth/swagger-ui/index.html](http://localhost:8000/auth/swagger-ui/index.html)
+- **Profile Service**: [http://localhost:8000/profile/swagger/index.html](http://localhost:8000/profile/swagger/index.html)
+- **Booking Service**: [http://localhost:8000/booking/swagger/index.html](http://localhost:8000/booking/swagger/index.html)
+- **Payment Service**: [http://localhost:8000/payment/swagger/index.html](http://localhost:8000/payment/swagger/index.html)
+- **Assessment Service**: [http://localhost:8000/assessment/swagger-ui](http://localhost:8000/assessment/swagger-ui)
+- **Forum Service**: [http://localhost:8000/forum/swagger/index.html](http://localhost:8000/forum/swagger/index.html)
+- **Chatroom Service**: [http://localhost:8000/chatroom/docs](http://localhost:8000/chatroom/docs)
 
 ---
 
-## 3. Kiến trúc hệ thống (System Architecture)
+## 🏗️ Kiến trúc Hệ thống (System Architecture)
 
-Hệ thống sử dụng mô hình **Client-Server** dựa trên các Microservices độc lập, đứng sau một **API Gateway**:
+```mermaid
+graph TD
+    Client[Client: Next.js / WebRTC / Socket.IO] -->|Request: Cổng 8000| Kong[Kong API Gateway]
+    
+    subgraph Gateway Layer
+        Kong -->|Go Custom Plugin| AuthVerify[mindcare-auth: Verify JWT]
+    end
 
-- **API Gateway:** [Kong](https://konghq.com/) (declarative config) tích hợp plugin JWT xác thực tự viết bằng Go (`mindcare-auth`), route request tới từng service theo path prefix, xử lý CORS/rate-limiting.
-- **Communication:** Giao tiếp qua REST API (đồng bộ). Chưa có event bus / message broker nào được các service thực sự sử dụng (xem mục 6).
-- **Decoupling:** Mỗi service sở hữu database riêng (theo schema `*_DB_NAME` trên cùng một Postgres instance), không truy cập trực tiếp DB của service khác.
+    subgraph Internal Network (Docker Bridge)
+        Kong -->|/api/v1/auth| Auth[Auth Service: Spring Boot]
+        Kong -->|/api/v1/profiles| Profile[Profile Service: Go Gin]
+        Kong -->|/api/v1/booking| Booking[Booking Service: Go Gin]
+        Kong -->|/api/v1/payments| Payment[Payment Service: Go Gin]
+        Kong -->|/api/v1/assessments| Assessment[Assessment Service: FastAPI]
+        Kong -->|/api/v1/forum| Forum[Forum Service: Go Gin]
+        Kong -->|/api/v1/chatroom| Chatroom[Chatroom Service: Node.js]
+        Kong -->|/api/v1/chat| Chatbot[Chatbot Service: FastAPI]
+    end
 
----
-
-## 4. Công nghệ sử dụng (Technology Stack)
-
-### **Frontend**
-
-- **Next.js 16 (App Router) + React 19 + TypeScript:** Xây dựng giao diện người dùng.
-- **TanStack React Query:** Quản lý server state / data fetching.
-- **React Hook Form + Zod:** Quản lý và validate form.
-- **Radix UI + Tailwind CSS v4:** UI primitives và styling.
-- **Axios**, **@react-oauth/google:** Gọi API và đăng nhập Google OAuth.
-- **Capacitor:** Cấu hình sẵn cho mobile wrapper (chưa triển khai app di động thật).
-
-### **API Gateway**
-
-| Thành phần  | Công nghệ                                 | Vai trò                                                                    |
-| :---------- | :---------------------------------------- | :------------------------------------------------------------------------- |
-| **Gateway** | Kong + custom Go plugin (`mindcare-auth`) | Định tuyến request, xác thực JWT, CORS, rate-limiting cho toàn bộ backend. |
-
-### **Backend - Microservices (đã triển khai)**
-
-| Service                | Công nghệ                     | Trách nhiệm chính                                                                       |
-| :--------------------- | :---------------------------- | :-------------------------------------------------------------------------------------- |
-| **Auth Service**       | Java 21, Spring Boot          | Quản lý tài khoản người dùng, đăng ký/đăng nhập, phát hành JWT.                         |
-| **Profile Service**    | Go (Gin + GORM)               | Quản lý hồ sơ Patient/Expert/Admin, chuyên môn, lịch sử bệnh án.                        |
-| **Booking Service**    | Go (Gin + GORM)               | Quản lý lịch trình, khóa slot, ca làm việc/nghỉ phép, trạng thái cuộc hẹn.              |
-| **Payment Service**    | Go (Gin + GORM)               | Quản lý ví nội bộ (wallet): nạp/rút, giao dịch, xử lý webhook thanh toán buổi tư vấn.   |
-| **Assessment Service** | Python (FastAPI + SQLAlchemy) | Quản lý bộ câu hỏi trắc nghiệm, chấm điểm, sinh gợi ý đánh giá bằng AI (Google Gemini). |
-
-### **Dịch vụ đã lên kế hoạch nhưng chưa triển khai (Planned, not implemented)**
-
-| Service                     | Công nghệ dự kiến   | Trách nhiệm dự kiến                                                  |
-| :-------------------------- | :------------------ | :------------------------------------------------------------------- |
-| **Chat Service**            | Node.js / Socket.io | Nhắn tin real-time 1-1 giữa Client và Expert.                        |
-| **Community/Forum Service** | Spring Boot         | Diễn đàn, blog, hệ thống comment tree giữa người dùng và chuyên gia. |
-| **Notification Service**    | WebSocket           | Đẩy thông báo tức thời (push notification).                          |
-
-Hiện tại các tính năng trên chỉ tồn tại dưới dạng UI với mock data ở frontend (`app/frontend/data/messages.ts`, `notifications.ts`, `app/patient/messages/`), chưa có endpoint hoặc service backend tương ứng.
+    subgraph Infrastructure
+        Payment -->|Atomicity: Outbox Pattern| PG[(PostgreSQL 16)]
+        Booking & Profile & Forum & Chatroom & Chatbot & Auth & Assessment --> PG
+        Chatroom -->|State Management| Redis[(Redis 7)]
+        Chatbot -->|Vector Embeddings / LLM| Ollama[Ollama: nomic-embed-text]
+        
+        %% RabbitMQ Messaging %%
+        Profile -.->|Publish: profile.sync_seed_authors| Rabbit[RabbitMQ Broker]
+        Rabbit -.->|Subscribe| Forum
+    end
+```
 
 ---
 
-## 5. Quản lý dữ liệu (Database & Storage)
+## 🛠️ Danh sách Microservices & Công nghệ
 
-- **PostgreSQL 16:** Cơ sở dữ liệu quan hệ chính, mỗi service (`auth`, `profile`, `booking`, `payment`, `assessment`) có database logic riêng trên cùng một Postgres instance, đảm bảo tính nhất quán (ACID).
-- **Redis & RabbitMQ:** Đã được khai báo sẵn trong docker-compose (hạ tầng), nhưng **chưa có service nào thực sự kết nối/sử dụng** — dự kiến dùng cho cache và message queue trong tương lai.
+### 1. **Frontend App** (`app/frontend`)
+- **Công nghệ**: Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS v4 + TanStack Query.
+- **Tính năng**: Tích hợp đầy đủ luồng nghiệp vụ đặt lịch (Booking), thanh toán nội bộ & VNPay, làm bài test tâm lý, quản lý ví, chat thời gian thực và gọi thoại WebRTC.
+
+### 2. **API Gateway (Kong)** (`app/backend/gateway`)
+- **Công nghệ**: Kong Gateway (Declarative Config) + Custom Go Plugin (`mindcare-auth`).
+- **Nhiệm vụ**: Xác thực JWT tập trung, phân quyền cơ bản, chặn tuyệt đối các endpoint nội bộ (`/internal/*`) từ bên ngoài internet, cấu hình CORS và Rate Limiting.
+
+### 3. **Auth Service** (`app/backend/auth-service`)
+- **Công nghệ**: Java 21 + Spring Boot 3 + Maven.
+- **Nhiệm vụ**: Quản lý tài khoản, đăng ký/đăng nhập, phân quyền Role-Based Access Control (RBAC: `ADMIN`, `EXPERT`, `PATIENT`), phát hành token JWT (ký bằng cặp khóa RSA), cung cấp API cấp mã Internal Token (M2M Auth) cho các service giao tiếp nội bộ.
+
+### 4. **Profile Service** (`app/backend/profile-service`)
+- **Công nghệ**: Go (Gin + GORM).
+- **Nhiệm vụ**: Quản lý thông tin chi tiết hồ sơ bệnh nhân, chuyên gia, quản trị viên, lịch sử bệnh án và chuyên môn của Expert.
+
+### 5. **Booking Service** (`app/backend/booking-service`)
+- **Công nghệ**: Go (Gin + GORM).
+- **Nhiệm vụ**: Quản lý lịch trình rảnh của Expert (Availabilities), tự động sinh lịch hẹn (Slots), cơ chế khóa slot giữ chỗ (Slot locking) trong 15 phút, quản lý ca hẹn (Appointments), lịch nghỉ phép (Time-off).
+
+### 6. **Payment Service** (`app/backend/payment-service`)
+- **Công nghệ**: Go (Gin + GORM).
+- **Nhiệm vụ**: Quản lý ví điện tử nội bộ, nạp/rút tiền, lưu vết giao dịch (Ledger), tạo đơn thanh toán (Payment Order) tích hợp cổng VNPay Sandbox, đối soát giao dịch (VNPay IPN webhook), cơ chế Outbox Pattern tin cậy để đồng bộ trạng thái cuộc hẹn.
+
+### 7. **Assessment Service** (`app/backend/assessment-service`)
+- **Công nghệ**: Python 3.10+ (FastAPI + SQLAlchemy + Alembic).
+- **Nhiệm vụ**: Quản lý ngân hàng câu hỏi trắc nghiệm tâm lý (PHQ-9, ASRS, MDQ...), thu thập câu trả lời từ bệnh nhân, chấm điểm tự động và gọi API Google Gemini để sinh nhận xét/lời khuyên AI cá nhân hóa.
+
+### 8. **Forum Service** (`app/backend/forum-service`)
+- **Công nghệ**: Go (Gin + GORM).
+- **Nhiệm vụ**: Diễn đàn hỏi đáp cộng đồng tâm lý, tạo/quản lý bài viết, chuyên mục, bình luận dưới dạng comment tree, bookmark và yêu thích bài viết.
+
+### 9. **Chatroom Service** (`app/backend/chatroom-service`)
+- **Công nghệ**: Node.js + Socket.IO + Redis + Postgres.
+- **Nhiệm vụ**:
+  - Nhắn tin thời gian thực (1-1 DM và phòng chat chung).
+  - Gửi tin nhắn thoại (Voice messages) định dạng Base64 kết hợp khuếch đại âm thanh (Web Audio API).
+  - Gọi thoại trực tiếp peer-to-peer (**1-on-1 WebRTC Calls**) tích hợp UI đổ chuông, chấp nhận/từ chối, bật/tắt mic, và bộ đếm thời gian cuộc gọi.
+  - Kết nối với Chatbot Service để đưa trợ lý ảo vào cuộc trò chuyện.
+
+### 10. **Chatbot Service** (`app/backend/chatbot-service`)
+- **Công nghệ**: Python (FastAPI + PyTorch + HuggingFace Speech Emotion Recognition) + Ollama.
+- **Nhiệm vụ**: Trợ lý AI hỗ trợ tư vấn tâm lý, phân tích cảm xúc qua giọng nói/văn bản, tìm kiếm ngữ nghĩa (Semantic search) dựa trên Vector database PostgreSQL (PGVector) và mô hình `nomic-embed-text` cục bộ qua Ollama.
 
 ---
 
-## 6. Xử lý thời gian thực & Sự kiện (Real-time & Events)
+## 🔄 Cơ chế Giao tiếp & Đồng bộ (Communication Patterns)
 
-Hiện hệ thống **chưa có** cơ chế real-time (WebSocket) hay event-driven thực sự nào được triển khai — toàn bộ giao tiếp giữa các service là REST API đồng bộ. Redis và RabbitMQ đã được provision sẵn trong hạ tầng để phục vụ cho Chat/Notification Service và xử lý sự kiện (ví dụ _thanh toán thành công_ kích hoạt cập nhật Booking) khi các service này được xây dựng.
+### 1. REST M2M Authentication (Machine-to-Machine Auth)
+Để bảo mật mạng nội bộ, các service khi gọi API trực tiếp của nhau qua Docker Network (bypass Kong Gateway) bắt buộc phải sử dụng **Internal JWT Token**.
+- **Luồng hoạt động**:
+  1. Service gọi (ví dụ: `booking-service`) gửi credentials (`clientId` + `clientSecret` khai báo trong `.env`) lên `/internal/auth/token` của `auth-service`.
+  2. `auth-service` kiểm tra, trả về một token nội bộ có thời hạn 15 phút.
+  3. Service gọi đính kèm token này vào header `Authorization: Bearer <token>`.
+  4. Service nhận xác thực token thông qua RSA Public Key lấy từ `auth-service`.
+- **An toàn tuyệt đối**: Kong Gateway đã chặn toàn bộ truy cập vào path `/internal/*` từ Internet (trả về HTTP `403 Forbidden`).
 
----
+### 2. Sự kiện bất đồng bộ qua RabbitMQ (Event-Driven)
+Hệ thống sử dụng RabbitMQ để xử lý các tác vụ bất đồng bộ hoặc đồng bộ hóa dữ liệu không chặn (Non-blocking):
+- Sử dụng **Topic Exchange** (ví dụ: `user.exchange`, `booking.exchange`, `payment.exchange`).
+- Quy tắc đặt tên Routing Key: `<entity>.<action>` (ví dụ: `user.created`, `profile.sync_seed_authors`, `payment.success`).
+- Tất cả các hàng đợi (Queues) đều là **Durable** và tin nhắn là **Persistent**.
+- Điển hình: `profile-service` phát sự kiện `profile.sync_seed_authors` qua RabbitMQ, `forum-service` nhận sự kiện để cập nhật ID chuyên gia đồng bộ với tác giả bài viết.
 
-## 7. Bảo mật (Security)
-
-- **JWT (JSON Web Token):** Xác thực người dùng, được xác minh tại API Gateway (Kong) thông qua plugin Go `mindcare-auth` trước khi request tới các service downstream.
-- **RBAC (Role-based Access Control):**
-  - `ADMIN`: Kiểm duyệt nội dung, quản lý tài chính hệ thống.
-  - `EXPERT`: Cấu hình ca làm việc, xem thu nhập và tư vấn.
-  - `CLIENT`: Tìm kiếm chuyên gia, đặt lịch, làm bài test.
-
----
-
-## 8. Triển khai & Mở rộng (Deployment & Scalability)
-
-- **Containerization:** Toàn bộ service (frontend, gateway, auth, profile, booking, payment, assessment) được đóng gói bằng **Docker**, orchestrate qua `docker-compose` (`.deploy/dev`, `.deploy/product`).
-- **Independent Scaling:** Có thể tăng số lượng instance của từng service độc lập mà không tốn tài nguyên cho các service khác.
-- **CI/CD:** GitHub Actions build & test riêng cho từng service (Go matrix cho profile/payment/booking, Maven cho auth, pip cho assessment, npm cho frontend, build plugin cho gateway) trước khi deploy dev/staging/production.
-
----
-
-## 9. Định hướng phát triển tương lai (Future Improvements)
-
-- Xây dựng **Chat Service** (Node.js/Socket.io) cho nhắn tin real-time 1-1 giữa Client và Expert.
-- Xây dựng **Community/Forum Service** (Spring Boot) cho diễn đàn, blog và comment tree.
-- Xây dựng **Notification Service** (WebSocket) để đẩy thông báo tức thời, liên kết với các sự kiện booking/payment.
-- Đưa **Redis** vào sử dụng thực tế cho caching, và **RabbitMQ** cho xử lý sự kiện bất đồng bộ giữa các service.
-- Tích hợp cổng thanh toán bên ngoài (VNPay/MoMo) cho Payment Service (hiện chỉ có ví nội bộ).
-- Phát triển ứng dụng di động (**Mobile App**) đa nền tảng dựa trên Capacitor đã cấu hình sẵn ở frontend.
-- Nâng cấp AI (hiện dùng Google Gemini trong Assessment Service) để cá nhân hóa lộ trình điều trị cho từng Client.
+### 3. Outbox Pattern trong Thanh toán
+Để tránh lỗi mất mát trạng thái giữa lúc VNPay gọi Webhook IPN đến `payment-service` và cập nhật lịch hẹn tại `booking-service`:
+- Khi giao dịch thành công, `payment-service` thực hiện ghi nhận thông tin thanh toán, cập nhật ví và lưu một thông điệp vào bảng `payment_outbox` trong **cùng một transaction cơ sở dữ liệu** (ACID).
+- Một worker chạy ngầm định kỳ quét bảng outbox, tiến hành gọi REST API nội bộ `/internal/appointments/:id/webhook` sang `booking-service` với cơ chế retry tối đa 10 lần (Exponential Backoff), đảm bảo cuộc hẹn chắc chắn được xác nhận hoặc xử lý bồi hoàn (Compensation case) nếu xảy ra xung đột.
 
 ---
 
-© 2026 Psychological Counseling System - Technical Documentation.
+## 🔒 Cơ chế Phân quyền (Security & RBAC)
+
+Hệ thống chia làm 3 Role chính:
+- **`ADMIN`**: Quản lý danh mục chuyên gia, duyệt rút tiền, xem log bồi hoàn hệ thống, cấu hình ca mẫu.
+- **`EXPERT`**: Đăng ký ca rảnh có giá, xuất lịch hẹn, xem thu nhập và ví tiền, thực hiện tư vấn và viết bệnh án.
+- **`PATIENT`** *(trong code là `PATIENT`, tài liệu nghiệp vụ ghi `CLIENT`)*: Tìm kiếm chuyên gia, đặt lịch, nạp/rút tiền, làm trắc nghiệm tâm lý hỗ trợ bởi AI, chat & gọi điện thoại trực tiếp.
+
+---
+
+## ⚡ Hướng dẫn Khởi chạy dưới Local (Development)
+
+### 📋 Yêu cầu hệ thống (Prerequisites)
+- Docker & Docker Compose
+- Java 21 & Maven 3.9+
+- Go 1.21+
+- Python 3.10+ (cùng pip)
+- Node.js 20+ & npm
+
+### 🚀 Bước 1: Khởi tạo File Môi trường
+Sao chép cấu hình mẫu và chỉnh sửa nếu cần thiết:
+```bash
+cp .env.example .env
+```
+*(Mặc định `.env` đã được điền đầy đủ thông tin cổng, db name và cặp khóa RSA cho dev local).*
+
+### 🚀 Bước 2: Chạy Hạ tầng Docker (Databases, Broker, Gateway, AI)
+Tại thư mục root của dự án, khởi chạy PostgreSQL, Redis, RabbitMQ, Ollama và Kong Gateway:
+```bash
+# 1. Khởi động DB và các Message Broker
+docker compose up -d postgres-db redis rabbitmq ollama
+
+# 2. Chờ DB khởi động và tự chạy script init-db.sh để tạo database logic
+
+# 3. Khởi động API Gateway (Kong)
+docker compose up -d api-gateway
+```
+
+### 🚀 Bước 3: Chạy các Backend Services (Hoặc chạy qua Docker)
+Bạn có thể chạy toàn bộ service bằng docker-compose hoặc chạy thủ công từng tab terminal để debug code nhanh hơn.
+
+#### **Cách A: Chạy toàn bộ bằng Docker Compose (Khuyên dùng)**
+```bash
+docker compose up -d --build
+```
+*(Lệnh này sẽ build và chạy tất cả backend + frontend).*
+
+#### **Cách B: Chạy thủ công từng Service (Dành cho nhà phát triển)**
+Mở các cửa sổ Terminal riêng biệt:
+- **Auth Service**:
+  ```bash
+  cd app/backend/auth-service
+  ./mvnw spring-boot:run
+  ```
+- **Booking Service**:
+  ```bash
+  cd app/backend/booking-service
+  go run cmd/api/main.go
+  ```
+- **Payment Service**:
+  ```bash
+  cd app/backend/payment-service
+  go run cmd/main.go
+  ```
+- **Profile Service**:
+  ```bash
+  cd app/backend/profile-service
+  go run cmd/main.go
+  ```
+- **Assessment Service**:
+  ```bash
+  cd app/backend/assessment-service
+  # Tạo venv và cài dependencies
+  python -m venv .venv && source .venv/bin/activate
+  pip install -r requirements.txt
+  alembic upgrade head
+  uvicorn app.main:app --port 5000 --reload
+  ```
+- **Forum Service**:
+  ```bash
+  cd app/backend/forum-service
+  go run cmd/main.go
+  ```
+- **Chatroom Service**:
+  ```bash
+  cd app/backend/chatroom-service
+  npm install
+  npm run dev
+  ```
+- **Chatbot Service**:
+  ```bash
+  cd app/backend/chatbot-service
+  python -m venv .venv && source .venv/bin/activate
+  pip install -r requirements.txt
+  python run_console.py # Hoặc uvicorn server
+  ```
+
+### 🚀 Bước 4: Khởi chạy Frontend App
+```bash
+cd app/frontend
+npm install
+cp .env.local.example .env.local
+npm run dev
+```
+Truy cập ứng dụng tại: [http://localhost:3000](http://localhost:3000).
+
+---
+
+## 👥 Tài khoản Thử nghiệm Local (Local Credentials)
+
+| Vai trò (Role) | Email tài khoản | Mật khẩu (Password) |
+| :--- | :--- | :--- |
+| **ADMIN** | `admin@mindcare.com` | `admin@mindcare.com` |
+| **EXPERT** | `expert@mindcare.com` | `expert@mindcare.com` |
+| **PATIENT** | `patient@mindcare.com` | `patient@mindcare.com` |
+
+> ⚠️ **Chú ý bảo mật**: Tuyệt đối không sử dụng các tài khoản mặc định và mật khẩu này trên môi trường Production thực tế.
+
+---
+
+© 2026 Psychological Counseling System (MindCare) - Tài liệu hướng dẫn phát triển hệ thống.

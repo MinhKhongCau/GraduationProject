@@ -21,6 +21,13 @@ func RegisterRoutes(publicGroup, privateGroup *gin.RouterGroup, internalGroup *g
 	privateGroup.GET("/appointments/:id", h.GetDetail)
 	privateGroup.PATCH("/appointments/:id/cancel", h.Cancel)
 
+	// ── Medical Record routes ──────────────────────────────────────────────
+	privateGroup.POST("/appointments/:id/medical-record", h.SaveMedicalRecord)
+	privateGroup.PUT("/appointments/:id/medical-record", h.SaveMedicalRecord)
+	privateGroup.GET("/appointments/:id/medical-record", h.GetAppointmentMedicalRecord)
+	privateGroup.GET("/medical-records", h.ListMedicalRecords)
+	privateGroup.GET("/medical-records/:id", h.GetMedicalRecordDetail)
+
 	// ── Internal routes (chỉ service nội bộ mới gọi được — M2M JWT) ─────────
 	// Kong đã block /internal/* từ Internet → an toàn tuyệt đối.
 	// Payment Service gọi vào đây sau khi nhận IPN thành công từ VNPay.

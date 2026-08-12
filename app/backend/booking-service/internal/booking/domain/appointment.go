@@ -8,10 +8,15 @@ const (
 	AppointmentStatusPendingPayment AppointmentStatus = 0 // "PENDING_PAYMENT"
 	AppointmentStatusConfirmed      AppointmentStatus = 1 // "CONFIRMED"
 	AppointmentStatusCancelled      AppointmentStatus = 2 // "CANCELLED"
+	AppointmentStatusCompleted      AppointmentStatus = 3 // "COMPLETED"
 )
 
 func (s AppointmentStatus) String() string {
-	return [...]string{"PENDING_PAYMENT", "CONFIRMED", "CANCELLED"}[s]
+	statuses := [...]string{"PENDING_PAYMENT", "CONFIRMED", "CANCELLED", "COMPLETED"}
+	if int(s) >= 0 && int(s) < len(statuses) {
+		return statuses[s]
+	}
+	return "UNKNOWN"
 }
 
 // Appointment - Cuộc hẹn đã đặt
