@@ -15,3 +15,4 @@ export * from "./useDmThread";
 export * from "./useForumPosts";
 export * from "./useForumMutations";
 export * from "./useForumAuthorName";
+export * from "./useMedicalRecords";

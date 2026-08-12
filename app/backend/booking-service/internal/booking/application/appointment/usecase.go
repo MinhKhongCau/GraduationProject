@@ -15,6 +15,11 @@ type Usecase interface {
 	HandlePaymentResult(command HandlePaymentResultCommand) error
 	GetAppointmentsByPatient(patientID string) ([]domain.Appointment, error)
 	GetAppointmentsByExpert(expertID string, fromDate, toDate int64, status *domain.AppointmentStatus) ([]domain.Appointment, error)
+
+	SaveMedicalRecord(actorID, actorRole, appointmentID string, cmd SaveMedicalRecordCommand) (*domain.MedicalRecord, error)
+	GetMedicalRecordByAppointmentID(actorID, actorRole, appointmentID string) (*domain.MedicalRecord, error)
+	GetMedicalRecordByID(actorID, actorRole, recordID string) (*domain.MedicalRecord, error)
+	ListMedicalRecords(actorID, actorRole string, page bookingquery.PageRequest) (bookingquery.Page[domain.MedicalRecord], error)
 }
 
 type ReadUsecase interface {
@@ -35,6 +40,13 @@ type Repository interface {
 	ConfirmPayment(appointmentID string) error
 	HandlePaymentResult(command HandlePaymentResultCommand) error
 	CancelExpiredLocks() (int64, error)
+	UpdateAppointmentStatus(appointmentID string, status domain.AppointmentStatus) error
+
+	SaveMedicalRecord(record *domain.MedicalRecord) error
+	GetMedicalRecordByAppointmentID(appointmentID string) (*domain.MedicalRecord, error)
+	GetMedicalRecordByID(recordID string) (*domain.MedicalRecord, error)
+	ListMedicalRecordsByPatient(patientID string, limit, offset int) ([]domain.MedicalRecord, int64, error)
+	ListMedicalRecordsByExpert(expertID string, limit, offset int) ([]domain.MedicalRecord, int64, error)
 }
 
 type appointmentUsecase struct {

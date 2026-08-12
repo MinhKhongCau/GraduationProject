@@ -26,8 +26,8 @@ export interface AvailableTimeSlot {
   price?: number;
 }
 
-export type AppointmentStatusCode = 0 | 1 | 2;
-export type AppointmentStatus = "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED";
+export type AppointmentStatusCode = 0 | 1 | 2 | 3;
+export type AppointmentStatus = "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
 
 export interface Appointment {
   appointmentId: string;

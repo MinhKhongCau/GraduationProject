@@ -11,7 +11,7 @@ export interface ToastItem {
 
 interface ErrorContextValue {
   toasts: ToastItem[];
-  showError: (error: ApiErrorResponse) => void;
+  showError: (error: ApiErrorResponse | string) => void;
   showSuccess: (message: string) => void;
   dismissToast: (id: string) => void;
 }
@@ -39,7 +39,10 @@ export function ErrorProvider({ children }: { children: ReactNode }) {
   );
 
   const showError = useCallback(
-    (error: ApiErrorResponse) => pushToast(error.message, "error"),
+    (error: ApiErrorResponse | string) => {
+      const message = typeof error === "string" ? error : error?.message || "Đã xảy ra lỗi";
+      pushToast(message, "error");
+    },
     [pushToast]
   );
 

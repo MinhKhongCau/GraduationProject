@@ -27,7 +27,16 @@ func ParseAppointmentStatus(value string) (*domain.AppointmentStatus, error) {
 	if value == "" {
 		return nil, nil
 	}
-	statuses := map[string]domain.AppointmentStatus{"0": domain.AppointmentStatusPendingPayment, "PENDING_PAYMENT": domain.AppointmentStatusPendingPayment, "1": domain.AppointmentStatusConfirmed, "CONFIRMED": domain.AppointmentStatusConfirmed, "2": domain.AppointmentStatusCancelled, "CANCELLED": domain.AppointmentStatusCancelled}
+	statuses := map[string]domain.AppointmentStatus{
+		"0":               domain.AppointmentStatusPendingPayment,
+		"PENDING_PAYMENT": domain.AppointmentStatusPendingPayment,
+		"1":               domain.AppointmentStatusConfirmed,
+		"CONFIRMED":       domain.AppointmentStatusConfirmed,
+		"2":               domain.AppointmentStatusCancelled,
+		"CANCELLED":       domain.AppointmentStatusCancelled,
+		"3":               domain.AppointmentStatusCompleted,
+		"COMPLETED":       domain.AppointmentStatusCompleted,
+	}
 	status, ok := statuses[value]
 	if !ok {
 		return nil, fmt.Errorf("%w: unsupported appointment status", bookingquery.ErrInvalidQuery)

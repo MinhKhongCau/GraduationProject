@@ -165,9 +165,11 @@ func runPreMigrations(db *gorm.DB) {
 		    WHEN 'PENDING_PAYMENT' THEN 0
 		    WHEN 'CONFIRMED'       THEN 1
 		    WHEN 'CANCELLED'       THEN 2
+		    WHEN 'COMPLETED'       THEN 3
 		    WHEN '0' THEN 0
 		    WHEN '1' THEN 1
 		    WHEN '2' THEN 2
+		    WHEN '3' THEN 3
 		    ELSE 0
 		  END
 	`)

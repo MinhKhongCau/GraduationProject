@@ -37,6 +37,9 @@ export const BOOKING_ENDPOINTS = {
   APPOINTMENTS: "/booking/appointments",
   EXPERT_APPOINTMENTS: "/booking/appointments/expert",
   CANCEL_APPOINTMENT: (appointmentId: string) => `/booking/appointments/${appointmentId}/cancel`,
+  APPOINTMENT_MEDICAL_RECORD: (appointmentId: string) => `/booking/appointments/${appointmentId}/medical-record`,
+  MEDICAL_RECORDS: "/booking/medical-records",
+  MEDICAL_RECORD: (recordId: string) => `/booking/medical-records/${recordId}`,
   /** [PUBLIC] Admin-managed shift templates (e.g. "Morning shift 08:00-12:00"), expert picks from these. */
   SHIFT_TEMPLATES: "/public/booking/templates",
   /** [EXPERT] Weekly template — one row per weekday mapping a shift template to that day. */
@@ -142,6 +145,8 @@ export const QUERY_KEYS = {
   assessmentQuestion: (slug: string) => ["assessment", "question", slug] as const,
   assessmentHistory: () => ["assessment", "history"] as const,
   myMedicalRecordHistory: () => ["clinical-records", "my-history"] as const,
+  medicalRecords: (params?: Record<string, unknown>) => ["booking", "medical-records", params ?? {}] as const,
+  appointmentMedicalRecord: (appointmentId: string) => ["booking", "appointment-medical-record", appointmentId] as const,
   forumPosts: (params?: Record<string, unknown>) => ["forum", "posts", params ?? {}] as const,
   forumPost: (slug: string) => ["forum", "post", slug] as const,
   forumComments: (postId: number) => ["forum", "comments", postId] as const,

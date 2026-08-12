@@ -16,6 +16,26 @@ Tài liệu mô tả chi tiết toàn bộ chuỗi thao tác thực tế liên t
 
 ---
 
+## 🔐 Cấu hình tài khoản VNPay Sandbox
+
+**URL Sandbox**: `https://sandbox.vnpayment.vn`
+
+**Cấu hình tài khoản merchant (Cung cấp cho developer)**:
+
+```
+TMN Quốc tế:   MOCK_TMN
+API Secret:     a1b2c3d4e5f6789012345678901234567890
+Hash Secret:    a1b2c3d4e5f6789012345678901234567890
+```
+
+**Tài khoản ngân hàng Sandbox để testing**:
+
+| Ngân hàng (Chọn trong form VNPay) | Số thẻ (Input)          | Tên chủ thẻ      | Ngày hết hạn (CVV/Expiry) | OTP (Input) |
+| :-------------------------------- | :---------------------- | :--------------- | :------------------------ | :---------- |
+| **NCB**                           | **9704198526191432198** | **NGUYEN VAN A** | **07/15**                 | **123456**  |
+
+---
+
 ## 🔄 CHI TIẾT 8 BƯỚC THỰC THI THỰC TẾ
 
 ```mermaid
@@ -46,22 +66,21 @@ sequenceDiagram
 ---
 
 ### 1️⃣ BƯỚC 1: Tìm các ngày có khung giờ trống của Chuyên gia
-* **Mục đích**: Người dùng chọn Chuyên gia và khoảng ngày để xem chuyên gia đó trống vào những ngày nào.
-* **HTTP Method**: `GET`
-* **URL**: `/api/v1/public/booking/slots/available-dates?expert_id=2c230afb-a1af-4813-8b26-b17ae7fceb26&from=2026-07-23&to=2026-07-30&page=0&size=20`
-* **Auth**: Không yêu cầu (Public)
+
+- **Mục đích**: Người dùng chọn Chuyên gia và khoảng ngày để xem chuyên gia đó trống vào những ngày nào.
+- **HTTP Method**: `GET`
+- **URL**: `/api/v1/public/booking/slots/available-dates?expert_id=2c230afb-a1af-4813-8b26-b17ae7fceb26&from=2026-07-23&to=2026-07-30&page=0&size=20`
+- **Auth**: Không yêu cầu (Public)
 
 📥 **Response Example (200 OK)**:
+
 ```json
 {
   "success": true,
   "message": "Get available dates successfully",
   "data": {
     "expert_id": "2c230afb-a1af-4813-8b26-b17ae7fceb26",
-    "items": [
-      "2026-07-25",
-      "2026-07-26"
-    ],
+    "items": ["2026-07-25", "2026-07-26"],
     "page": 0,
     "size": 20,
     "total_items": 2,
@@ -75,12 +94,14 @@ sequenceDiagram
 ---
 
 ### 2️⃣ BƯỚC 2: Xem chi tiết các khung giờ trống của Ngày 2026-07-25
-* **Mục đích**: Người dùng bấm chọn ngày `2026-07-25` để xem danh sách các slot giờ cụ thể.
-* **HTTP Method**: `GET`
-* **URL**: `/api/v1/public/booking/slots/available-times?expert_id=2c230afb-a1af-4813-8b26-b17ae7fceb26&date=2026-07-25&page=0&size=20`
-* **Auth**: Không yêu cầu (Public)
+
+- **Mục đích**: Người dùng bấm chọn ngày `2026-07-25` để xem danh sách các slot giờ cụ thể.
+- **HTTP Method**: `GET`
+- **URL**: `/api/v1/public/booking/slots/available-times?expert_id=2c230afb-a1af-4813-8b26-b17ae7fceb26&date=2026-07-25&page=0&size=20`
+- **Auth**: Không yêu cầu (Public)
 
 📥 **Response Example (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -109,10 +130,11 @@ sequenceDiagram
 ---
 
 ### 3️⃣ BƯỚC 3: Giữ chỗ tạm thời khung giờ (Lock Slot)
-* **Mục đích**: Khóa tạm thời slot giờ `3fa85f64-5717-4562-b3fc-2c963f66afa6` trong 5 phút để tránh bị người dùng khác đặt trùng trong khi đang điền thông tin.
-* **HTTP Method**: `POST`
-* **URL**: `/api/v1/booking/slots/3fa85f64-5717-4562-b3fc-2c963f66afa6/lock`
-* **Headers**:
+
+- **Mục đích**: Khóa tạm thời slot giờ `3fa85f64-5717-4562-b3fc-2c963f66afa6` trong 5 phút để tránh bị người dùng khác đặt trùng trong khi đang điền thông tin.
+- **HTTP Method**: `POST`
+- **URL**: `/api/v1/booking/slots/3fa85f64-5717-4562-b3fc-2c963f66afa6/lock`
+- **Headers**:
   ```http
   Authorization: Bearer <PATIENT_ACCESS_TOKEN>
   X-User-Id: 11111111-1111-1111-1111-111111111111
@@ -120,6 +142,7 @@ sequenceDiagram
   ```
 
 📥 **Response Example (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -135,16 +158,17 @@ sequenceDiagram
 ---
 
 ### 4️⃣ BƯỚC 4: Tạo cuộc hẹn (Create Appointment)
-* **Mục đích**: Điền lý do/ghi chú và chính thức khởi tạo cuộc hẹn trạng thái `PENDING_PAYMENT`.
-* **HTTP Method**: `POST`
-* **URL**: `/api/v1/booking/appointments`
-* **Headers**:
+
+- **Mục đích**: Điền lý do/ghi chú và chính thức khởi tạo cuộc hẹn trạng thái `PENDING_PAYMENT`.
+- **HTTP Method**: `POST`
+- **URL**: `/api/v1/booking/appointments`
+- **Headers**:
   ```http
   Authorization: Bearer <PATIENT_ACCESS_TOKEN>
   X-User-Id: 11111111-1111-1111-1111-111111111111
   Content-Type: application/json
   ```
-* **Request Body**:
+- **Request Body**:
   ```json
   {
     "slot_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
@@ -153,6 +177,7 @@ sequenceDiagram
   ```
 
 📥 **Response Example (201 Created)**:
+
 ```json
 {
   "success": true,
@@ -173,16 +198,17 @@ sequenceDiagram
 ---
 
 ### 5️⃣ BƯỚC 5: Tạo Đơn hàng thanh toán lấy URL VNPay
-* **Mục đích**: Gửi `appointment_id` sang Payment Service để tính phí, khấu trừ hoa hồng hệ thống và tạo đường link thanh toán VNPay Sandbox.
-* **HTTP Method**: `POST`
-* **URL**: `/api/v1/payments/orders`
-* **Headers**:
+
+- **Mục đích**: Gửi `appointment_id` sang Payment Service để tính phí, khấu trừ hoa hồng hệ thống và tạo đường link thanh toán VNPay Sandbox.
+- **HTTP Method**: `POST`
+- **URL**: `/api/v1/payments/orders`
+- **Headers**:
   ```http
   Authorization: Bearer <PATIENT_ACCESS_TOKEN>
   X-User-Id: 11111111-1111-1111-1111-111111111111
   Content-Type: application/json
   ```
-* **Request Body**:
+- **Request Body**:
   ```json
   {
     "appointment_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
@@ -190,6 +216,7 @@ sequenceDiagram
   ```
 
 📥 **Response Example (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -209,12 +236,14 @@ sequenceDiagram
 ---
 
 ### 6️⃣ BƯỚC 6: Frontend chuyển hướng người dùng sang `payment_url`
-* Frontend nhận `payment_url` ở Bước 5 và thực hiện redirect trình duyệt: `window.location.href = data.payment_url;`.
-* Người dùng thao tác chọn thẻ Sandbox (Ví dụ chọn Ngân hàng `NCB`, số thẻ `9704198526191432198`, tên `NGUYEN VAN A`, OTP `123456`).
+
+- Frontend nhận `payment_url` ở Bước 5 và thực hiện redirect trình duyệt: `window.location.href = data.payment_url;`.
+- Người dùng thao tác chọn thẻ Sandbox (Ví dụ chọn Ngân hàng `NCB`, số thẻ `9704198526191432198`, tên `NGUYEN VAN A`, CVV `07/15` OTP `123456`).
 
 ---
 
 ### 7️⃣ BƯỚC 7: VNPay xử lý Webhook IPN & Chuyển hướng người dùng về Frontend
+
 1. **VNPay gọi ngầm Webhook Backend (Server-to-Server)**:
    - **URL**: `GET /api/v1/payments/vnpay-ipn?vnp_Amount=30000000&vnp_ResponseCode=00&vnp_TxnRef=ffffffff-ffff-4fff-8fff-ffffffffffff...`
    - **Xử lý Backend**: Kiểm tra checksum -> Cập nhật Order thành `SUCCESS` -> Cập nhật Appointment thành `CONFIRMED` -> Nạp tiền giữ (Hold) cho Ví chuyên gia.
@@ -224,16 +253,18 @@ sequenceDiagram
 ---
 
 ### 8️⃣ BƯỚC 8: Frontend tra cứu chi tiết Đơn hàng & Hiển thị màn hình thành công
-* **Mục đích**: Khi trình duyệt quay lại trang `/payment-result`, Frontend gọi API Backend để xác nhận trạng thái cuối cùng trong CSDL trước khi hiện UI thành công.
-* **HTTP Method**: `GET`
-* **URL**: `/api/v1/payments/orders/ffffffff-ffff-4fff-8fff-ffffffffffff`
-* **Headers**:
+
+- **Mục đích**: Khi trình duyệt quay lại trang `/payment-result`, Frontend gọi API Backend để xác nhận trạng thái cuối cùng trong CSDL trước khi hiện UI thành công.
+- **HTTP Method**: `GET`
+- **URL**: `/api/v1/payments/orders/ffffffff-ffff-4fff-8fff-ffffffffffff`
+- **Headers**:
   ```http
   Authorization: Bearer <PATIENT_ACCESS_TOKEN>
   X-User-Id: 11111111-1111-1111-1111-111111111111
   ```
 
 📥 **Response Example (200 OK)**:
+
 ```json
 {
   "success": true,
@@ -252,6 +283,7 @@ sequenceDiagram
 ```
 
 🎉 **GIAO DIỆN KẾT THÚC**: Frontend hiển thị popup/màn hình:
+
 > **"Thanh toán 300,000 VNĐ thành công! Lịch hẹn của bạn đã được xác nhận thành công."**
 
 ---
