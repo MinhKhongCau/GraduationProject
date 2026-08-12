@@ -223,3 +223,28 @@ func (r *fakePaymentResultRepository) ConfirmPayment(appointmentID string) error
 func (r *fakePaymentResultRepository) CancelExpiredLocks() (int64, error) {
 	return 0, nil
 }
+
+func (r *fakePaymentResultRepository) UpdateAppointmentStatus(appointmentID string, status domain.AppointmentStatus) error {
+	r.appointment.Status = status
+	return nil
+}
+
+func (r *fakePaymentResultRepository) SaveMedicalRecord(record *domain.MedicalRecord) error {
+	return nil
+}
+
+func (r *fakePaymentResultRepository) GetMedicalRecordByAppointmentID(appointmentID string) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (r *fakePaymentResultRepository) GetMedicalRecordByID(recordID string) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (r *fakePaymentResultRepository) ListMedicalRecordsByPatient(patientID string, limit, offset int) ([]domain.MedicalRecord, int64, error) {
+	return nil, 0, nil
+}
+
+func (r *fakePaymentResultRepository) ListMedicalRecordsByExpert(expertID string, limit, offset int) ([]domain.MedicalRecord, int64, error) {
+	return nil, 0, nil
+}

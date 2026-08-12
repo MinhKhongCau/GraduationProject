@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	appappointment "booking-service/internal/booking/application/appointment"
+	bookingquery "booking-service/internal/booking/application/query"
 	"booking-service/internal/booking/domain"
 
 	"github.com/gin-gonic/gin"
@@ -59,6 +60,22 @@ func (m *mockBookingUsecase) GetAppointmentsByPatient(patientID string) ([]domai
 
 func (m *mockBookingUsecase) GetAppointmentsByExpert(expertID string, fromDate, toDate int64, status *domain.AppointmentStatus) ([]domain.Appointment, error) {
 	return nil, nil
+}
+
+func (m *mockBookingUsecase) SaveMedicalRecord(actorID, actorRole, appointmentID string, cmd appappointment.SaveMedicalRecordCommand) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (m *mockBookingUsecase) GetMedicalRecordByAppointmentID(actorID, actorRole, appointmentID string) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (m *mockBookingUsecase) GetMedicalRecordByID(actorID, actorRole, recordID string) (*domain.MedicalRecord, error) {
+	return nil, nil
+}
+
+func (m *mockBookingUsecase) ListMedicalRecords(actorID, actorRole string, page bookingquery.PageRequest) (bookingquery.Page[domain.MedicalRecord], error) {
+	return bookingquery.Page[domain.MedicalRecord]{}, nil
 }
 
 func TestCreateAppointment(t *testing.T) {
