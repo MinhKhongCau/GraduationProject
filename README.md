@@ -12,52 +12,24 @@ Toàn bộ các yêu cầu từ Client (hoặc Postman) đều đi qua **API Gat
 
 ### 🌐 Môi trường Production (Sandbox Demo)
 - **Frontend App**: [https://sandbox.qmcloud.io.vn](https://sandbox.qmcloud.io.vn)
+- **API Gateway**: [https://api.qmcloud.io.vn](https://api.qmcloud.io.vn)
 - **RabbitMQ Management**: [https://rabbitmq.qmcloud.io.vn](https://rabbitmq.qmcloud.io.vn)
 - **System Observer (Dozzle)**: [https://observer.qmcloud.io.vn](https://observer.qmcloud.io.vn)
 
-### 📄 Swagger / OpenAPI UI (Bản chạy Local - Cổng `8000`)
-- **Auth Service**: [http://localhost:8000/auth/swagger-ui/index.html](http://localhost:8000/auth/swagger-ui/index.html)
-- **Profile Service**: [http://localhost:8000/profile/swagger/index.html](http://localhost:8000/profile/swagger/index.html)
-- **Booking Service**: [http://localhost:8000/booking/swagger/index.html](http://localhost:8000/booking/swagger/index.html)
-- **Payment Service**: [http://localhost:8000/payment/swagger/index.html](http://localhost:8000/payment/swagger/index.html)
-- **Assessment Service**: [http://localhost:8000/assessment/swagger-ui](http://localhost:8000/assessment/swagger-ui)
-- **Forum Service**: [http://localhost:8000/forum/swagger/index.html](http://localhost:8000/forum/swagger/index.html)
-- **Chatroom Service**: [http://localhost:8000/chatroom/docs](http://localhost:8000/chatroom/docs)
+### 📄 Swagger / OpenAPI UI
+- **Auth Service**: [https://api.qmcloud.io.vn/auth/swagger-ui/index.html](https://api.qmcloud.io.vn/auth/swagger-ui/index.html)
+- **Profile Service**: [https://api.qmcloud.io.vn/profile/swagger/index.html](https://api.qmcloud.io.vn/profile/swagger/index.html)
+- **Booking Service**: [https://api.qmcloud.io.vn/booking/swagger/index.html](https://api.qmcloud.io.vn/booking/swagger/index.html)
+- **Payment Service**: [https://api.qmcloud.io.vn/payment/swagger/index.html](https://api.qmcloud.io.vn/payment/swagger/index.html)
+- **Assessment Service**: [https://api.qmcloud.io.vn/assessment/swagger-ui](https://api.qmcloud.io.vn/assessment/swagger-ui)
+- **Forum Service**: [https://api.qmcloud.io.vn/forum/swagger/index.html](https://api.qmcloud.io.vn/forum/swagger/index.html)
+- **Chatroom Service**: [https://api.qmcloud.io.vn/chatroom/docs](https://api.qmcloud.io.vn/chatroom/docs)
 
 ---
 
 ## 🏗️ Kiến trúc Hệ thống (System Architecture)
 
-```mermaid
-graph TD
-    Client[Client: Next.js / WebRTC / Socket.IO] -->|Request: Cổng 8000| Kong[Kong API Gateway]
-    
-    subgraph Gateway Layer
-        Kong -->|Go Custom Plugin| AuthVerify[mindcare-auth: Verify JWT]
-    end
-
-    subgraph Internal Network (Docker Bridge)
-        Kong -->|/api/v1/auth| Auth[Auth Service: Spring Boot]
-        Kong -->|/api/v1/profiles| Profile[Profile Service: Go Gin]
-        Kong -->|/api/v1/booking| Booking[Booking Service: Go Gin]
-        Kong -->|/api/v1/payments| Payment[Payment Service: Go Gin]
-        Kong -->|/api/v1/assessments| Assessment[Assessment Service: FastAPI]
-        Kong -->|/api/v1/forum| Forum[Forum Service: Go Gin]
-        Kong -->|/api/v1/chatroom| Chatroom[Chatroom Service: Node.js]
-        Kong -->|/api/v1/chat| Chatbot[Chatbot Service: FastAPI]
-    end
-
-    subgraph Infrastructure
-        Payment -->|Atomicity: Outbox Pattern| PG[(PostgreSQL 16)]
-        Booking & Profile & Forum & Chatroom & Chatbot & Auth & Assessment --> PG
-        Chatroom -->|State Management| Redis[(Redis 7)]
-        Chatbot -->|Vector Embeddings / LLM| Ollama[Ollama: nomic-embed-text]
-        
-        %% RabbitMQ Messaging %%
-        Profile -.->|Publish: profile.sync_seed_authors| Rabbit[RabbitMQ Broker]
-        Rabbit -.->|Subscribe| Forum
-    end
-```
+![Kiến trúc Hệ thống](document/system-architect.jpg)
 
 ---
 
