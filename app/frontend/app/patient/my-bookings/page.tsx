@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { BookingListItem } from "./component/BookingListItem";
 import { CancelBookingDialog } from "./component/CancelBookingDialog";
-import { Spinner } from "@/components/ui";
+import { Card, PageHeader, Spinner } from "@/components/ui";
 import { useMyBookings, useCancelBooking, usePaymentRedirect } from "@/hooks";
 import { useApiMutation } from "@/hooks";
 import { paymentApi } from "@/api";
@@ -65,12 +65,12 @@ export default function MyBookingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">My Bookings</h1>
+      <PageHeader title="My Bookings" />
 
       {isLoading ? (
         <Spinner className="h-6 w-6" />
       ) : appointments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">You don&apos;t have any bookings yet.</p>
+        <Card className="p-10 text-center text-sm text-muted-foreground">You don&apos;t have any bookings yet.</Card>
       ) : (
         <div className="space-y-3">
           {appointments.map((appointment) => (

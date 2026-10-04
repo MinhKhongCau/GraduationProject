@@ -6,7 +6,7 @@ import { BalanceCard } from "./component/BalanceCard";
 import { TransactionListItem } from "./component/TransactionListItem";
 import { TopUpDialog } from "./component/TopUpDialog";
 import { WithdrawDialog } from "./component/WithdrawDialog";
-import { Button, Spinner } from "@/components/ui";
+import { Button, Card, PageHeader, Spinner } from "@/components/ui";
 import { useApiMutation } from "@/hooks";
 import { paymentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -60,29 +60,29 @@ export default function WalletPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">Wallet</h1>
+      <PageHeader title="Wallet" />
 
       {isLoading ? (
         <Spinner className="h-6 w-6" />
       ) : isError || !wallet ? (
-        <div className="flex flex-col items-center gap-4 rounded-3xl bg-surface p-10 text-center">
+        <Card className="flex flex-col items-center gap-4 p-10 text-center">
           <p className="text-sm text-muted-foreground">You don&apos;t have a wallet yet.</p>
           <Button onClick={() => initWalletMutation.mutate()} disabled={initWalletMutation.isPending}>
             {initWalletMutation.isPending ? "Setting up..." : "Set up my wallet"}
           </Button>
-        </div>
+        </Card>
       ) : (
         <>
           <BalanceCard balance={wallet.balance} onTopUp={() => setTopUpOpen(true)} onWithdraw={() => setWithdrawOpen(true)} />
 
-          <div className="mt-6">
-            <h2 className="mb-3 text-lg font-bold text-foreground">Transaction history</h2>
-            <div className="space-y-0">
+          <Card className="mt-6 overflow-hidden">
+            <h2 className="border-b border-border px-5 py-4 text-base font-semibold text-foreground">Transaction history</h2>
+            <div className="divide-y divide-border">
               {TRANSACTIONS_MOCK.map((transaction) => (
                 <TransactionListItem key={transaction.txnId} transaction={transaction} />
               ))}
             </div>
-          </div>
+          </Card>
 
           <TopUpDialog
             open={topUpOpen}

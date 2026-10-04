@@ -1,22 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import { BrandLogo } from "@/components/ui";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useTranslation } from "@/hooks";
-import { ROUTES, ADMIN_NAV_ITEMS } from "@/constants";
+import { ADMIN_NAV_ITEMS } from "@/constants";
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const { t } = useTranslation();
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-background lg:flex">
-      <Link href={ROUTES.HOME} className="flex items-center gap-2 border-b border-border px-6 py-5 text-lg font-bold text-foreground">
-        <span className="rounded-lg bg-primary p-1 text-white">🧠</span>
-        MindCare Admin
-      </Link>
-      <nav className="flex-1 space-y-1 p-4">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-background lg:flex">
+      <div className="flex h-16 items-center border-b border-border px-6">
+        <BrandLogo label="MindCare Admin" />
+      </div>
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {ADMIN_NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -24,9 +24,10 @@ export function AdminSidebar() {
             <Link
               key={item.id}
               href={item.href}
+              aria-current={isActive ? "page" : undefined}
               className={clsx(
-                "flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
-                isActive ? "bg-primary text-white shadow-card" : "text-muted-foreground hover:bg-surface"
+                "flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+                isActive ? "bg-primary-soft text-primary-soft-text font-semibold" : "text-muted-foreground hover:bg-surface hover:text-foreground"
               )}
             >
               <Icon className="h-4 w-4" />

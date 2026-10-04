@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { Spinner } from "@/components/ui";
+import { buttonClasses, Spinner } from "@/components/ui";
 
 export interface WeekCalendarProps {
   /** "YYYY-MM-DD" dates the expert has open slots on. */
@@ -82,7 +82,7 @@ export function WeekCalendar({ availableDates, selectedDate, onSelectDate, isLoa
           <button
             type="button"
             onClick={() => goToWeek(-7)}
-            className="rounded-lg border border-border p-1.5 hover:bg-surface"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-strong bg-background transition-colors hover:bg-surface"
             aria-label="Previous week"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -94,7 +94,7 @@ export function WeekCalendar({ availableDates, selectedDate, onSelectDate, isLoa
           <button
             type="button"
             onClick={() => goToWeek(7)}
-            className="rounded-lg border border-border p-1.5 hover:bg-surface"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-strong bg-background transition-colors hover:bg-surface"
             aria-label="Next week"
           >
             <ChevronRight className="h-4 w-4" />
@@ -105,7 +105,8 @@ export function WeekCalendar({ availableDates, selectedDate, onSelectDate, isLoa
           <button
             type="button"
             onClick={() => setPickerOpen((open) => !open)}
-            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-surface"
+            aria-expanded={pickerOpen}
+            className={buttonClasses("outline", "sm")}
           >
             <CalendarDays className="h-3.5 w-3.5" />
             Jump to date
@@ -140,12 +141,13 @@ export function WeekCalendar({ availableDates, selectedDate, onSelectDate, isLoa
                 type="button"
                 disabled={!isAvailable}
                 onClick={() => onSelectDate(key)}
-                className={`flex flex-col items-center gap-1 rounded-xl border py-3 text-xs font-semibold transition-colors ${
+                aria-pressed={isSelected}
+                className={`flex flex-col items-center gap-1 rounded-lg border py-3 text-xs font-semibold transition-colors ${
                   isSelected
                     ? "border-primary bg-primary text-white"
                     : isAvailable
-                      ? "border-border text-foreground hover:bg-surface"
-                      : "cursor-not-allowed border-border/50 text-muted-foreground/50"
+                      ? "border-border-strong bg-background text-foreground hover:border-primary/40 hover:bg-surface"
+                      : "cursor-not-allowed border-border bg-surface text-muted-foreground/50"
                 }`}
               >
                 <span>{DAY_LABELS[(date.getDay() + 6) % 7]}</span>

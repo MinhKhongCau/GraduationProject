@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import { CalendarClock, FileText, Video } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Card, Button, Badge, type BadgeTone } from "@/components/ui";
 import { useAppointmentMedicalRecord } from "@/hooks";
 import { MedicalRecordDetailModal } from "@/components/medical-record/MedicalRecordDetailModal";
 import type { AppointmentStatus } from "@/types";
 import type { AppointmentWithExpert } from "@/hooks";
 
-const STATUS_STYLES: Record<AppointmentStatus, string> = {
-  PENDING_PAYMENT: "bg-warning-soft text-warning",
-  CONFIRMED: "bg-success-soft text-success",
-  CANCELLED: "bg-danger-soft text-danger",
-  COMPLETED: "bg-primary-soft text-primary",
+const STATUS_TONES: Record<AppointmentStatus, BadgeTone> = {
+  PENDING_PAYMENT: "warning",
+  CONFIRMED: "success",
+  CANCELLED: "danger",
+  COMPLETED: "primary",
 };
 
 const STATUS_TEXT: Record<AppointmentStatus, string> = {
@@ -39,19 +39,19 @@ export function BookingListItem({ appointment, onCancel, onPayNow, isPaying }: B
 
   return (
     <>
-      <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between hover:border-primary/30 transition-all duration-200">
+      <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between transition-colors duration-200 hover:border-primary/30">
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary-soft-text">
             <CalendarClock className="h-5 w-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-foreground">{appointment.expertName ?? "Chuyên gia"}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-foreground">{appointment.expertName ?? "Chuyên gia"}</p>
               {medicalRecord && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold text-secondary">
-                  <FileText className="h-3 w-3" />
+                <Badge tone="primary">
+                  <FileText className="h-3 w-3" aria-hidden="true" />
                   Đã có bệnh án
-                </span>
+                </Badge>
               )}
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -75,19 +75,14 @@ export function BookingListItem({ appointment, onCancel, onPayNow, isPaying }: B
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 sm:justify-end">
-          <span
-            className={`rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
-              STATUS_STYLES[appointment.statusLabel] || "bg-surface text-muted-foreground"
-            }`}
-          >
+          <Badge tone={STATUS_TONES[appointment.statusLabel] ?? "neutral"}>
             {STATUS_TEXT[appointment.statusLabel] || appointment.statusLabel}
-          </span>
+          </Badge>
 
           {medicalRecord && (
             <Button
               size="sm"
               variant="outline"
-              className="gap-1.5 text-xs"
               onClick={() => setDetailModalOpen(true)}
             >
               <FileText className="h-3.5 w-3.5 text-primary" />

@@ -20,9 +20,11 @@ export function QuickLinksGrid() {
       {QUICK_LINKS.map((link) => {
         const Icon = link.icon;
         return (
-          <Link key={link.id} href={link.href}>
-            <Card className="flex flex-col items-center gap-2 p-5 text-center transition-shadow hover:shadow-elevated">
-              <Icon className="h-6 w-6 text-primary" />
+          <Link key={link.id} href={link.href} className="group block rounded-xl">
+            <Card className="flex h-full flex-col items-center gap-3 p-5 text-center transition-all duration-200 group-hover:border-primary/40 group-hover:shadow-elevated">
+              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                <Icon className="h-5 w-5" />
+              </span>
               <span className="text-sm font-semibold text-foreground">{link.label}</span>
             </Card>
           </Link>

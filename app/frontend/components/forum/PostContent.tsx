@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useForumAuthorName } from "@/hooks";
 import type { PostDetail } from "@/types";
+import { Badge } from "@/components/ui";
 
 const ContentViewer = dynamic(() => import("@/components/ui/MDXEditor"), { ssr: false });
 
@@ -26,7 +27,7 @@ export function PostContent({ post }: PostContentProps) {
 
   return (
     <div>
-      <h1 className="mb-4 text-3xl font-extrabold tracking-tight text-foreground">{post.title}</h1>
+      <h1 className="mb-4 text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">{post.title}</h1>
       
       {/* Author and metadata */}
       <div className="mb-6 flex items-center gap-3 border-b border-border pb-4">
@@ -38,10 +39,10 @@ export function PostContent({ post }: PostContentProps) {
           )}
         </div>
         <div className="flex flex-col min-w-0">
-          <span className="text-sm font-bold text-foreground">{authorName}</span>
+          <span className="text-sm font-semibold text-foreground">{authorName}</span>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span>{new Date(post.createdAt).toLocaleDateString("vi-VN")}</span>
-            <span>•</span>
+            <span aria-hidden="true">•</span>
             <span>{post.viewCount} lượt xem</span>
           </div>
         </div>
@@ -50,15 +51,15 @@ export function PostContent({ post }: PostContentProps) {
       {post.tags.length > 0 && (
         <div className="mb-6 flex flex-wrap gap-1.5">
           {post.tags.map((tag) => (
-            <span key={tag} className="rounded-full bg-primary-soft px-2.5 py-0.5 text-[11px] font-medium text-primary-soft-text">
+            <Badge key={tag} tone="primary">
               {tag}
-            </span>
+            </Badge>
           ))}
         </div>
       )}
 
       {post.thumbnailUrl && (
-        <div className="mb-6 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-border">
+        <div className="mb-6 aspect-[16/9] w-full overflow-hidden rounded-xl border border-border">
           <img
             src={post.thumbnailUrl}
             alt={post.title}

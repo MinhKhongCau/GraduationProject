@@ -3,7 +3,7 @@
 import { UpcomingAppointmentCard } from "./component/UpcomingAppointmentCard";
 import { WalletSnapshotCard } from "./component/WalletSnapshotCard";
 import { QuickLinksGrid } from "./component/QuickLinksGrid";
-import { Spinner } from "@/components/ui";
+import { PageHeader, Spinner } from "@/components/ui";
 import { useApiQuery, useMyBookings } from "@/hooks";
 import { paymentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -24,9 +24,7 @@ export default function PatientDashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">
-        Welcome back{user ? `, ${user.fullName}` : ""}
-      </h1>
+      <PageHeader title={`Welcome back${user ? `, ${user.fullName}` : ""}`} />
 
       {/* {isLoadingAppointments ? (
         <Spinner className="h-6 w-6" />

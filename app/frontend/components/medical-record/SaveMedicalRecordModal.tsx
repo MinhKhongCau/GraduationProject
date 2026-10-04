@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Modal, Button } from "@/components/ui";
+import { Modal, Button, Input, Textarea } from "@/components/ui";
 import { useSaveMedicalRecord } from "@/hooks";
 import { useErrorContext } from "@/context/ErrorContext";
 import type { MedicalRecord, SaveMedicalRecordRequest } from "@/types";
@@ -105,108 +105,108 @@ export function SaveMedicalRecordModal({
       description={`Tư vấn & chẩn đoán y khoa cho bệnh nhân: ${patientName || "Bệnh nhân"}`}
       size="2xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* Tình trạng bệnh / Chẩn đoán */}
         <div>
-          <label className="mb-1 flex items-center gap-1.5 text-xs font-bold text-foreground">
+          <label htmlFor="mr-diagnosis" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-foreground">
             <HeartPulse className="h-4 w-4 text-primary" />
             Tình trạng bệnh / Chẩn đoán <span className="text-danger">*</span>
           </label>
-          <input
+          <Input
             type="text"
             required
+            id="mr-diagnosis"
             value={diagnosis}
             onChange={(e) => setDiagnosis(e.target.value)}
             placeholder="Ví dụ: Rối loạn lo âu lan tỏa, Căng thẳng mức độ nhẹ..."
-            className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
         </div>
 
         {/* Triệu chứng */}
         <div>
-          <label className="mb-1 flex items-center gap-1.5 text-xs font-bold text-foreground">
+          <label htmlFor="mr-symptoms" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-foreground">
             <AlertCircle className="h-4 w-4 text-warning" />
             Triệu chứng lâm sàng
           </label>
-          <textarea
+          <Textarea
             rows={2}
+            id="mr-symptoms"
             value={symptoms}
             onChange={(e) => setSymptoms(e.target.value)}
             placeholder="Ví dụ: Mất ngủ thường xuyên về đêm, tim đập nhanh khi áp lực, khó tập trung..."
-            className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
         </div>
 
         {/* 2 cột: Cần tránh & Cần làm */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 flex items-center gap-1.5 text-xs font-bold text-danger">
+            <label htmlFor="mr-avoid" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-danger">
               <ShieldAlert className="h-4 w-4" />
               Các hành động CẦN TRÁNH
             </label>
-            <textarea
+            <Textarea
               rows={3}
-              value={actionsToAvoid}
+              id="mr-avoid"
+            value={actionsToAvoid}
               onChange={(e) => setActionsToAvoid(e.target.value)}
               placeholder="Ví dụ: Tránh sử dụng chất kích thích (cà phê, rượu), tránh dùng điện thoại trước khi ngủ 1h..."
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-danger focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="mb-1 flex items-center gap-1.5 text-xs font-bold text-success">
+            <label htmlFor="mr-take" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-success">
               <CheckCircle2 className="h-4 w-4" />
               Các hành động CẦN LÀM / Lời dặn
             </label>
-            <textarea
+            <Textarea
               rows={3}
-              value={actionsToTake}
+              id="mr-take"
+            value={actionsToTake}
               onChange={(e) => setActionsToTake(e.target.value)}
               placeholder="Ví dụ: Tập thở 4-7-8 mỗi ngày 15 phút, đi bộ nhẹ nhàng buổi sáng, duy trì nhật ký cảm xúc..."
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-success focus:outline-none"
             />
           </div>
         </div>
 
         {/* Phác đồ / Kế hoạch điều trị */}
         <div>
-          <label className="mb-1 flex items-center gap-1.5 text-xs font-bold text-foreground">
-            <FileText className="h-4 w-4 text-secondary" />
+          <label htmlFor="mr-treatment" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <FileText className="h-4 w-4 text-primary" />
             Phác đồ / Hướng can thiệp
           </label>
-          <textarea
+          <Textarea
             rows={2}
+            id="mr-treatment"
             value={treatmentPlan}
             onChange={(e) => setTreatmentPlan(e.target.value)}
             placeholder="Ví dụ: Liệu pháp nhận thức hành vi (CBT), bài tập thư giãn cơ tiến triển..."
-            className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
         </div>
 
         {/* Buổi gặp tiếp theo */}
-        <div className="rounded-xl border border-border/60 bg-surface/50 p-3 space-y-2.5">
-          <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+        <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+          <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
             <Calendar className="h-4 w-4 text-primary" />
             Lịch hẹn tái khám / Buổi gặp tiếp theo (nếu có)
-          </label>
+          </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <span className="block text-[11px] font-medium text-muted-foreground mb-1">Ngày đề xuất</span>
-              <input
+              <label htmlFor="mr-next-date" className="mb-1 block text-xs font-medium text-muted-foreground">Ngày đề xuất</label>
+              <Input
                 type="date"
-                value={nextAppointmentDate}
+                id="mr-next-date"
+            value={nextAppointmentDate}
                 onChange={(e) => setNextAppointmentDate(e.target.value)}
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
               />
             </div>
             <div>
-              <span className="block text-[11px] font-medium text-muted-foreground mb-1">Ghi chú lịch hẹn</span>
-              <input
+              <label htmlFor="mr-next-note" className="mb-1 block text-xs font-medium text-muted-foreground">Ghi chú lịch hẹn</label>
+              <Input
                 type="text"
-                value={nextAppointmentNote}
+                id="mr-next-note"
+            value={nextAppointmentNote}
                 onChange={(e) => setNextAppointmentNote(e.target.value)}
                 placeholder="Ví dụ: Tái khám sau 2 tuần để đánh giá tiến triển..."
-                className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
               />
             </div>
           </div>
@@ -214,21 +214,21 @@ export function SaveMedicalRecordModal({
 
         {/* Ghi chú thêm */}
         <div>
-          <label className="mb-1 flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+          <label htmlFor="mr-notes" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
             <Sparkles className="h-4 w-4" />
             Ghi chú bổ sung của Chuyên gia
           </label>
-          <textarea
+          <Textarea
             rows={2}
+            id="mr-notes"
             value={expertNotes}
             onChange={(e) => setExpertNotes(e.target.value)}
             placeholder="Ghi chú thêm về phản ứng hoặc tâm lý bệnh nhân..."
-            className="w-full rounded-xl border border-border bg-surface px-3.5 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
         </div>
 
         {/* Nút hành động */}
-        <div className="flex items-center justify-end gap-3 pt-3">
+        <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end sm:gap-3">
           <Button
             type="button"
             variant="outline"

@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { PostForm } from "@/components/forum";
-import { Card, Spinner } from "@/components/ui";
+import { Card, PageHeader, Spinner } from "@/components/ui";
 import { ROUTES } from "@/constants";
 import { useForumPost } from "@/hooks";
 import { useAuthContext } from "@/context/AuthContext";
@@ -20,8 +20,8 @@ export default function EditForumPostPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">Edit post</h1>
-      <Card className="p-6">
+      <PageHeader title="Edit post" />
+      <Card className="p-5 sm:p-6">
         <PostForm
           basePath={ROUTES.PATIENT.FORUM}
           mode="edit"

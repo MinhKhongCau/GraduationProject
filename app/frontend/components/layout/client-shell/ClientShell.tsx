@@ -1,8 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { ROUTES } from "@/constants";
+import { BrandLogo } from "@/components/ui";
 import { DesktopHeaderNav } from "./DesktopHeaderNav";
 import { TabletDrawerNav } from "./TabletDrawerNav";
 import { MobileBottomNav } from "./MobileBottomNav";
@@ -24,19 +23,16 @@ export interface ClientShellProps {
  */
 export function ClientShell({ navItems, bottomNavItems, settingsItem, children }: ClientShellProps) {
   return (
-    <div className="flex min-h-dvh flex-col bg-surface/30">
+    <div className="flex min-h-dvh flex-col bg-surface">
       <DesktopHeaderNav navItems={navItems} settingsItem={settingsItem} />
       <TabletDrawerNav navItems={navItems} settingsItem={settingsItem} />
 
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur sm:hidden">
-        <Link href={ROUTES.HOME} className="flex items-center gap-2 text-base font-bold text-foreground">
-          <span className="rounded-lg bg-primary p-1 text-white">🧠</span>
-          MindCare
-        </Link>
+<BrandLogo className="text-base" />
         <NavAvatarMenu settingsItem={settingsItem} />
       </header>
 
-      <main className="flex-1 p-4 pb-20 sm:p-6 sm:pb-6 lg:p-8">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-5 pb-24 sm:px-6 sm:py-6 lg:px-8 lg:py-8">{children}</main>
 
       <MobileBottomNav navItems={bottomNavItems} />
     </div>

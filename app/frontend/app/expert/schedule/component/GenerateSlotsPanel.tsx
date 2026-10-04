@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Input } from "@/components/ui";
 import { useApiMutation } from "@/hooks";
 import { bookingApi } from "@/api";
 import { useErrorContext } from "@/context/ErrorContext";
@@ -27,21 +27,21 @@ export function GenerateSlotsPanel() {
   });
 
   return (
-    <Card className="p-6">
-      <h2 className="mb-1 text-lg font-bold text-foreground">Generate bookable slots</h2>
+    <Card className="p-5 sm:p-6">
+      <h2 className="mb-1 text-base font-semibold text-foreground">Generate bookable slots</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Turns your saved weekly template into concrete slots patients can book, starting today.
       </p>
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <label className="flex items-center gap-2 text-sm font-medium text-foreground">
           Days ahead
-          <input
+          <Input
             type="number"
             min={1}
             max={30}
             value={days}
             onChange={(event) => setDays(Math.min(30, Math.max(1, Number(event.target.value) || 1)))}
-            className="w-20 rounded-lg border border-border px-2 py-1.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            className="w-20"
           />
         </label>
         <Button onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>

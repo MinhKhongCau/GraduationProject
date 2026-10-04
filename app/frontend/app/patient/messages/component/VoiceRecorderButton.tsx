@@ -26,7 +26,7 @@ export function VoiceRecorderButton({ onSend }: VoiceRecorderButtonProps) {
         <button
           type="button"
           onClick={cancelRecording}
-          className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-border/50"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
           aria-label="Cancel recording"
         >
           <X className="h-4 w-4" />
@@ -37,7 +37,7 @@ export function VoiceRecorderButton({ onSend }: VoiceRecorderButtonProps) {
             const blob = await stopRecording();
             if (blob) onSend(blob, recordingTime);
           }}
-          className="rounded-full bg-primary p-2 text-white transition-colors hover:bg-primary/90"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover"
           aria-label="Send voice message"
         >
           <Square className="h-4 w-4" />
@@ -50,7 +50,7 @@ export function VoiceRecorderButton({ onSend }: VoiceRecorderButtonProps) {
     <button
       type="button"
       onClick={startRecording}
-      className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:bg-border/50"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
       aria-label="Record voice message"
     >
       <Mic className="h-5 w-5" />

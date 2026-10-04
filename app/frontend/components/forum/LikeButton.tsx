@@ -29,13 +29,16 @@ export function LikeButton({ postId, initialLikeCount }: LikeButtonProps) {
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-pressed={liked}
+      aria-label="Like"
       disabled={toggleLike.isPending}
-      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-        liked ? "border-primary bg-primary-soft text-primary" : "border-border text-muted-foreground hover:bg-surface"
+      className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors disabled:opacity-60 ${
+        liked ? "border-primary/30 bg-primary-soft text-primary" : "border-border-strong bg-background text-muted-foreground hover:bg-surface hover:text-foreground"
       }`}
     >
-      <Heart className={`h-4 w-4 ${liked ? "fill-primary" : ""}`} />
+      <Heart aria-hidden="true" className={`h-4 w-4 ${liked ? "fill-primary" : ""}`} />
       {count}
     </button>
   );

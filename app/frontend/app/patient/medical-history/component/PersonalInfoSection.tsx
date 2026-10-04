@@ -15,8 +15,8 @@ export function PersonalInfoSection({ profile }: { profile: PatientProfile }) {
         <tbody className="divide-y divide-border">
           {rows.map(([label, value]) => (
             <tr key={label} className="transition-colors hover:bg-surface/50">
-              <td className="w-1/3 px-6 py-4 text-muted-foreground">{label}</td>
-              <td className="px-6 py-4 font-medium text-foreground">{value}</td>
+              <th scope="row" className="w-1/3 px-5 py-3.5 font-medium text-muted-foreground">{label}</th>
+              <td className="px-5 py-3.5 font-medium text-foreground">{value}</td>
             </tr>
           ))}
         </tbody>

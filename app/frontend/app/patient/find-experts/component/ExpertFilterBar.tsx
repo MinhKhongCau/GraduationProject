@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import { Input, Select } from "@/components/ui";
 import type { Specialization } from "@/types";
 
 export interface ExpertFilterBarProps {
@@ -24,18 +25,20 @@ export function ExpertFilterBar({
         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
           <Search className="h-4 w-4" />
         </div>
-        <input
+        <Input
           type="text"
+          aria-label="Search experts"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Search by expert name or specialization..."
-          className="w-full rounded-xl border border-border py-2.5 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+          className="pl-10"
         />
       </div>
-      <select
+      <Select
+        aria-label="Filter by specialization"
         value={specializationId}
         onChange={(event) => onSpecializationChange(event.target.value)}
-        className="rounded-xl border border-border px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+        className="sm:w-64"
       >
         <option value="">All specializations</option>
         {specializations.map((spec) => (
@@ -43,7 +46,7 @@ export function ExpertFilterBar({
             {spec.name}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   );
 }

@@ -11,18 +11,19 @@ export interface RoleToggleProps {
 export function RoleToggle({ value, onChange }: RoleToggleProps) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">I am a:</p>
-      <div className="flex gap-2">
+      <p id="register-role-label" className="mb-1.5 text-sm font-medium text-foreground">I am a:</p>
+      <div role="group" aria-labelledby="register-role-label" className="flex gap-1 rounded-lg border border-border bg-surface p-1">
         {(["PATIENT", "EXPERT"] as const).map((role) => (
           <button
             key={role}
             type="button"
             onClick={() => onChange(role)}
+            aria-pressed={value === role}
             className={clsx(
-              "flex-1 rounded-lg py-2 text-sm font-semibold capitalize transition-all",
+              "h-9 flex-1 rounded-md text-sm font-semibold capitalize transition-colors",
               value === role
-                ? "bg-primary text-white shadow-card"
-                : "border border-border bg-surface text-muted-foreground hover:bg-border/40"
+                ? "bg-background text-primary shadow-card"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
             {role === "PATIENT" ? "Patient" : "Expert"}

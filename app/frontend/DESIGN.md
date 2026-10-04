@@ -95,6 +95,13 @@ One shared shell renders three nav variants and lets Tailwind's own breakpoints 
 
 Tailwind v4 is CSS-first: `app/index.css`'s `@theme inline` block is the **single real source of truth** for color/radius/shadow tokens (`--color-primary`, `--color-danger`, etc.), migrated from the ad hoc hex values scattered across the original prototype pages. `tailwind.config.js` exists because it was explicitly requested, and is kept intentionally thin — `theme.extend` mirrors the same CSS variables for tooling that expects a JS config, plus a `safelist` for dynamically-built class names Tailwind's static analyzer can't see (e.g. status-pill colors chosen by a JS switch). **Edit `app/index.css` to change a color, not `tailwind.config.js`.**
 
+UI conventions (aligned with the `ui-ux-pro-max` skill's accessibility/touch rules):
+
+- **Radius scale** — controls (buttons, inputs, selects, nav links) `rounded-lg`; cards, panels, list rows `rounded-xl`; modals and hero blocks `rounded-2xl`; `rounded-full` only for avatars, status pills and dots, never for text buttons.
+- **Contrast** — solid `primary`/`danger`/`success`/`warning` fills carry white text, so their token values are chosen to reach 4.5:1 against white.
+- **Primitives** in `components/ui/` — `Button` (+ `buttonClasses()` for a `Link` styled as a button; never nest `<Button>` in `<Link>`), `Input`/`Select`/`Textarea`/`Label`/`FieldError` (`fieldClasses()` for one-offs), `Card`/`CardHeader`, `PageHeader` (title + description + actions at the top of every portal page), `Badge` (status pills), `BrandLogo`/`BrandMark`.
+- Focus rings, pointer cursor on buttons, and `prefers-reduced-motion` are handled globally in `app/index.css`'s `@layer base`.
+
 ## i18n (`context/LocaleContext.tsx` + `hooks/useTranslation.ts` + `locales/`)
 
 No URL locale prefixing (`/en/...`, `/vi/...`) — that would double every route under the already-established `/patient`, `/expert`, `/admin` prefix scheme. Instead, `t(key, defaultText, vars?)` takes a **required** English default so every page reads correctly even before a translation exists for a given key — this is why the signature isn't the more familiar `t(key, vars?)`.

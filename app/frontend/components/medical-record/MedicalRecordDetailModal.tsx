@@ -48,9 +48,9 @@ export function MedicalRecordDetailModal({
       description={`Mã hồ sơ: ${record.record_id || record.recordId || "N/A"}`}
       size="2xl"
     >
-      <div className="space-y-5 pt-2">
+      <div className="space-y-5">
         {/* Header thông tin người tham gia & ngày khám */}
-        <div className="grid grid-cols-1 gap-3 rounded-2xl bg-surface p-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 rounded-xl border border-border bg-surface p-4 sm:grid-cols-2">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
               <User className="h-5 w-5" />
@@ -71,7 +71,7 @@ export function MedicalRecordDetailModal({
           </div>
 
           <div className="flex items-center gap-3 sm:justify-end">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-raised text-muted-foreground">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-background text-muted-foreground">
               <Clock className="h-5 w-5" />
             </div>
             <div className="text-left sm:text-right">
@@ -90,7 +90,7 @@ export function MedicalRecordDetailModal({
         </div>
 
         {/* Tình trạng bệnh / Chẩn đoán */}
-        <div className="rounded-2xl border border-primary/20 bg-primary-soft/30 p-4">
+        <div className="rounded-xl border border-primary/20 bg-primary-soft/40 p-4">
           <div className="flex items-center gap-2 mb-1.5">
             <HeartPulse className="h-5 w-5 text-primary" />
             <span className="text-xs font-bold uppercase tracking-wider text-primary">
@@ -107,7 +107,7 @@ export function MedicalRecordDetailModal({
               <AlertCircle className="h-4 w-4 text-warning" />
               Triệu chứng lâm sàng
             </div>
-            <div className="rounded-xl border border-border bg-surface p-3.5 text-sm text-foreground whitespace-pre-line leading-relaxed">
+            <div className="rounded-xl border border-border bg-background p-3.5 text-sm text-foreground whitespace-pre-line leading-relaxed">
               {record.symptoms}
             </div>
           </div>
@@ -116,7 +116,7 @@ export function MedicalRecordDetailModal({
         {/* Cần tránh & Cần làm */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {actionsAvoid && (
-            <div className="rounded-xl border border-danger/20 bg-danger-soft/20 p-4 space-y-2">
+            <div className="rounded-xl border border-danger/20 bg-danger-soft p-4 space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-danger">
                 <ShieldAlert className="h-4 w-4" />
                 Các hành động CẦN TRÁNH
@@ -128,7 +128,7 @@ export function MedicalRecordDetailModal({
           )}
 
           {actionsTake && (
-            <div className="rounded-xl border border-success/20 bg-success-soft/20 p-4 space-y-2">
+            <div className="rounded-xl border border-success/20 bg-success-soft p-4 space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-bold text-success">
                 <CheckCircle2 className="h-4 w-4" />
                 Các hành động CẦN LÀM / Lời dặn
@@ -144,10 +144,10 @@ export function MedicalRecordDetailModal({
         {treatment && (
           <div>
             <div className="flex items-center gap-1.5 mb-1.5 text-xs font-bold text-foreground">
-              <FileText className="h-4 w-4 text-secondary" />
+              <FileText className="h-4 w-4 text-primary" />
               Phác đồ / Hướng can thiệp
             </div>
-            <div className="rounded-xl border border-border bg-surface p-3.5 text-sm text-foreground whitespace-pre-line leading-relaxed">
+            <div className="rounded-xl border border-border bg-background p-3.5 text-sm text-foreground whitespace-pre-line leading-relaxed">
               {treatment}
             </div>
           </div>
@@ -185,14 +185,14 @@ export function MedicalRecordDetailModal({
               <Sparkles className="h-4 w-4" />
               Ghi chú thêm từ Chuyên gia
             </div>
-            <div className="rounded-xl border border-border bg-surface p-3.5 text-xs text-muted-foreground italic whitespace-pre-line">
+            <div className="rounded-xl border border-border bg-background p-3.5 text-xs text-muted-foreground italic whitespace-pre-line">
               {notes}
             </div>
           </div>
         )}
 
         {/* Nút hành động */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end sm:gap-3">
           {isExpert && onEdit && (
             <Button
               variant="outline"

@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, PageHeader } from "@/components/ui";
 import { BOOKING_TOPICS } from "@/constants";
 import { useTranslation } from "@/hooks";
 
@@ -16,12 +16,10 @@ export function TopicStep({ selectedTopics, onToggleTopic, onNext }: TopicStepPr
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-8">
-        <h1 className="mb-3 text-3xl font-bold text-foreground">What brings you here today?</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Please select the topics or symptoms you&apos;d like to discuss with an expert. You can choose multiple.
-        </p>
-      </div>
+      <PageHeader
+        title="What brings you here today?"
+        description="Please select the topics or symptoms you'd like to discuss with an expert. You can choose multiple."
+      />
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {BOOKING_TOPICS.map((topic) => {
@@ -33,10 +31,11 @@ export function TopicStep({ selectedTopics, onToggleTopic, onNext }: TopicStepPr
               key={topic.id}
               type="button"
               onClick={() => onToggleTopic(topic.id)}
-              className={`relative flex h-36 flex-col items-center justify-center rounded-2xl border p-6 transition-all ${
+              aria-pressed={isSelected}
+              className={`relative flex h-36 flex-col items-center justify-center rounded-xl border p-6 transition-all ${
                 isSelected
-                  ? "border-primary bg-primary-soft/50 shadow-elevated"
-                  : "border-border bg-background hover:border-primary/40 hover:shadow-card"
+                  ? "border-primary bg-primary-soft ring-1 ring-primary"
+                  : "border-border-strong bg-background hover:border-primary/40 hover:shadow-card"
               }`}
             >
               {isSelected && (

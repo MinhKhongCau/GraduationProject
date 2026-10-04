@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Modal, Spinner } from "@/components/ui";
+import { Badge, Modal, Spinner } from "@/components/ui";
 import { useForumPost } from "@/hooks";
 
 const ContentViewer = dynamic(() => import("@/components/ui/MDXEditor"), { ssr: false });
@@ -23,12 +23,9 @@ export function PostPreviewModal({ slug, onOpenChange }: PostPreviewModalProps) 
           {post.tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-medium text-primary-soft-text"
-                >
+                <Badge key={tag} tone="primary">
                   #{tag}
-                </span>
+                </Badge>
               ))}
             </div>
           )}

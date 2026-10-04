@@ -3,7 +3,7 @@
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Modal, Button } from "@/components/ui";
+import { Modal, Button, Input, Textarea, Label, FieldError } from "@/components/ui";
 import type { CreateMedicalHistoryRequest } from "@/types";
 
 const schema = z.object({
@@ -35,37 +35,25 @@ export function AddMedicalHistoryDialog({ open, onOpenChange, onSubmit, isSubmit
     <Modal open={open} onOpenChange={onOpenChange} title="Add a medical history entry">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">Condition name</label>
-          <input
-            type="text"
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-            {...register("conditionName")}
-          />
-          {errors.conditionName && <p className="mt-1 text-xs text-danger">{errors.conditionName.message}</p>}
+          <Label htmlFor="history-condition">Condition name</Label>
+          <Input id="history-condition" type="text" invalid={!!errors.conditionName} {...register("conditionName")} />
+          <FieldError>{errors.conditionName?.message}</FieldError>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">Description</label>
-          <textarea
-            rows={3}
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-            {...register("description")}
-          />
+          <Label htmlFor="history-description">Description</Label>
+          <Textarea id="history-description" rows={3} {...register("description")} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">Diagnosed on</label>
-          <input
-            type="date"
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-            {...register("diagnosedAt")}
-          />
-          {errors.diagnosedAt && <p className="mt-1 text-xs text-danger">{errors.diagnosedAt.message}</p>}
+          <Label htmlFor="history-diagnosed-at">Diagnosed on</Label>
+          <Input id="history-diagnosed-at" type="date" invalid={!!errors.diagnosedAt} {...register("diagnosedAt")} />
+          <FieldError>{errors.diagnosedAt?.message}</FieldError>
         </div>
         <Controller
           control={control}
           name="isChronic"
           render={({ field }) => (
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <input type="checkbox" checked={field.value} onChange={(event) => field.onChange(event.target.checked)} />
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground">
+              <input type="checkbox" className="h-4 w-4 rounded accent-primary" checked={field.value} onChange={(event) => field.onChange(event.target.checked)} />
               This is a chronic condition
             </label>
           )}

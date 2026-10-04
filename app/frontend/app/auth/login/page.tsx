@@ -76,13 +76,13 @@ export default function LoginPage() {
         <PasswordField label="Password" placeholder="••••••••" error={errors.password?.message} {...register("password")} />
 
         <div className="text-right">
-          <Link href={ROUTES.AUTH.FORGOT_PASSWORD} className="text-xs font-semibold text-primary hover:underline">
+          <Link href={ROUTES.AUTH.FORGOT_PASSWORD} className="text-sm font-semibold text-primary hover:underline">
             Forgot password?
           </Link>
         </div>
 
-        <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
-          <LogIn className="h-5 w-5" />
+        <Button type="submit" size="lg" className="w-full" disabled={loginMutation.isPending}>
+          <LogIn className="h-4 w-4" />
           {loginMutation.isPending ? "Signing in..." : "Sign In"}
         </Button>
       </form>

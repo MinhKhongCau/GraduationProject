@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, Trash2, HelpCircle, FileText, CheckSquare } from "lucide-react";
-import { Card, Button, Spinner, Modal } from "@/components/ui";
+import { Card, Button, Spinner, Modal, Label, PageHeader, Input, Select, Badge } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { assessmentApi } from "@/api";
 import { QUERY_KEYS, ROUTES } from "@/constants";
@@ -115,21 +115,19 @@ export default function AdminQuestionsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Quản lý câu hỏi (Questions)</h1>
-          <p className="text-sm text-muted-foreground">
-            Thiết lập bộ câu hỏi và thang đo chuyên sâu cho từng bài test.
-          </p>
-        </div>
-        <Button
-          disabled={!selectedTemplateSlug || dimensions.length === 0}
-          onClick={() => { resetBulkForm(); setIsBulkCreateOpen(true); }}
-          className="flex items-center gap-1.5 self-start sm:self-auto"
-        >
-          <Plus className="h-4 w-4" /> Thêm câu hỏi (Bulk)
-        </Button>
-      </div>
+      <PageHeader
+        className="mb-0"
+        title="Quản lý câu hỏi (Questions)"
+        description="Thiết lập bộ câu hỏi và thang đo chuyên sâu cho từng bài test."
+        actions={
+          <Button
+            disabled={!selectedTemplateSlug || dimensions.length === 0}
+            onClick={() => { resetBulkForm(); setIsBulkCreateOpen(true); }}
+          >
+            <Plus className="h-4 w-4" /> Thêm câu hỏi (Bulk)
+          </Button>
+        }
+      />
 
       {dimensions.length === 0 && (
         <Card className="p-4 text-sm text-muted-foreground">
@@ -142,11 +140,13 @@ export default function AdminQuestionsPage() {
       )}
 
       <Card className="p-5">
-        <label className="mb-2 block text-sm font-bold text-foreground">Chọn bài test để quản lý câu hỏi</label>
-        <select
+        <Label className="mb-2 font-semibold" htmlFor="questions-selectedTemplateSlug">Chọn bài test để quản lý câu hỏi</Label>
+        <Select
+          id="questions-selectedTemplateSlug"
+          aria-label="Chọn bài test để quản lý câu hỏi"
           value={selectedTemplateSlug}
           onChange={(e) => setSelectedTemplateSlug(e.target.value)}
-          className="w-full max-w-md rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+          className="max-w-md"
         >
           <option value="">-- Hãy chọn một bài đánh giá --</option>
           {templates.map((t) => (
@@ -154,7 +154,7 @@ export default function AdminQuestionsPage() {
               {t.title} ({t.code})
             </option>
           ))}
-        </select>
+        </Select>
       </Card>
 
       {!selectedTemplateSlug ? (
@@ -175,7 +175,7 @@ export default function AdminQuestionsPage() {
               <Card key={question.slug} className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
-                    <div className="mt-1 rounded bg-primary-soft p-1.5 text-primary font-mono text-xs font-bold">
+                    <div className="mt-0.5 shrink-0 rounded-lg bg-primary-soft px-2 py-1 font-mono text-xs font-bold text-primary-soft-text">
                       Q{question.questionOrder}
                     </div>
                     <div>
@@ -183,13 +183,13 @@ export default function AdminQuestionsPage() {
                         {question.content}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                        <span className="font-mono text-primary bg-primary-soft/40 px-1.5 py-0.5 rounded">
+                        <span className="rounded-md bg-surface px-1.5 py-0.5 font-mono text-muted-foreground">
                           Slug: {question.slug}
                         </span>
                         {question.dimension && (
-                          <span className="bg-success-soft text-success px-1.5 py-0.5 rounded uppercase font-semibold">
+                          <Badge tone="success" className="uppercase">
                             Thang đo: {question.dimension}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -199,13 +199,13 @@ export default function AdminQuestionsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDelete(question.slug)}
-                    className="flex items-center gap-1 border-danger/20 px-2.5 py-1 text-xs text-danger hover:bg-danger-soft shrink-0"
+                    className="border-danger/30 text-danger hover:bg-danger-soft"
                   >
                     <Trash2 className="h-3.5 w-3.5" /> Xóa
                   </Button>
                 </div>
 
-                <div className="mt-4 border-t border-border/40 pt-3">
+                <div className="mt-4 border-t border-border pt-3">
                   <span className="text-xs font-semibold text-muted-foreground">
                     Các phương án trả lời tương ứng:
                   </span>
@@ -213,7 +213,7 @@ export default function AdminQuestionsPage() {
                     {question.options.map((opt) => (
                       <span
                         key={opt.slug}
-                        className="inline-flex items-center gap-1 rounded bg-surface border border-border px-2 py-1 text-xs font-medium text-foreground"
+                        className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1 text-xs font-medium text-foreground"
                       >
                         {opt.label}{" "}
                         <span className="font-bold text-primary">({opt.scoreValue}đ)</span>
@@ -237,12 +237,12 @@ export default function AdminQuestionsPage() {
       <Modal open={isBulkCreateOpen} onOpenChange={setIsBulkCreateOpen} title="Thêm danh sách câu hỏi (Bulk)">
         <form onSubmit={handleBulkSubmit} className="space-y-4 pt-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Chọn nhóm phương án trả lời chung</label>
-            <select
+            <Label htmlFor="questions-bulkGroupId">Chọn nhóm phương án trả lời chung</Label>
+            <Select
+              id="questions-bulkGroupId"
               required
               value={bulkGroupId}
               onChange={(e) => setBulkGroupId(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             >
               <option value="">-- Chọn nhóm phương án --</option>
               {groups.map((g) => (
@@ -250,39 +250,39 @@ export default function AdminQuestionsPage() {
                   {g.groupName} ({g.groupCode})
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
 
           <div className="border-t border-border pt-4">
             <div className="mb-3 flex items-center justify-between">
-              <label className="text-sm font-bold text-foreground">Danh sách câu hỏi</label>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddQuestionRow} className="flex items-center gap-1">
+              <Label className="mb-0 font-semibold">Danh sách câu hỏi</Label>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddQuestionRow}>
                 <Plus className="h-3.5 w-3.5" /> Thêm câu
               </Button>
             </div>
 
             <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
               {bulkQuestions.map((q, index) => (
-                <div key={index} className="flex flex-col gap-2 rounded-lg border border-border bg-surface/50 p-3 sm:flex-row sm:items-start">
+                <div key={index} className="flex flex-col gap-2 rounded-xl border border-border bg-surface/50 p-3 sm:flex-row sm:items-start">
                   <div className="w-12 text-center text-xs font-mono font-bold text-muted-foreground pt-3 shrink-0">
                     #{index + 1}
                   </div>
                   <div className="flex-1">
-                    <input
+                    <Input
                       type="text"
                       required
                       placeholder="Nội dung câu hỏi..."
                       value={q.content}
                       onChange={(e) => handleQuestionChange(index, "content", e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
+                      className="h-9 text-xs"
                     />
                   </div>
                   <div className="w-36 shrink-0">
-                    <select
+                    <Select
                       required
                       value={q.dimensionId}
                       onChange={(e) => handleQuestionChange(index, "dimensionId", e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
+                      className="h-9 text-xs"
                     >
                       <option value="">-- Khía cạnh --</option>
                       {dimensions.map((d) => (
@@ -290,24 +290,24 @@ export default function AdminQuestionsPage() {
                           {d.name} ({d.code})
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div className="w-16 shrink-0">
-                    <input
+                    <Input
                       type="number"
                       required
                       min={1}
                       placeholder="Thứ tự"
                       value={q.questionOrder}
                       onChange={(e) => handleQuestionChange(index, "questionOrder", parseInt(e.target.value) || 1)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground text-center outline-none focus:border-primary"
+                      className="h-9 text-center text-xs"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveQuestionRow(index)}
                     disabled={bulkQuestions.length === 1}
-                    className="self-end p-1.5 text-danger hover:bg-danger-soft disabled:opacity-40 rounded-md sm:self-auto shrink-0"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg text-danger transition-colors hover:bg-danger-soft disabled:cursor-not-allowed disabled:opacity-40 sm:self-auto"
                     aria-label="Remove question"
                   >
                     <Trash2 className="h-4 w-4" />

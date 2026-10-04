@@ -12,7 +12,7 @@ import {
   HeartPulse,
   Clock,
 } from "lucide-react";
-import { Card, Button, Spinner } from "@/components/ui";
+import { Card, Button, Badge, Spinner } from "@/components/ui";
 import { useMedicalRecords } from "@/hooks";
 import { MedicalRecordDetailModal } from "@/components/medical-record/MedicalRecordDetailModal";
 import type { MedicalRecord } from "@/types";
@@ -36,7 +36,7 @@ export function ConsultationRecordList() {
     return (
       <Card className="p-8 text-center">
         <HeartPulse className="mx-auto h-10 w-10 text-muted-foreground/40 mb-3" />
-        <h4 className="text-sm font-bold text-foreground">Chưa có hồ sơ bệnh án từ chuyên gia</h4>
+        <h3 className="text-sm font-semibold text-foreground">Chưa có hồ sơ bệnh án từ chuyên gia</h3>
         <p className="mt-1 text-xs text-muted-foreground max-w-sm mx-auto">
           Sau mỗi buổi tư vấn hoặc khám bệnh với Chuyên gia / Bác sĩ, kết luận chẩn đoán và hướng dẫn điều trị sẽ xuất hiện tại đây.
         </p>
@@ -59,7 +59,7 @@ export function ConsultationRecordList() {
           return (
             <Card
               key={recordId}
-              className="p-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between hover:border-primary/40 transition-all duration-200"
+              className="flex flex-col gap-3 p-5 transition-colors duration-200 hover:border-primary/30 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="space-y-1.5 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
@@ -77,15 +77,15 @@ export function ConsultationRecordList() {
                     })}
                   </span>
                   {nextDateMs && (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-2 py-0.5 text-[11px] font-semibold text-primary">
-                      <Calendar className="h-3 w-3" />
+                    <Badge tone="primary">
+                      <Calendar className="h-3 w-3" aria-hidden="true" />
                       Tái khám: {new Date(nextDateMs).toLocaleDateString("vi-VN")}
-                    </span>
+                    </Badge>
                   )}
                 </div>
 
                 {/* Chẩn đoán */}
-                <p className="text-sm font-bold text-foreground">
+                <p className="text-sm font-semibold text-foreground">
                   {record.diagnosis || "Chưa ghi nhận chẩn đoán"}
                 </p>
 
@@ -99,16 +99,16 @@ export function ConsultationRecordList() {
                 {/* Gợi ý Cần tránh / Cần làm */}
                 <div className="flex flex-wrap gap-2 pt-1">
                   {actionsAvoid && (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-danger-soft/40 px-2 py-0.5 text-[10px] font-medium text-danger">
-                      <ShieldAlert className="h-3 w-3" />
+                    <Badge tone="danger">
+                      <ShieldAlert className="h-3 w-3" aria-hidden="true" />
                       Có dặn dò CẦN TRÁNH
-                    </span>
+                    </Badge>
                   )}
                   {actionsTake && (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-success-soft/40 px-2 py-0.5 text-[10px] font-medium text-success">
-                      <CheckCircle2 className="h-3 w-3" />
+                    <Badge tone="success">
+                      <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
                       Có hướng dẫn CẦN LÀM
-                    </span>
+                    </Badge>
                   )}
                 </div>
               </div>
@@ -117,7 +117,7 @@ export function ConsultationRecordList() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="gap-1.5 text-xs w-full sm:w-auto"
+                  className="w-full sm:w-auto"
                   onClick={() => {
                     setSelectedRecord(record);
                     setDetailOpen(true);

@@ -4,7 +4,7 @@ import { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { CalendarRange, ChevronDown } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, Input, Select, fieldClasses } from "@/components/ui";
 import type { TimeTemplate, Availability, DayOfWeek } from "@/types";
 
 const DAYS: { value: DayOfWeek; short: string }[] = [
@@ -67,7 +67,7 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
   const activeTemplates = templates.filter((template) => template.isActive);
 
   return (
-    <Card className="p-6">
+    <Card className="p-5 sm:p-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
         {DAYS.map((day) => {
           const config = state[day.value];
@@ -78,13 +78,14 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
             <div
               key={day.value}
               className={`flex flex-col gap-2 rounded-xl border p-3 transition-colors ${
-                config.enabled ? "border-primary bg-primary-soft/40" : "border-border"
+                config.enabled ? "border-primary bg-primary-soft/40" : "border-border bg-background"
               }`}
             >
-              <label className="flex items-center justify-between gap-2 text-sm font-bold text-foreground">
+              <label className="flex cursor-pointer items-center justify-between gap-2 text-sm font-semibold text-foreground">
                 {day.short}
                 <input
                   type="checkbox"
+                  className="h-4 w-4 cursor-pointer accent-primary"
                   checked={config.enabled}
                   onChange={(event) => updateDay(day.value, { enabled: event.target.checked })}
                 />
@@ -92,10 +93,11 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
 
               {config.enabled && (
                 <>
-                  <select
+                  <Select
+                    aria-label={`${day.short} shift template`}
                     value={config.templateId}
                     onChange={(event) => updateDay(day.value, { templateId: event.target.value })}
-                    className="rounded-lg border border-border px-2 py-1.5 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+                    className="h-9 px-2 text-xs"
                   >
                     {activeTemplates.length === 0 && <option value="">No templates yet</option>}
                     {activeTemplates.map((t) => (
@@ -103,17 +105,18 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
                         {t.shiftName}
                       </option>
                     ))}
-                  </select>
+                  </Select>
 
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-semibold text-muted-foreground">Price (VND)</span>
-                    <input
+                    <span className="text-[11px] font-medium text-muted-foreground">Price (VND)</span>
+                    <Input
+                      aria-label={`${day.short} price (VND)`}
                       type="number"
                       value={config.price}
                       min={0}
                       step={50000}
                       onChange={(event) => updateDay(day.value, { price: Number(event.target.value) })}
-                      className="rounded-lg border border-border px-2 py-1 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+                      className="h-9 px-2 text-xs"
                     />
                   </div>
 
@@ -126,7 +129,8 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
                   <button
                     type="button"
                     onClick={() => setExpandedDay(isExpanded ? null : day.value)}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline"
+                    aria-expanded={isExpanded}
+                    className="flex items-center gap-1 rounded-lg py-1 text-xs font-semibold text-primary hover:underline"
                   >
                     <CalendarRange className="h-3 w-3" />
                     Effective dates
@@ -134,18 +138,18 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
                   </button>
 
                   {isExpanded && (
-                    <div className="space-y-1.5 rounded-lg bg-surface p-2">
+                    <div className="space-y-2 rounded-lg border border-border bg-surface p-2">
                       <div>
-                        <p className="mb-0.5 text-[10px] font-semibold text-muted-foreground">From</p>
+                        <p className="mb-1 text-[11px] font-medium text-muted-foreground">From</p>
                         <DatePicker
                           selected={config.effectiveFrom}
                           onChange={(date: Date | null) => date && updateDay(day.value, { effectiveFrom: date })}
                           dateFormat="dd/MM/yyyy"
-                          className="w-full rounded-lg border border-border px-2 py-1 text-xs outline-none focus:border-primary"
+                          className={fieldClasses(false, "h-9 px-2 text-xs")}
                         />
                       </div>
                       <div>
-                        <p className="mb-0.5 text-[10px] font-semibold text-muted-foreground">Until (optional)</p>
+                        <p className="mb-1 text-[11px] font-medium text-muted-foreground">Until (optional)</p>
                         <DatePicker
                           selected={config.effectiveUntil}
                           onChange={(date: Date | null) => updateDay(day.value, { effectiveUntil: date })}
@@ -153,7 +157,7 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
                           isClearable
                           minDate={config.effectiveFrom}
                           placeholderText="No end date"
-                          className="w-full rounded-lg border border-border px-2 py-1 text-xs outline-none focus:border-primary"
+                          className={fieldClasses(false, "h-9 px-2 text-xs")}
                         />
                       </div>
                     </div>
@@ -165,9 +169,11 @@ export function WeekTemplateGrid({ templates, availabilities, onSave, isSubmitti
         })}
       </div>
 
-      <Button className="mt-6" onClick={() => onSave(state)} disabled={isSubmitting}>
-        {isSubmitting ? "Saving..." : "Save weekly template"}
-      </Button>
+      <div className="mt-6 flex justify-end border-t border-border pt-5">
+        <Button onClick={() => onSave(state)} disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save weekly template"}
+        </Button>
+      </div>
     </Card>
   );
 }

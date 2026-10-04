@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PostCard, PostFilters } from "@/components/forum";
-import { Button, Spinner, Pagination } from "@/components/ui";
+import { Card, PageHeader, Spinner, Pagination, buttonClasses } from "@/components/ui";
 import { useForumPosts, useForumCategories, useForumTags, useDebounce } from "@/hooks";
 import { ROUTES } from "@/constants";
 
@@ -32,21 +32,19 @@ export default function ExpertForumPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Community</h1>
-        <div className="flex gap-2">
-          <Link href={ROUTES.EXPERT.FORUM_MY_BOOKMARKS}>
-            <Button variant="outline" size="sm">
+      <PageHeader
+        title="Community"
+        actions={
+          <>
+            <Link href={ROUTES.EXPERT.FORUM_MY_BOOKMARKS} className={buttonClasses("outline")}>
               My bookmarks
-            </Button>
-          </Link>
-          <Link href={ROUTES.EXPERT.FORUM_NEW_POST}>
-            <Button size="sm" className="flex items-center gap-1">
+            </Link>
+            <Link href={ROUTES.EXPERT.FORUM_NEW_POST} className={buttonClasses("primary")}>
               <Plus className="h-4 w-4" /> New post
-            </Button>
-          </Link>
-        </div>
-      </div>
+            </Link>
+          </>
+        }
+      />
 
       <PostFilters
         search={search}
@@ -71,7 +69,7 @@ export default function ExpertForumPage() {
       {isLoading ? (
         <Spinner className="h-6 w-6" />
       ) : posts.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No posts found.</p>
+        <Card className="p-8 text-center text-sm text-muted-foreground">No posts found.</Card>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

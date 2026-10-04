@@ -2,7 +2,7 @@
 
 import { Users, GraduationCap, CalendarCheck, UserCog } from "lucide-react";
 import { StatCard } from "./component/StatCard";
-import { Spinner } from "@/components/ui";
+import { PageHeader, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { expertApi, specializationApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -26,7 +26,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">Admin Dashboard</h1>
+      <PageHeader title="Admin Dashboard" />
 
       {isLoadingExperts ? (
         <Spinner className="h-6 w-6" />

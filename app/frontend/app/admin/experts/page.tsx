@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, Edit2, BadgeCheck, ShieldX } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, Button, Spinner, Pagination } from "@/components/ui";
+import { Card, Button, Spinner, Pagination, PageHeader, Input, Badge, type BadgeTone } from "@/components/ui";
 import { useApiQuery, useApiMutation, useDebounce } from "@/hooks";
 import { expertApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -13,11 +13,11 @@ import type { ExpertVerificationStatus, UpdateExpertProfileRequest } from "@/typ
 
 const PAGE_SIZE = 10;
 
-const STATUS_STYLES: Record<ExpertVerificationStatus, string> = {
-  VERIFIED: "bg-success-soft text-success",
-  PENDING: "bg-warning-soft text-warning",
-  UNVERIFIED: "bg-surface text-muted-foreground",
-  REJECTED: "bg-danger-soft text-danger",
+const STATUS_TONES: Record<ExpertVerificationStatus, BadgeTone> = {
+  VERIFIED: "success",
+  PENDING: "warning",
+  UNVERIFIED: "neutral",
+  REJECTED: "danger",
 };
 
 const STATUS_LABELS: Record<ExpertVerificationStatus, string> = {
@@ -73,26 +73,26 @@ export default function AdminExpertsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Quản lý chuyên gia</h1>
-          <p className="text-sm text-muted-foreground">
-            Danh sách chuyên gia, chuyên khoa và trạng thái xác minh hồ sơ.
-          </p>
-        </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(1);
-            }}
-            placeholder="Tìm theo tên..."
-            className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-primary"
-          />
-        </div>
-      </div>
+      <PageHeader
+        className="mb-0"
+        title="Quản lý chuyên gia"
+        description="Danh sách chuyên gia, chuyên khoa và trạng thái xác minh hồ sơ."
+        actions={
+          <div className="relative w-full sm:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Tìm theo tên"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Tìm theo tên..."
+              className="pl-9"
+            />
+          </div>
+        }
+      />
 
       {isLoading ? (
         <div className="flex justify-center py-20">
@@ -102,34 +102,32 @@ export default function AdminExpertsPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
-              <thead className="border-b border-border bg-surface text-xs font-semibold uppercase text-muted-foreground">
+              <thead className="border-b border-border bg-surface text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-6 py-4">Họ và tên</th>
-                  <th className="px-6 py-4">Liên hệ</th>
-                  <th className="px-6 py-4">Chuyên khoa</th>
-                  <th className="px-6 py-4">Trạng thái</th>
-                  <th className="px-6 py-4 text-right">Thao tác</th>
+                  <th className="px-4 py-3">Họ và tên</th>
+                  <th className="px-4 py-3">Liên hệ</th>
+                  <th className="px-4 py-3">Chuyên khoa</th>
+                  <th className="px-4 py-3">Trạng thái</th>
+                  <th className="px-4 py-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border bg-background">
                 {experts.map((expert) => (
-                  <tr key={expert.expertId} className="hover:bg-surface/30">
-                    <td className="px-6 py-4 font-medium text-foreground">{expert.fullName}</td>
-                    <td className="px-6 py-4 text-muted-foreground">
+                  <tr key={expert.expertId} className="transition-colors hover:bg-surface/60">
+                    <td className="px-4 py-3 font-medium text-foreground">{expert.fullName}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
                       <div>{expert.email || "—"}</div>
                       <div className="text-xs">{expert.phoneNumber || "—"}</div>
                     </td>
-                    <td className="max-w-xs px-6 py-4 text-muted-foreground">
+                    <td className="max-w-xs px-4 py-3 text-muted-foreground">
                       {expert.specializations.map((spec) => spec.name).join(", ") || "—"}
                     </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${STATUS_STYLES[expert.verificationStatus]}`}
-                      >
+                    <td className="px-4 py-3">
+                      <Badge tone={STATUS_TONES[expert.verificationStatus]}>
                         {STATUS_LABELS[expert.verificationStatus]}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
                         {expert.verificationStatus !== "VERIFIED" && (
                           <Button
@@ -139,7 +137,7 @@ export default function AdminExpertsPage() {
                             onClick={() =>
                               verifyMutation.mutate({ accountId: expert.accountId, status: "VERIFIED" })
                             }
-                            className="flex items-center gap-1 text-success hover:bg-success-soft/50"
+                            className="text-success hover:bg-success-soft"
                           >
                             <BadgeCheck className="h-3.5 w-3.5" /> Duyệt
                           </Button>
@@ -152,7 +150,7 @@ export default function AdminExpertsPage() {
                             onClick={() =>
                               verifyMutation.mutate({ accountId: expert.accountId, status: "REJECTED" })
                             }
-                            className="flex items-center gap-1 text-danger hover:bg-danger-soft/50"
+                            className="text-danger hover:bg-danger-soft"
                           >
                             <ShieldX className="h-3.5 w-3.5" /> Từ chối
                           </Button>
@@ -161,7 +159,7 @@ export default function AdminExpertsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditAccountId(expert.accountId)}
-                          className="flex items-center gap-1 text-primary hover:bg-primary-soft/50"
+                          className="text-primary hover:bg-primary-soft"
                         >
                           <Edit2 className="h-3.5 w-3.5" /> Sửa
                         </Button>

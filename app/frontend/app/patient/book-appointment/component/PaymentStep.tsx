@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, buttonClasses } from "@/components/ui";
 import { ROUTES } from "@/constants";
 
 export interface PaymentStepProps {
@@ -30,8 +30,8 @@ export function PaymentStep({ onPay, isPending, isError }: PaymentStepProps) {
             payment later from My Bookings.
           </p>
           <div className="flex gap-3">
-            <Link href={ROUTES.PATIENT.MY_BOOKINGS}>
-              <Button variant="outline">Pay later</Button>
+            <Link href={ROUTES.PATIENT.MY_BOOKINGS} className={buttonClasses("outline")}>
+              Pay later
             </Link>
             <Button onClick={onPay} disabled={isPending}>
               {isPending ? "Retrying..." : "Retry payment"}

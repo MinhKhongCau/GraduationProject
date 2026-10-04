@@ -5,3 +5,7 @@ export * from "./Modal";
 export * from "./Toast";
 export * from "./ComingSoon";
 export * from "./Pagination";
+export * from "./PageHeader";
+export * from "./Field";
+export * from "./Badge";
+export * from "./BrandLogo";

@@ -2,7 +2,7 @@
 
 import { Check, Clock } from "lucide-react";
 import { WeekCalendar } from "./WeekCalendar";
-import { Button, Spinner } from "@/components/ui";
+import { Button, PageHeader, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { bookingApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -40,7 +40,7 @@ export function SlotStep({
 
   return (
     <div className="flex h-full flex-col">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">Pick a date &amp; time</h1>
+      <PageHeader title="Pick a date &amp; time" />
 
       <div className="mb-6">
         <p className="mb-3 text-sm font-semibold text-foreground">Pick a day</p>
@@ -66,10 +66,11 @@ export function SlotStep({
                   key={slot.slotId}
                   type="button"
                   onClick={() => onSelectSlot(slot)}
-                  className={`flex items-center gap-1.5 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
+                  aria-pressed={selectedSlot?.slotId === slot.slotId}
+                  className={`flex h-10 items-center gap-1.5 rounded-lg border px-4 text-sm font-semibold transition-colors ${
                     selectedSlot?.slotId === slot.slotId
                       ? "border-primary bg-primary text-white"
-                      : "border-border text-foreground hover:bg-surface"
+                      : "border-border-strong bg-background text-foreground hover:border-primary/40 hover:bg-surface"
                   }`}
                 >
                   <Clock className="h-3.5 w-3.5" />

@@ -23,9 +23,10 @@ export function MobileBottomNav({ navItems }: MobileBottomNavProps) {
           <Link
             key={item.id}
             href={item.href}
+            aria-current={isActive ? "page" : undefined}
             className={clsx(
-              "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium",
-              isActive ? "text-primary" : "text-muted-foreground"
+              "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors",
+              isActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Icon className="h-5 w-5" />

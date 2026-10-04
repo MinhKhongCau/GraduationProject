@@ -10,7 +10,7 @@ export interface QuestionStepProps {
 export function QuestionStep({ question, selectedOptionId, onAnswer }: QuestionStepProps) {
   return (
     <Card className="p-6">
-      <h2 className="mb-5 text-lg font-bold text-foreground">{question.content}</h2>
+      <h2 className="mb-5 text-lg font-semibold text-foreground">{question.content}</h2>
       <div className="space-y-2">
         {question.options
           .slice()
@@ -20,10 +20,11 @@ export function QuestionStep({ question, selectedOptionId, onAnswer }: QuestionS
               key={option.slug}
               type="button"
               onClick={() => onAnswer(option.slug)}
+              aria-pressed={selectedOptionId === option.slug}
               className={`w-full rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors ${
                 selectedOptionId === option.slug
-                  ? "border-primary bg-primary-soft text-primary-soft-text"
-                  : "border-border text-foreground hover:bg-surface"
+                  ? "border-primary bg-primary-soft text-primary-soft-text ring-1 ring-primary"
+                  : "border-border-strong text-foreground hover:border-primary/40 hover:bg-surface"
               }`}
             >
               {option.label}

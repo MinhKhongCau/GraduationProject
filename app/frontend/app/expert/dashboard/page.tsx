@@ -7,6 +7,7 @@ import { useExpertAppointments } from "@/hooks";
 import { paymentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
+import { PageHeader } from "@/components/ui";
 
 export default function ExpertDashboardPage() {
   const { user } = useAuthContext();
@@ -24,9 +25,7 @@ export default function ExpertDashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">
-        Welcome back{user ? `, ${user.fullName}` : ""}
-      </h1>
+      <PageHeader title={`Welcome back${user ? `, ${user.fullName}` : ""}`} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Upcoming appointments" value={appointments.length} icon={CalendarCheck} />

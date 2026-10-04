@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Search } from "lucide-react";
 import type { ChatContact } from "@/types";
+import { Input } from "@/components/ui";
 
 export interface ContactListProps {
   contacts: ChatContact[];
@@ -16,14 +17,15 @@ export function ContactList({ contacts, activeContactId, onlineByContactId, onSe
   return (
     <div className={`flex w-full md:w-80 shrink-0 flex-col border-r border-border bg-background ${className ?? ""}`}>
       <div className="border-b border-border p-4">
-        <h2 className="mb-4 text-xl font-bold text-foreground">Messages</h2>
+        <h2 className="mb-3 text-lg font-semibold text-foreground">Messages</h2>
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
             <Search className="h-4 w-4" />
           </div>
-          <input
+          <Input
             type="text"
-            className="block w-full rounded-xl border-none bg-surface py-2 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-primary-soft"
+            aria-label="Search conversations"
+            className="bg-surface pl-9"
             placeholder="Search experts..."
           />
         </div>
@@ -38,9 +40,11 @@ export function ContactList({ contacts, activeContactId, onlineByContactId, onSe
           return (
             <button
               key={contact.id}
+              type="button"
+              aria-current={activeContactId === contact.id ? "true" : undefined}
               onClick={() => onSelect(contact)}
-              className={`flex w-full items-center gap-3 border-b border-border/50 p-4 text-left transition-colors ${
-                activeContactId === contact.id ? "border-r-2 border-r-primary bg-primary-soft/50" : "hover:bg-surface"
+              className={`flex w-full items-center gap-3 border-b border-border/60 border-l-2 px-4 py-3 text-left transition-colors ${
+                activeContactId === contact.id ? "border-l-primary bg-primary-soft/60" : "border-l-transparent hover:bg-surface"
               }`}
             >
               <div className="relative shrink-0">
@@ -55,7 +59,7 @@ export function ContactList({ contacts, activeContactId, onlineByContactId, onSe
                 {online && <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-success" />}
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="truncate text-sm font-semibold text-foreground/80">{contact.fullName}</h3>
+                <h3 className="truncate text-sm font-semibold text-foreground">{contact.fullName}</h3>
                 <p className="truncate text-xs text-muted-foreground">{contact.role === "EXPERT" ? "Expert" : "Patient"}</p>
               </div>
             </button>
