@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useTranslation } from "@/hooks";
-import type { NavItem } from "@/constants/nav";
+import { isNavItemActive, type NavItem } from "@/constants/nav";
 
 export interface MobileBottomNavProps {
   navItems: NavItem[];
@@ -17,7 +17,7 @@ export function MobileBottomNav({ navItems }: MobileBottomNavProps) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background pb-[env(safe-area-inset-bottom)] sm:hidden">
       {navItems.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = isNavItemActive(item, pathname);
         const Icon = item.icon;
         return (
           <Link

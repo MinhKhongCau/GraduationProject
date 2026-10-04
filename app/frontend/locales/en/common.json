@@ -18,7 +18,40 @@
     "specializations": "Specializations",
     "schedules": "Schedules",
     "withdrawals": "Withdrawals",
-    "logout": "Log out"
+    "logout": "Log out",
+    "myPosts": "My Posts",
+    "templates": "Templates",
+    "dimensions": "Dimensions",
+    "optionGroups": "Option Groups",
+    "questions": "Questions",
+    "forumPosts": "Forum Posts",
+    "group": {
+      "care": "Care",
+      "patientCare": "Patient care",
+      "account": "Account & community",
+      "assessmentBuilder": "Assessment builder",
+      "operations": "Operations",
+      "moreFeatures": "More features"
+    },
+    "desc": {
+      "bookAppointment": "Pick a topic, an expert and a time slot.",
+      "wallet": "Check your balance, top up or withdraw.",
+      "assessment": "Take a self-assessment and review past results.",
+      "medicalHistory": "Your health history and consultation records.",
+      "myPosts": "Posts you have shared with the community.",
+      "expertPatients": "Everyone you have counselled so far.",
+      "clinicalRecords": "Session notes and medical records.",
+      "expertWallet": "Earnings and withdrawal requests.",
+      "forum": "Answer questions and share knowledge.",
+      "specializations": "Areas of expertise experts can list.",
+      "adminAppointments": "Every booking across the platform.",
+      "schedules": "Shift templates and expert availability.",
+      "withdrawals": "Review and process payout requests.",
+      "templates": "Assessment templates patients can take.",
+      "dimensions": "Scoring dimensions used by templates.",
+      "optionGroups": "Reusable answer scales for questions.",
+      "questions": "The question bank behind every assessment."
+    }
   },
   "common": {
     "save": "Save",

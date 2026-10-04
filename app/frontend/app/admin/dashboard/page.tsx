@@ -5,7 +5,8 @@ import { StatCard } from "./component/StatCard";
 import { PageHeader, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { expertApi, specializationApi } from "@/api";
-import { QUERY_KEYS } from "@/constants";
+import { ADMIN_DASHBOARD_FEATURES, QUERY_KEYS } from "@/constants";
+import { FeatureGrid } from "@/components/dashboard";
 
 /**
  * No admin aggregate endpoints exist yet (no GET /admin/stats-style route
@@ -31,13 +32,15 @@ export default function AdminDashboardPage() {
       {isLoadingExperts ? (
         <Spinner className="h-6 w-6" />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Total Experts" value={experts.length} icon={GraduationCap} />
           <StatCard label="Specializations" value={specializations.length} icon={UserCog} />
           <StatCard label="Recent Bookings (no data source)" value="—" icon={CalendarCheck} />
           <StatCard label="Total Patients (mock)" value="—" icon={Users} />
         </div>
       )}
+
+      <FeatureGrid groups={ADMIN_DASHBOARD_FEATURES} />
     </div>
   );
 }

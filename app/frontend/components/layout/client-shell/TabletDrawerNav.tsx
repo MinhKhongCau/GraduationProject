@@ -10,7 +10,7 @@ import { useTranslation } from "@/hooks";
 import { BrandLogo, BrandMark } from "@/components/ui";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NavAvatarMenu } from "./component/NavAvatarMenu";
-import type { NavItem } from "@/constants/nav";
+import { isNavItemActive, type NavItem } from "@/constants/nav";
 
 export interface TabletDrawerNavProps {
   navItems: NavItem[];
@@ -51,7 +51,7 @@ export function TabletDrawerNav({ navItems, settingsItem }: TabletDrawerNavProps
 
                 <nav className="flex-1 space-y-1">
                   {navItems.map((item) => {
-                    const isActive = pathname === item.href;
+                    const isActive = isNavItemActive(item, pathname);
                     const Icon = item.icon;
                     return (
                       <Link

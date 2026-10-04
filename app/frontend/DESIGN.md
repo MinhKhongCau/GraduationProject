@@ -87,6 +87,8 @@ One shared shell renders three nav variants and lets Tailwind's own breakpoints 
 - **Tablet** (`sm:`–`lg:` — `TabletDrawerNav.tsx`): slim top bar with a hamburger that opens a left Radix Dialog sheet.
 - **Mobile** (`<sm:` — `MobileBottomNav.tsx`): fixed bottom tab bar with the 4–5 highest-value nav items (`PATIENT_BOTTOM_NAV_ITEMS`/`EXPERT_BOTTOM_NAV_ITEMS` in `constants/nav.ts`).
 
+**Core nav vs. dashboard features**: every nav surface (desktop header, tablet drawer, mobile bottom bar, admin sidebar) shows only a short core list per role (`*_HEADER_NAV_ITEMS` in `constants/nav.ts`). Every other page is reached from that role's dashboard, which renders the grouped `*_DASHBOARD_FEATURES` lists through `components/dashboard/FeatureGrid.tsx`. To add a page, add it to the role's `*_NAV_ITEMS` with a `description`, then put its id in either the header list or a dashboard group. `*_NAV_ITEMS` itself stays the full list, used for lookups such as the admin topbar title.
+
 `ClientShell` is used by both `app/patient/layout.tsx` and `app/expert/layout.tsx`, each passing its own `navItems`/`settingsItem` — this is the "client" layout the requirements referred to (a shared shell for both patient and expert "clients" of the platform), as distinct from `landing` (public marketing) and `admin` (a separate, desktop-first sidebar layout in `components/layout/admin-shell/`, since admin panels are conventionally desktop tools and weren't worth building a second three-way responsive system for in this pass).
 
 `hooks/useBreakpoint.ts`/`useMediaQuery.ts` still exist (built on `useSyncExternalStore`, SSR-safe) for genuine JS-only behavior that CSS can't express — they are not used to decide what to render in the shell.

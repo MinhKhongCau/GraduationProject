@@ -8,7 +8,7 @@ import { useTranslation } from "@/hooks";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { WalletBadge } from "./component/WalletBadge";
 import { NavAvatarMenu } from "./component/NavAvatarMenu";
-import type { NavItem } from "@/constants/nav";
+import { isNavItemActive, type NavItem } from "@/constants/nav";
 
 export interface DesktopHeaderNavProps {
   navItems: NavItem[];
@@ -26,7 +26,7 @@ export function DesktopHeaderNav({ navItems, settingsItem }: DesktopHeaderNavPro
           <BrandLogo />
           <nav className="flex items-center gap-1">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = isNavItemActive(item, pathname);
               const Icon = item.icon;
               return (
                 <Link

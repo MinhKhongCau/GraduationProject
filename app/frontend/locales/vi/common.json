@@ -18,7 +18,40 @@
     "specializations": "Chuyên khoa",
     "schedules": "Lịch trình",
     "withdrawals": "Yêu cầu rút tiền",
-    "logout": "Đăng xuất"
+    "logout": "Đăng xuất",
+    "myPosts": "Bài viết của tôi",
+    "templates": "Mẫu đánh giá",
+    "dimensions": "Chiều đánh giá",
+    "optionGroups": "Nhóm lựa chọn",
+    "questions": "Câu hỏi",
+    "forumPosts": "Bài viết diễn đàn",
+    "group": {
+      "care": "Chăm sóc",
+      "patientCare": "Chăm sóc bệnh nhân",
+      "account": "Tài khoản & cộng đồng",
+      "assessmentBuilder": "Xây dựng bài đánh giá",
+      "operations": "Vận hành",
+      "moreFeatures": "Tính năng khác"
+    },
+    "desc": {
+      "bookAppointment": "Chọn chủ đề, chuyên gia và khung giờ.",
+      "wallet": "Xem số dư, nạp tiền hoặc rút tiền.",
+      "assessment": "Làm bài tự đánh giá và xem lại kết quả.",
+      "medicalHistory": "Tiền sử sức khỏe và hồ sơ tư vấn của bạn.",
+      "myPosts": "Các bài bạn đã chia sẻ với cộng đồng.",
+      "expertPatients": "Những người bạn đã tư vấn.",
+      "clinicalRecords": "Ghi chú buổi tư vấn và hồ sơ y tế.",
+      "expertWallet": "Thu nhập và yêu cầu rút tiền.",
+      "forum": "Trả lời câu hỏi và chia sẻ kiến thức.",
+      "specializations": "Các chuyên khoa chuyên gia có thể chọn.",
+      "adminAppointments": "Toàn bộ lịch hẹn trên nền tảng.",
+      "schedules": "Mẫu ca làm và lịch rảnh của chuyên gia.",
+      "withdrawals": "Duyệt và xử lý yêu cầu rút tiền.",
+      "templates": "Các mẫu đánh giá bệnh nhân có thể làm.",
+      "dimensions": "Các chiều chấm điểm dùng trong mẫu.",
+      "optionGroups": "Thang trả lời dùng lại cho câu hỏi.",
+      "questions": "Ngân hàng câu hỏi cho mọi bài đánh giá."
+    }
   },
   "common": {
     "save": "Lưu",

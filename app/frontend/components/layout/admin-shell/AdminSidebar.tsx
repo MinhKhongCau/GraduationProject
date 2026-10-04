@@ -5,7 +5,7 @@ import { BrandLogo } from "@/components/ui";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useTranslation } from "@/hooks";
-import { ADMIN_NAV_ITEMS } from "@/constants";
+import { ADMIN_HEADER_NAV_ITEMS, isNavItemActive } from "@/constants";
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -17,8 +17,8 @@ export function AdminSidebar() {
         <BrandLogo label="MindCare Admin" />
       </div>
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {ADMIN_NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href;
+        {ADMIN_HEADER_NAV_ITEMS.map((item) => {
+          const isActive = isNavItemActive(item, pathname);
           const Icon = item.icon;
           return (
             <Link
