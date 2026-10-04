@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package mindcare.chatbot.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/chatbot/v1;chatbotv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.chatbot.v1";
+
+// ChatbotService is the internal gRPC API of chatbot-service.
+//
+// Replaces the HTTP streaming calls made by chat-room-service
+// (socket/controllers/dm.socket.controller.js):
+//   POST /api/v1/chat/stream -> Chat        (server streaming)
+//   POST /api/v1/chat/voice  -> VoiceChat   (bidirectional streaming)
+service ChatbotService {
+  // Text message -> stream of answer chunks (LLM tokens).
+  rpc Chat(ChatRequest) returns (stream ChatChunk);
+
+  // First client message is VoiceChatConfig, then audio chunks.
+  // Server streams the transcript, the detected emotion and answer chunks.
+  rpc VoiceChat(stream VoiceChatRequest) returns (stream ChatChunk);
+
+  rpc GetSessionHistory(GetSessionHistoryRequest) returns (GetSessionHistoryResponse);
+
+  rpc ClearSession(ClearSessionRequest) returns (ClearSessionResponse);
+}
+
+enum MessageRole {
+  MESSAGE_ROLE_UNSPECIFIED = 0;
+  MESSAGE_ROLE_USER = 1;
+  MESSAGE_ROLE_ASSISTANT = 2;
+}
+
+message ChatRequest {
+  // Today chat-room uses the sender's user id as session id.
+  string session_id = 1;
+  string user_id = 2;
+  string message = 3;
+}
+
+message VoiceChatRequest {
+  oneof payload {
+    VoiceChatConfig config = 1;
+    // Raw bytes of the audio file, in order.
+    bytes audio_chunk = 2;
+  }
+}
+
+message VoiceChatConfig {
+  string session_id = 1;
+  string user_id = 2;
+  // e.g. "audio/webm", "audio/wav".
+  string mime_type = 3;
+  // Optional text sent together with the voice note.
+  string message = 4;
+  // When true only transcript + emotion are returned (was /chat/voice-only).
+  bool voice_only = 5;
+}
+
+message ChatChunk {
+  oneof chunk {
+    // A piece of the assistant answer; concatenate in order.
+    string text_delta = 1;
+    // Speech-to-text result (voice only), sent once before the answer.
+    string transcript = 2;
+    // Emotion detected from voice, sent once.
+    EmotionResult emotion = 3;
+    // Safety layer flagged a crisis; the client must show hotline info.
+    SafetyAlert safety_alert = 4;
+    // Last message of the stream.
+    ChatDone done = 5;
+  }
+}
+
+message EmotionResult {
+  string label = 1;
+  float confidence = 2;
+}
+
+message SafetyAlert {
+  // e.g. SELF_HARM, SUICIDE, VIOLENCE
+  string category = 1;
+  string message = 2;
+}
+
+message ChatDone {
+  string session_id = 1;
+  // Id of the persisted assistant message.
+  int64 message_id = 2;
+}
+
+message GetSessionHistoryRequest {
+  string session_id = 1;
+  int32 limit = 2;
+}
+
+message GetSessionHistoryResponse {
+  repeated ChatMessage messages = 1;
+}
+
+message ClearSessionRequest {
+  string session_id = 1;
+}
+
+message ClearSessionResponse {
+  int64 deleted_messages = 1;
+}
+
+message ChatMessage {
+  int64 id = 1;
+  string session_id = 2;
+  MessageRole role = 3;
+  string content = 4;
+  google.protobuf.Timestamp created_at = 5;
+}

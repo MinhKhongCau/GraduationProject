@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package mindcare.chatbot.v1;
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/chatbot/v1;chatbotv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.chatbot.v1";
+
+// Integration events published by chatbot-service through its outbox.
+// Exchange: chatbot.exchange (topic). Wrapped in mindcare.common.v1.EventEnvelope.
+// Never put the conversation text in the payload (sensitive data).
+
+// routing key: crisis.detected — safety layer (layer 0) flagged a message.
+// Consumers: notification (alert admin / on-duty expert).
+message CrisisDetected {
+  string session_id = 1;
+  string user_id = 2;
+  // SELF_HARM | SUICIDE | VIOLENCE ...
+  string category = 3;
+  // 0..1
+  float risk_score = 4;
+  int64 message_id = 5;
+}

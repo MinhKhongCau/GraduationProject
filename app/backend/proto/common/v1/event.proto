@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package mindcare.common.v1;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/common/v1;commonv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.common.v1";
+
+// EventEnvelope is the wire format of every integration event published to
+// RabbitMQ through the transactional outbox (see proto/OUTBOX_PATTERN_PLAN.md).
+//
+// It is the protobuf version of the envelope defined in RABBITMQ_CONVENTION.md:
+//   { eventId, eventType, occurredAt, source, data }
+//
+// AMQP mapping:
+//   exchange     = "<domain>.exchange"          (e.g. booking.exchange)
+//   routing key  = event_type                    (e.g. appointment.confirmed)
+//   message_id   = event_id                      (consumers dedupe on it)
+//   content_type = "application/x-protobuf"
+//   type         = fully-qualified proto name of `data` (e.g. mindcare.booking.v1.AppointmentConfirmed)
+//   delivery_mode= 2 (persistent)
+message EventEnvelope {
+  // UUID v4/v7, generated when the row is inserted into the outbox table.
+  string event_id = 1;
+  // "<entity>.<action>" — also used as the RabbitMQ routing key.
+  string event_type = 2;
+  // Business time of the fact (== outbox.created_at).
+  google.protobuf.Timestamp occurred_at = 3;
+  // Producer service name, e.g. "booking-service".
+  string source = 4;
+  // Id of the aggregate that changed (appointment id, invoice id...). Used for
+  // per-aggregate ordering and as the outbox partition key.
+  string aggregate_id = 5;
+  // Aggregate type, e.g. "appointment", "wallet", "post".
+  string aggregate_type = 6;
+  // Monotonic version of the aggregate when the event was produced. Consumers
+  // ignore events whose version is <= the last version they applied.
+  int64 aggregate_version = 7;
+  // Correlates every event/RPC produced by one user request (propagated from
+  // the gRPC metadata key "x-correlation-id").
+  string correlation_id = 8;
+  // event_id of the event that caused this one (saga chains), empty if none.
+  string causation_id = 9;
+  // Schema version of `data`, bumped on breaking change of the payload.
+  int32 schema_version = 10;
+  // Typed payload, e.g. mindcare.booking.v1.AppointmentConfirmed.
+  google.protobuf.Any data = 11;
+}

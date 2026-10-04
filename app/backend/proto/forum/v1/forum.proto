@@ -1,0 +1,80 @@
+syntax = "proto3";
+
+package mindcare.forum.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/forum/v1;forumv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.forum.v1";
+
+// ForumService is the internal gRPC API of forum-service.
+// Public CRUD for posts/comments stays on REST (/api/v1/forum/*) behind Kong;
+// these RPCs serve other services (admin dashboard, moderation, chatbot RAG).
+service ForumService {
+  rpc GetPost(GetPostRequest) returns (Post);
+
+  rpc BatchGetPosts(BatchGetPostsRequest) returns (BatchGetPostsResponse);
+
+  // Number of posts / comments written by a user (profile page, admin).
+  rpc GetUserForumStats(GetUserForumStatsRequest) returns (GetUserForumStatsResponse);
+
+  // Moderation from admin tooling (UC17): hides a post without deleting it.
+  rpc ArchivePost(ArchivePostRequest) returns (Post);
+}
+
+enum PostStatus {
+  POST_STATUS_UNSPECIFIED = 0;
+  POST_STATUS_DRAFT = 1;
+  POST_STATUS_PUBLISHED = 2;
+  POST_STATUS_ARCHIVED = 3;
+}
+
+message GetPostRequest {
+  int64 post_id = 1;
+}
+
+message BatchGetPostsRequest {
+  repeated int64 post_ids = 1;
+}
+
+message BatchGetPostsResponse {
+  repeated Post posts = 1;
+}
+
+message GetUserForumStatsRequest {
+  string user_id = 1;
+}
+
+message GetUserForumStatsResponse {
+  string user_id = 1;
+  int64 post_count = 2;
+  int64 comment_count = 3;
+  int64 like_received_count = 4;
+}
+
+message ArchivePostRequest {
+  int64 post_id = 1;
+  // Admin account id doing the moderation.
+  string moderator_id = 2;
+  string reason = 3;
+}
+
+message Post {
+  int64 id = 1;
+  int64 category_id = 2;
+  string author_id = 3;
+  string title = 4;
+  string slug = 5;
+  string summary = 6;
+  string content = 7;
+  string thumbnail_url = 8;
+  PostStatus status = 9;
+  int64 view_count = 10;
+  int64 like_count = 11;
+  int64 bookmark_count = 12;
+  int64 comment_count = 13;
+  repeated string tags = 14;
+  google.protobuf.Timestamp created_at = 15;
+  google.protobuf.Timestamp updated_at = 16;
+}

@@ -1,0 +1,95 @@
+syntax = "proto3";
+
+package mindcare.auth.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/auth/v1;authv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.auth.v1";
+
+// AuthService is the internal (east-west) gRPC API of auth-service.
+// It replaces the REST endpoints under /internal/auth/* and is never exposed
+// through Kong. Public login/register flows stay on REST (/api/v1/auth/*).
+service AuthService {
+  // Issues a short-lived (15 min) RS256 machine-to-machine token.
+  // Replaces POST /internal/auth/token. Only RPC callable without a token.
+  rpc IssueServiceToken(IssueServiceTokenRequest) returns (IssueServiceTokenResponse);
+
+  // Returns the RSA public key used to verify both user and service JWTs.
+  // Replaces GET /api/v1/auth/public-key for internal callers.
+  rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse);
+
+  // Validates a user access token and returns its claims (for services that
+  // are not behind Kong, e.g. chat-room Socket.IO handshake).
+  rpc ValidateAccessToken(ValidateAccessTokenRequest) returns (ValidateAccessTokenResponse);
+
+  // Reads one account (no secrets).
+  rpc GetAccount(GetAccountRequest) returns (Account);
+
+  // Reads many accounts at once (used by admin screens / enrichment).
+  rpc BatchGetAccounts(BatchGetAccountsRequest) returns (BatchGetAccountsResponse);
+}
+
+message IssueServiceTokenRequest {
+  // e.g. "booking-service".
+  string client_id = 1;
+  string client_secret = 2;
+}
+
+message IssueServiceTokenResponse {
+  string access_token = 1;
+  // Always "Bearer".
+  string token_type = 2;
+  // Seconds, 900 by default.
+  int64 expires_in = 3;
+}
+
+message GetPublicKeyRequest {}
+
+message GetPublicKeyResponse {
+  // PEM encoded RSA public key.
+  string public_key_pem = 1;
+  string algorithm = 2;
+  // Key id, allows key rotation.
+  string kid = 3;
+}
+
+message ValidateAccessTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateAccessTokenResponse {
+  bool valid = 1;
+  string account_id = 2;
+  mindcare.common.v1.Role role = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message GetAccountRequest {
+  string account_id = 1;
+}
+
+message BatchGetAccountsRequest {
+  repeated string account_ids = 1;
+}
+
+message BatchGetAccountsResponse {
+  repeated Account accounts = 1;
+}
+
+// Account is the public projection of the `Identity_Accounts` table.
+message Account {
+  string account_id = 1;
+  string email = 2;
+  string full_name = 3;
+  // ISO date "YYYY-MM-DD", empty if unknown.
+  string date_of_birth = 4;
+  mindcare.common.v1.Role role = 5;
+  bool is_active = 6;
+  bool is_email_verified = 7;
+  bool two_factor_enabled = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}

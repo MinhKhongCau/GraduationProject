@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package mindcare.assessment.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/assessment/v1;assessmentv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.assessment.v1";
+
+// AssessmentService is the internal gRPC API of assessment-service.
+// Public test flows (templates CRUD, POST /submit, GET /self) stay on REST.
+// Callers: booking/chat-room (expert reviews the patient before a session),
+// chatbot (personalize answers by latest severity).
+service AssessmentService {
+  rpc GetResult(GetResultRequest) returns (AssessmentResult);
+
+  rpc ListUserResults(ListUserResultsRequest) returns (ListUserResultsResponse);
+
+  // Latest result per template of a user (one entry per template).
+  rpc GetLatestResults(GetLatestResultsRequest) returns (GetLatestResultsResponse);
+
+  rpc GetTemplate(GetTemplateRequest) returns (AssessTemplate);
+}
+
+message GetResultRequest {
+  string result_id = 1;
+  // When true, answers are included.
+  bool include_answers = 2;
+}
+
+message ListUserResultsRequest {
+  string user_id = 1;
+  // Template slug, optional filter.
+  string template_slug = 2;
+  int32 limit = 3;
+}
+
+message ListUserResultsResponse {
+  repeated AssessmentResult results = 1;
+}
+
+message GetLatestResultsRequest {
+  string user_id = 1;
+}
+
+message GetLatestResultsResponse {
+  repeated AssessmentResult results = 1;
+}
+
+message GetTemplateRequest {
+  oneof id {
+    string template_id = 1;
+    string slug = 2;
+  }
+}
+
+message AssessTemplate {
+  string template_id = 1;
+  string code = 2;
+  string slug = 3;
+  string title = 4;
+  string description = 5;
+  string instruction = 6;
+  string certification = 7;
+  bool is_active = 8;
+}
+
+message DimensionScore {
+  // e.g. DEPRESSION, ANXIETY, STRESS
+  string dimension_code = 1;
+  int32 score = 2;
+  // severity_level from assess_score_rules (e.g. "Nhẹ", "Nặng", "Bình thường").
+  string severity_level = 3;
+  string short_advice = 4;
+}
+
+message UserAnswer {
+  string question_id = 1;
+  string option_id = 2;
+}
+
+message AssessmentResult {
+  string result_id = 1;
+  string template_id = 2;
+  string template_code = 3;
+  string user_id = 4;
+  int32 total_score = 5;
+  repeated DimensionScore dimension_scores = 6;
+  // Gemini evaluation text.
+  string ai_evaluation = 7;
+  repeated UserAnswer answers = 8;
+  google.protobuf.Timestamp created_at = 9;
+}

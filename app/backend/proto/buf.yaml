@@ -1,0 +1,23 @@
+# Buf workspace for MindCare internal gRPC contracts.
+# Lint:     buf lint
+# Breaking: buf breaking --against '../../../.git#branch=main,subdir=app/backend/proto'
+version: v2
+modules:
+  - path: .
+    name: buf.build/mindcare/proto
+lint:
+  use:
+    - STANDARD
+  except:
+    # Folder "chat-room" holds package mindcare.chatroom.v1 ('-' is not allowed in packages),
+    # and packages are prefixed with "mindcare." while folders are not.
+    - PACKAGE_DIRECTORY_MATCH
+    # Service RPCs return domain messages (Appointment, Profile...) directly,
+    # instead of one <Rpc>Response wrapper per RPC.
+    - RPC_RESPONSE_STANDARD_NAME
+    - RPC_REQUEST_RESPONSE_UNIQUE
+  ignore:
+    - gen
+breaking:
+  use:
+    - FILE

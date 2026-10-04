@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package mindcare.auth.v1;
+
+import "common/v1/common.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/auth/v1;authv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.auth.v1";
+
+// Integration events published by auth-service through its outbox.
+// Exchange: user.exchange (topic). Wrapped in mindcare.common.v1.EventEnvelope.
+
+// routing key: user.created — consumed by profile-service (profile.queue).
+message UserCreated {
+  string account_id = 1;
+  string email = 2;
+  string full_name = 3;
+  mindcare.common.v1.Role role = 4;
+  // ISO date "YYYY-MM-DD".
+  string date_of_birth = 5;
+}
+
+// routing key: user.updated — full_name / date_of_birth changed via PUT /profile.
+message UserUpdated {
+  string account_id = 1;
+  string full_name = 2;
+  string date_of_birth = 3;
+}
+
+// routing key: user.email_verified
+message UserEmailVerified {
+  string account_id = 1;
+  string email = 2;
+}
+
+// routing key: user.deactivated — admin disabled the account.
+message UserDeactivated {
+  string account_id = 1;
+  string reason = 2;
+}

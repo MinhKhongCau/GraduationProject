@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package mindcare.forum.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/forum/v1;forumv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.forum.v1";
+
+// Integration events published by forum-service through its outbox.
+// Exchange: forum.exchange (topic; replaces forum.events).
+// Wrapped in mindcare.common.v1.EventEnvelope. Main consumer: notification.
+
+// routing key: post.published (was forum.post.created)
+message PostPublished {
+  int64 post_id = 1;
+  string author_id = 2;
+  int64 category_id = 3;
+  string title = 4;
+  google.protobuf.Timestamp published_at = 5;
+}
+
+// routing key: post.archived
+message PostArchived {
+  int64 post_id = 1;
+  string author_id = 2;
+  string moderator_id = 3;
+  string reason = 4;
+}
+
+// routing key: comment.created (was forum.comment.created)
+message CommentCreated {
+  int64 comment_id = 1;
+  int64 post_id = 2;
+  string user_id = 3;
+  string post_author_id = 4;
+  // 0 when it is a root comment.
+  int64 parent_id = 5;
+  string parent_author_id = 6;
+}
+
+// routing key: post.liked (was forum.post.liked)
+message PostLiked {
+  int64 post_id = 1;
+  string user_id = 2;
+  string post_author_id = 3;
+}

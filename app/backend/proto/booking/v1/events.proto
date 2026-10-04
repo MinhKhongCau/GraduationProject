@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package mindcare.booking.v1;
+
+import "booking/v1/booking.proto";
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/booking/v1;bookingv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.booking.v1";
+
+// Integration events published by booking-service through its outbox.
+// Exchange: booking.exchange (topic). Wrapped in mindcare.common.v1.EventEnvelope.
+
+// routing key: appointment.created — status PENDING_PAYMENT, slot LOCKED.
+message AppointmentCreated {
+  string appointment_id = 1;
+  string patient_id = 2;
+  string expert_id = 3;
+  string slot_id = 4;
+  mindcare.common.v1.Money price = 5;
+  google.protobuf.Timestamp start_time = 6;
+  google.protobuf.Timestamp end_time = 7;
+  google.protobuf.Timestamp payment_deadline = 8;
+}
+
+// routing key: appointment.confirmed — after payment.succeeded was applied.
+// Consumers: chat-room (create consultation room), notification.
+message AppointmentConfirmed {
+  string appointment_id = 1;
+  string patient_id = 2;
+  string expert_id = 3;
+  string order_id = 4;
+  google.protobuf.Timestamp start_time = 5;
+  google.protobuf.Timestamp end_time = 6;
+  string meeting_link = 7;
+}
+
+// routing key: appointment.cancelled
+// Consumers: payment (refund when was_paid), chat-room (close room), notification.
+message AppointmentCancelled {
+  string appointment_id = 1;
+  string patient_id = 2;
+  string expert_id = 3;
+  CancelledBy cancelled_by = 4;
+  string reason = 5;
+  // true when the appointment was CONFIRMED (money captured) before cancel.
+  bool was_paid = 6;
+  // Percentage (0..100) of the paid amount the patient must get back,
+  // decided by booking's cancellation policy.
+  int32 refund_percent = 7;
+}
+
+// routing key: appointment.expired — PENDING_PAYMENT + slot lock expired (expired-lock worker).
+// Consumers: payment (expire pending order).
+message AppointmentExpired {
+  string appointment_id = 1;
+  string patient_id = 2;
+  string slot_id = 3;
+}
+
+// routing key: appointment.completed
+// Consumers: payment (release escrow pending -> available), notification.
+message AppointmentCompleted {
+  string appointment_id = 1;
+  string patient_id = 2;
+  string expert_id = 3;
+  google.protobuf.Timestamp completed_at = 4;
+}
+
+// routing key: medical_record.created
+message MedicalRecordCreated {
+  string record_id = 1;
+  string appointment_id = 2;
+  string patient_id = 3;
+  string expert_id = 4;
+}
+
+// routing key: review.created — profile can recompute the expert rating.
+message ReviewCreated {
+  string review_id = 1;
+  string appointment_id = 2;
+  string expert_id = 3;
+  string patient_id = 4;
+  int32 rating = 5;
+}

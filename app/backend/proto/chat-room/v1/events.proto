@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package mindcare.chatroom.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/chatroom/v1;chatroomv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.chatroom.v1";
+
+// Integration events published by chatroom-service through its outbox.
+// Exchange: chatroom.exchange (topic). Wrapped in mindcare.common.v1.EventEnvelope.
+// Chat messages themselves are NOT published (high volume + sensitive).
+
+// routing key: consultation.started — both participants joined.
+message ConsultationStarted {
+  string room_id = 1;
+  string appointment_id = 2;
+  google.protobuf.Timestamp started_at = 3;
+}
+
+// routing key: consultation.ended — Consumer: booking (mark appointment COMPLETED).
+message ConsultationEnded {
+  string room_id = 1;
+  string appointment_id = 2;
+  google.protobuf.Timestamp ended_at = 3;
+  // Total call/chat duration in seconds.
+  int64 duration_seconds = 4;
+  // EXPERT_ENDED | TIME_UP | ALL_LEFT
+  string end_reason = 5;
+}

@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package mindcare.payment.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/payment/v1;paymentv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.payment.v1";
+
+// PaymentService is the internal gRPC API of payment-service.
+// Public flows (create order, VNPay IPN, wallet, withdrawals) stay on REST
+// behind Kong; these RPCs are for other services.
+service PaymentService {
+  rpc GetPaymentOrder(GetPaymentOrderRequest) returns (PaymentOrder);
+
+  // Latest order of an appointment (booking UI / reconciliation).
+  rpc GetPaymentByAppointment(GetPaymentByAppointmentRequest) returns (PaymentOrder);
+
+  rpc GetWallet(GetWalletRequest) returns (Wallet);
+
+  // Requests a refund for a captured order. Idempotent on idempotency_key.
+  // Normally triggered by the appointment.cancelled event; the RPC is kept for
+  // admin tooling and reconciliation.
+  rpc RequestRefund(RequestRefundRequest) returns (RequestRefundResponse);
+}
+
+enum PaymentOrderStatus {
+  PAYMENT_ORDER_STATUS_UNSPECIFIED = 0;
+  PAYMENT_ORDER_STATUS_PENDING = 1;
+  PAYMENT_ORDER_STATUS_SUCCESS = 2;
+  PAYMENT_ORDER_STATUS_FAILED = 3;
+  PAYMENT_ORDER_STATUS_EXPIRED = 4;
+}
+
+enum PaymentGateway {
+  PAYMENT_GATEWAY_UNSPECIFIED = 0;
+  PAYMENT_GATEWAY_VNPAY = 1;
+  PAYMENT_GATEWAY_MOMO = 2;
+  PAYMENT_GATEWAY_MOCK = 3;
+}
+
+enum FulfillmentStatus {
+  FULFILLMENT_STATUS_UNSPECIFIED = 0;
+  FULFILLMENT_STATUS_PENDING = 1;
+  FULFILLMENT_STATUS_BOOKING_CONFIRMED = 2;
+  FULFILLMENT_STATUS_BOOKING_FAILED = 3;
+  FULFILLMENT_STATUS_MANUAL_REVIEW = 4;
+  FULFILLMENT_STATUS_REFUND_REQUIRED = 5;
+}
+
+enum RefundStatus {
+  REFUND_STATUS_UNSPECIFIED = 0;
+  REFUND_STATUS_REQUESTED = 1;
+  REFUND_STATUS_MANUAL_REVIEW = 2;
+  REFUND_STATUS_COMPLETED = 3;
+  REFUND_STATUS_REJECTED = 4;
+}
+
+message GetPaymentOrderRequest {
+  string order_id = 1;
+}
+
+message GetPaymentByAppointmentRequest {
+  string appointment_id = 1;
+}
+
+message GetWalletRequest {
+  string user_id = 1;
+}
+
+message RequestRefundRequest {
+  string appointment_id = 1;
+  // 0..100
+  int32 refund_percent = 2;
+  string reason = 3;
+  string idempotency_key = 4;
+}
+
+message RequestRefundResponse {
+  string refund_id = 1;
+  RefundStatus status = 2;
+  mindcare.common.v1.Money amount = 3;
+}
+
+message PaymentOrder {
+  string order_id = 1;
+  string payer_id = 2;
+  string expert_id = 3;
+  string appointment_id = 4;
+  mindcare.common.v1.Money gross_amount = 5;
+  // e.g. "15.00"
+  string commission_rate = 6;
+  mindcare.common.v1.Money commission_amount = 7;
+  mindcare.common.v1.Money net_amount = 8;
+  PaymentGateway gateway = 9;
+  string gateway_txn_ref = 10;
+  PaymentOrderStatus status = 11;
+  FulfillmentStatus fulfillment_status = 12;
+  bool released = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp expires_at = 15;
+  google.protobuf.Timestamp paid_at = 16;
+}
+
+message Wallet {
+  string wallet_id = 1;
+  string user_id = 2;
+  mindcare.common.v1.Money available_balance = 3;
+  mindcare.common.v1.Money pending_balance = 4;
+  mindcare.common.v1.Money locked_balance = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}

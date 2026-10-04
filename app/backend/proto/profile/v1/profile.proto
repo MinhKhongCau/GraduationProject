@@ -1,0 +1,169 @@
+syntax = "proto3";
+
+package mindcare.profile.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/profile/v1;profilev1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.profile.v1";
+
+// ProfileService is the internal gRPC API of profile-service.
+//
+// Replaces:
+//   POST /internal/api/v1/profiles/create        -> CreateProfile (fallback; normal path is the user.created event)
+//   POST /internal/api/v1/profiles/sync-seed-authors -> GetSeedExpert + forum consumer
+//   RabbitMQ RPC profile.get_batch.request/response -> BatchGetUserSummaries
+service ProfileService {
+  // Idempotent: returns the existing profile when auth_id already exists.
+  rpc CreateProfile(CreateProfileRequest) returns (Profile);
+
+  rpc GetProfileByAuthId(GetProfileByAuthIdRequest) returns (Profile);
+
+  // Lightweight author/participant info for forum, chat-room, booking.
+  // Unknown ids are simply missing from the response.
+  rpc BatchGetUserSummaries(BatchGetUserSummariesRequest) returns (BatchGetUserSummariesResponse);
+
+  // Used by booking-service to check the expert exists and is VERIFIED
+  // before opening slots / accepting appointments.
+  rpc GetExpert(GetExpertRequest) returns (ExpertProfile);
+
+  rpc ListExperts(ListExpertsRequest) returns (ListExpertsResponse);
+
+  // Used by booking/chat-room to show a patient's info to the assigned expert.
+  rpc GetPatient(GetPatientRequest) returns (PatientProfile);
+
+  // Returns the oldest EXPERT account (seed author for forum demo data).
+  rpc GetSeedExpert(GetSeedExpertRequest) returns (GetSeedExpertResponse);
+}
+
+enum VerificationStatus {
+  VERIFICATION_STATUS_UNSPECIFIED = 0;
+  VERIFICATION_STATUS_UNVERIFIED = 1;
+  VERIFICATION_STATUS_PENDING = 2;
+  VERIFICATION_STATUS_VERIFIED = 3;
+  VERIFICATION_STATUS_REJECTED = 4;
+}
+
+message CreateProfileRequest {
+  string auth_id = 1;
+  string name = 2;
+  mindcare.common.v1.Role role = 3;
+  string email = 4;
+}
+
+message GetProfileByAuthIdRequest {
+  string auth_id = 1;
+}
+
+message BatchGetUserSummariesRequest {
+  // auth ids (== account ids).
+  repeated string auth_ids = 1;
+}
+
+message BatchGetUserSummariesResponse {
+  repeated mindcare.common.v1.UserSummary users = 1;
+}
+
+message GetExpertRequest {
+  // profile id or auth id are both accepted.
+  oneof id {
+    string profile_id = 1;
+    string auth_id = 2;
+  }
+}
+
+message ListExpertsRequest {
+  mindcare.common.v1.PageRequest page = 1;
+  // Filter by specialization id (optional).
+  string specialization_id = 2;
+  // Full text on name / bio (optional).
+  string keyword = 3;
+  // Default: VERIFIED only.
+  VerificationStatus verification_status = 4;
+}
+
+message ListExpertsResponse {
+  repeated ExpertProfile experts = 1;
+  mindcare.common.v1.PageResponse page = 2;
+}
+
+message GetPatientRequest {
+  oneof id {
+    string profile_id = 1;
+    string auth_id = 2;
+  }
+}
+
+message GetSeedExpertRequest {}
+
+message GetSeedExpertResponse {
+  string expert_auth_id = 1;
+}
+
+message Profile {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+  string auth_id = 4;
+  mindcare.common.v1.Role role = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  oneof detail {
+    PatientProfile patient = 8;
+    ExpertProfile expert = 9;
+    AdminProfile admin = 10;
+  }
+}
+
+message PatientProfile {
+  string profile_id = 1;
+  string auth_id = 2;
+  string name = 3;
+  string phone_number = 4;
+  string email = 5;
+  string avatar_url = 6;
+  // ISO date "YYYY-MM-DD".
+  string date_of_birth = 7;
+  string gender = 8;
+  string address = 9;
+  repeated MedicalHistory medical_histories = 10;
+}
+
+message MedicalHistory {
+  string history_id = 1;
+  string condition_name = 2;
+  string description = 3;
+  string diagnosed_at = 4;
+  bool is_chronic = 5;
+  bool is_active = 6;
+}
+
+message ExpertProfile {
+  string profile_id = 1;
+  string auth_id = 2;
+  string name = 3;
+  string slug = 4;
+  string phone_number = 5;
+  string email = 6;
+  string avatar_url = 7;
+  string introduction_video_url = 8;
+  string bio = 9;
+  VerificationStatus verification_status = 10;
+  repeated Specialization specializations = 11;
+}
+
+message AdminProfile {
+  string profile_id = 1;
+  string email = 2;
+  string note = 3;
+}
+
+message Specialization {
+  string spec_id = 1;
+  string name = 2;
+  string description = 3;
+  string image_url = 4;
+  bool is_active = 5;
+}

@@ -1,0 +1,189 @@
+syntax = "proto3";
+
+package mindcare.booking.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/booking/v1;bookingv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.booking.v1";
+
+// BookingService is the internal gRPC API of booking-service.
+//
+// Replaces:
+//   POST /internal/appointments/:id/payment-eligibility -> GetPaymentEligibility
+//   POST /internal/appointments/:id/webhook             -> ApplyPaymentResult
+//                                                          (normally driven by the payment.succeeded /
+//                                                           payment.failed events; RPC kept for reconciliation)
+//   GET  /internal/appointments/:id                     -> GetAppointment
+service BookingService {
+  // Called synchronously by payment-service before creating a PaymentOrder,
+  // to get the trusted amount/expert/expiry. Errors:
+  //   NOT_FOUND           appointment does not exist
+  //   PERMISSION_DENIED   payer is not the appointment's patient
+  //   FAILED_PRECONDITION not PENDING_PAYMENT / slot lock expired
+  //   INVALID_ARGUMENT    bad price
+  rpc GetPaymentEligibility(GetPaymentEligibilityRequest) returns (PaymentEligibility);
+
+  // Idempotent. SUCCESS -> CONFIRMED + slot OCCUPIED, FAILED -> CANCELLED + slot released.
+  // Replaying an already-applied terminal result returns OK.
+  // ABORTED is returned when the appointment is in a conflicting terminal state.
+  rpc ApplyPaymentResult(ApplyPaymentResultRequest) returns (Appointment);
+
+  rpc GetAppointment(GetAppointmentRequest) returns (Appointment);
+
+  rpc ListAppointments(ListAppointmentsRequest) returns (ListAppointmentsResponse);
+
+  // Used by chat-room-service before letting a user join a consultation room:
+  // the user must be the patient/expert of a CONFIRMED appointment and the
+  // current time must be inside [start_time - grace, end_time + grace].
+  rpc CheckConsultationAccess(CheckConsultationAccessRequest) returns (CheckConsultationAccessResponse);
+
+  rpc GetSlot(GetSlotRequest) returns (ExpertSlot);
+
+  // Expert's medical record of an appointment (read by assessment/chatbot for context, admin).
+  rpc GetMedicalRecord(GetMedicalRecordRequest) returns (MedicalRecord);
+}
+
+enum AppointmentStatus {
+  APPOINTMENT_STATUS_UNSPECIFIED = 0;
+  APPOINTMENT_STATUS_PENDING_PAYMENT = 1;
+  APPOINTMENT_STATUS_CONFIRMED = 2;
+  APPOINTMENT_STATUS_CANCELLED = 3;
+  APPOINTMENT_STATUS_COMPLETED = 4;
+}
+
+enum SlotStatus {
+  SLOT_STATUS_UNSPECIFIED = 0;
+  SLOT_STATUS_AVAILABLE = 1;
+  SLOT_STATUS_LOCKED = 2;
+  SLOT_STATUS_OCCUPIED = 3;
+  SLOT_STATUS_UNAVAILABLE = 4;
+}
+
+enum CancelledBy {
+  CANCELLED_BY_UNSPECIFIED = 0;
+  CANCELLED_BY_SYSTEM = 1;
+  CANCELLED_BY_PATIENT = 2;
+  CANCELLED_BY_EXPERT = 3;
+}
+
+enum PaymentResultStatus {
+  PAYMENT_RESULT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_RESULT_STATUS_SUCCESS = 1;
+  PAYMENT_RESULT_STATUS_FAILED = 2;
+}
+
+message GetPaymentEligibilityRequest {
+  string appointment_id = 1;
+  string payer_id = 2;
+}
+
+message PaymentEligibility {
+  string appointment_id = 1;
+  string expert_id = 2;
+  mindcare.common.v1.Money amount = 3;
+  // Equals the slot lock expiry; the payment order must expire before it.
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+message ApplyPaymentResultRequest {
+  string appointment_id = 1;
+  string order_id = 2;
+  PaymentResultStatus status = 3;
+  // event_id of the payment event (or outbox id) — used for dedupe.
+  string idempotency_key = 4;
+}
+
+message GetAppointmentRequest {
+  string appointment_id = 1;
+}
+
+message ListAppointmentsRequest {
+  oneof owner {
+    string patient_id = 1;
+    string expert_id = 2;
+  }
+  // Empty = all statuses.
+  repeated AppointmentStatus statuses = 3;
+  google.protobuf.Timestamp from = 4;
+  google.protobuf.Timestamp to = 5;
+  mindcare.common.v1.PageRequest page = 6;
+}
+
+message ListAppointmentsResponse {
+  repeated Appointment appointments = 1;
+  mindcare.common.v1.PageResponse page = 2;
+}
+
+message CheckConsultationAccessRequest {
+  string appointment_id = 1;
+  string user_id = 2;
+}
+
+message CheckConsultationAccessResponse {
+  bool allowed = 1;
+  // Machine readable reason when not allowed:
+  // NOT_PARTICIPANT | NOT_CONFIRMED | TOO_EARLY | ENDED.
+  string reason = 2;
+  mindcare.common.v1.Role participant_role = 3;
+  google.protobuf.Timestamp start_time = 4;
+  google.protobuf.Timestamp end_time = 5;
+}
+
+message GetSlotRequest {
+  string slot_id = 1;
+}
+
+message GetMedicalRecordRequest {
+  string appointment_id = 1;
+}
+
+message Appointment {
+  string appointment_id = 1;
+  string slot_id = 2;
+  string patient_id = 3;
+  string expert_id = 4;
+  AppointmentStatus status = 5;
+  string meeting_link = 6;
+  string cancellation_reason = 7;
+  CancelledBy cancelled_by = 8;
+  mindcare.common.v1.Money price = 9;
+  google.protobuf.Timestamp start_time = 10;
+  google.protobuf.Timestamp end_time = 11;
+  google.protobuf.Timestamp confirmed_at = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+message ExpertSlot {
+  string slot_id = 1;
+  string expert_id = 2;
+  // ISO date "YYYY-MM-DD".
+  string date_slot = 3;
+  google.protobuf.Timestamp start_time = 4;
+  google.protobuf.Timestamp end_time = 5;
+  SlotStatus status = 6;
+  mindcare.common.v1.Money price = 7;
+  google.protobuf.Timestamp locked_expires_at = 8;
+  string locked_by = 9;
+  string availability_id = 10;
+}
+
+message MedicalRecord {
+  string record_id = 1;
+  string appointment_id = 2;
+  string patient_id = 3;
+  string expert_id = 4;
+  string diagnosis = 5;
+  string symptoms = 6;
+  string actions_to_avoid = 7;
+  string actions_to_take = 8;
+  string treatment_plan = 9;
+  google.protobuf.Timestamp next_appointment_date = 10;
+  string next_appointment_note = 11;
+  string expert_notes = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}

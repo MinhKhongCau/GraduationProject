@@ -1,0 +1,142 @@
+syntax = "proto3";
+
+// Directory is chat-room/ (service name); proto packages cannot contain '-',
+// so the package is mindcare.chatroom.v1.
+package mindcare.chatroom.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/chatroom/v1;chatroomv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.chatroom.v1";
+
+// ChatRoomService is the internal gRPC API of chatroom-service.
+// Real-time traffic between browser and server stays on Socket.IO; these RPCs
+// are for other services.
+service ChatRoomService {
+  // Online/offline status of users (expert list, booking page).
+  rpc GetPresence(GetPresenceRequest) returns (GetPresenceResponse);
+
+  rpc ListRooms(ListRoomsRequest) returns (ListRoomsResponse);
+
+  // Creates (idempotently, keyed by appointment_id) the private consultation
+  // room of an appointment. Normally driven by appointment.confirmed.
+  rpc CreateConsultationRoom(CreateConsultationRoomRequest) returns (ConsultationRoom);
+
+  rpc GetConsultationRoom(GetConsultationRoomRequest) returns (ConsultationRoom);
+
+  // Closes the room (appointment cancelled / ended).
+  rpc CloseConsultationRoom(CloseConsultationRoomRequest) returns (ConsultationRoom);
+
+  // Message history of a room or a DM (admin moderation UC19).
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+}
+
+enum PresenceStatus {
+  PRESENCE_STATUS_UNSPECIFIED = 0;
+  PRESENCE_STATUS_ONLINE = 1;
+  PRESENCE_STATUS_OFFLINE = 2;
+  PRESENCE_STATUS_IN_CALL = 3;
+}
+
+enum ConsultationRoomStatus {
+  CONSULTATION_ROOM_STATUS_UNSPECIFIED = 0;
+  CONSULTATION_ROOM_STATUS_SCHEDULED = 1;
+  CONSULTATION_ROOM_STATUS_ACTIVE = 2;
+  CONSULTATION_ROOM_STATUS_ENDED = 3;
+  CONSULTATION_ROOM_STATUS_CANCELLED = 4;
+}
+
+enum MessageType {
+  MESSAGE_TYPE_UNSPECIFIED = 0;
+  MESSAGE_TYPE_CHAT = 1;
+  MESSAGE_TYPE_VOICE = 2;
+  MESSAGE_TYPE_SYSTEM = 3;
+}
+
+message GetPresenceRequest {
+  repeated string user_ids = 1;
+}
+
+message GetPresenceResponse {
+  repeated UserPresence presences = 1;
+}
+
+message UserPresence {
+  string user_id = 1;
+  PresenceStatus status = 2;
+  google.protobuf.Timestamp last_seen_at = 3;
+}
+
+message ListRoomsRequest {}
+
+message ListRoomsResponse {
+  repeated Room rooms = 1;
+}
+
+message Room {
+  string id = 1;
+  string name = 2;
+  string icon = 3;
+  // Live user count.
+  int32 users = 4;
+}
+
+message CreateConsultationRoomRequest {
+  string appointment_id = 1;
+  string patient_id = 2;
+  string expert_id = 3;
+  google.protobuf.Timestamp start_time = 4;
+  google.protobuf.Timestamp end_time = 5;
+}
+
+message GetConsultationRoomRequest {
+  string appointment_id = 1;
+}
+
+message CloseConsultationRoomRequest {
+  string appointment_id = 1;
+  string reason = 2;
+}
+
+message ConsultationRoom {
+  string room_id = 1;
+  string appointment_id = 2;
+  string patient_id = 3;
+  string expert_id = 4;
+  ConsultationRoomStatus status = 5;
+  google.protobuf.Timestamp start_time = 6;
+  google.protobuf.Timestamp end_time = 7;
+  google.protobuf.Timestamp started_at = 8;
+  google.protobuf.Timestamp ended_at = 9;
+}
+
+message GetMessagesRequest {
+  oneof target {
+    string room_id = 1;
+    string dm_id = 2;
+  }
+  // Return messages created strictly before this time (cursor). Empty = now.
+  google.protobuf.Timestamp before = 3;
+  int32 limit = 4;
+}
+
+message GetMessagesResponse {
+  repeated Message messages = 1;
+}
+
+message Message {
+  string id = 1;
+  string room_id = 2;
+  string dm_id = 3;
+  MessageType type = 4;
+  string text = 5;
+  // URL or base64 audio for voice messages.
+  string audio = 6;
+  int32 duration = 7;
+  string mime_type = 8;
+  string user_name = 9;
+  string from_id = 10;
+  string to_id = 11;
+  google.protobuf.Timestamp created_at = 12;
+}

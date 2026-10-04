@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package mindcare.common.v1;
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/common/v1;commonv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.common.v1";
+
+// Role mirrors auth-service `Role` and profile-service `models.Role`.
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_PATIENT = 1;
+  ROLE_EXPERT = 2;
+  ROLE_ADMIN = 3;
+}
+
+// PageRequest is the standard offset pagination input used by List* RPCs.
+message PageRequest {
+  // 1-based page number.
+  int32 page = 1;
+  // Number of items per page (server caps it, e.g. 100).
+  int32 page_size = 2;
+}
+
+// PageResponse is returned next to the items of a List* RPC.
+message PageResponse {
+  int32 page = 1;
+  int32 page_size = 2;
+  int64 total_items = 3;
+  int32 total_pages = 4;
+}
+
+// Money uses the smallest currency unit (VND has no minor unit, so amount is VND).
+message Money {
+  int64 amount = 1;
+  // ISO 4217 code, default "VND".
+  string currency = 2;
+}
+
+// UserSummary is the lightweight public view of a user, used to enrich
+// forum posts, chat messages, bookings... without exposing private data.
+message UserSummary {
+  // auth-service Account.accountId (UUID) == profile.auth_id.
+  string user_id = 1;
+  string name = 2;
+  string avatar_url = 3;
+  Role role = 4;
+}

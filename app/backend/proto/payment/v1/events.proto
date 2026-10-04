@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package mindcare.payment.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/payment/v1;paymentv1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.payment.v1";
+
+// Integration events published by payment-service through its outbox
+// (table payment_outbox_events). Exchange: payment.exchange (topic; replaces
+// payment.events). Wrapped in mindcare.common.v1.EventEnvelope.
+
+// routing key: payment.succeeded — replaces outbox type booking.appointment.confirm.
+// Consumer: booking (ApplyPaymentResult SUCCESS), notification.
+message PaymentSucceeded {
+  string order_id = 1;
+  string appointment_id = 2;
+  string payer_id = 3;
+  string expert_id = 4;
+  mindcare.common.v1.Money gross_amount = 5;
+  mindcare.common.v1.Money net_amount = 6;
+  google.protobuf.Timestamp paid_at = 7;
+}
+
+// routing key: payment.failed — replaces outbox type booking.appointment.fail.
+// Consumer: booking (ApplyPaymentResult FAILED).
+message PaymentFailed {
+  string order_id = 1;
+  string appointment_id = 2;
+  string payer_id = 3;
+  string gateway_response_code = 4;
+}
+
+// routing key: payment.compensation_required — booking rejected the confirm
+// (conflict, not found...) or duplicate capture. Consumer: admin/notification.
+message PaymentCompensationRequired {
+  string case_id = 1;
+  string order_id = 2;
+  string appointment_id = 3;
+  // BOOKING_CONFLICT | APPOINTMENT_NOT_FOUND | DUPLICATE_GATEWAY_CAPTURE | ...
+  string reason_code = 4;
+  mindcare.common.v1.Money amount = 5;
+}
+
+// routing key: refund.completed
+message RefundCompleted {
+  string refund_id = 1;
+  string order_id = 2;
+  string appointment_id = 3;
+  string payer_id = 4;
+  mindcare.common.v1.Money amount = 5;
+}
+
+// routing key: wallet.funds_released — escrow hold period passed (pending -> available).
+message WalletFundsReleased {
+  string wallet_id = 1;
+  string user_id = 2;
+  string order_id = 3;
+  mindcare.common.v1.Money amount = 4;
+}
+
+// routing keys: withdrawal.requested | withdrawal.approved | withdrawal.rejected
+//               | withdrawal.completed | withdrawal.failed
+// (were wallet.withdrawal.* outbox rows that the current publisher marks DEAD).
+message WithdrawalStatusChanged {
+  string withdrawal_id = 1;
+  string wallet_id = 2;
+  string user_id = 3;
+  mindcare.common.v1.Money amount = 4;
+  // PENDING | PENDING_APPROVAL | APPROVED | PROCESSING | COMPLETED | REJECTED | FAILED
+  string status = 5;
+  bool requires_manual_approval = 6;
+  string approver_id = 7;
+  string note = 8;
+}

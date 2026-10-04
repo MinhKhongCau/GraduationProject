@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package mindcare.profile.v1;
+
+import "common/v1/common.proto";
+
+option go_package = "github.com/MinhKhongCau/GraduationProject/app/backend/proto/gen/go/profile/v1;profilev1";
+option java_multiple_files = true;
+option java_package = "com.mindcare.proto.profile.v1";
+
+// Integration events published by profile-service through its outbox.
+// Exchange: profile.exchange (topic). Wrapped in mindcare.common.v1.EventEnvelope.
+
+// routing key: profile.created — after consuming user.created.
+message ProfileCreated {
+  string profile_id = 1;
+  string auth_id = 2;
+  string name = 3;
+  mindcare.common.v1.Role role = 4;
+}
+
+// routing key: profile.updated — name/avatar changed. Forum & chat-room
+// refresh their cached UserSummary.
+message ProfileUpdated {
+  mindcare.common.v1.UserSummary user = 1;
+}
+
+// routing key: expert.verification_changed — booking only opens slots for
+// VERIFIED experts.
+message ExpertVerificationChanged {
+  string profile_id = 1;
+  string auth_id = 2;
+  // Values of VerificationStatus as defined in profile.proto.
+  string old_status = 3;
+  string new_status = 4;
+}
+
+// routing key: profile.seed_authors_synced — replaces raw-JSON
+// profile.sync_seed_authors {expertId}; consumed by forum-service.
+message SeedAuthorsSynced {
+  string expert_auth_id = 1;
+}
