@@ -8,12 +8,12 @@ export interface AuthCardProps {
 
 export function AuthCard({ title, subtitle, children }: AuthCardProps) {
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-6 text-center">
-        <h1 className="mb-2 text-2xl font-bold text-foreground">{title}</h1>
+    <div className="mx-auto w-full max-w-md">
+      <div className="mb-8 text-center">
+        <h1 className="mb-2 text-2xl font-bold tracking-tight text-foreground">{title}</h1>
         <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
-      <div className="space-y-5">{children}</div>
+      <div className="space-y-6">{children}</div>
     </div>
   );
 }

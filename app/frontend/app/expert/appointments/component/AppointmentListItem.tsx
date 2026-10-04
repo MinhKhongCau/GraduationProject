@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import { CalendarClock, FileText, Video, ClipboardList } from "lucide-react";
-import { Card, Button } from "@/components/ui";
+import { Badge, Card, Button, type BadgeTone } from "@/components/ui";
 import { useAppointmentMedicalRecord } from "@/hooks";
 import { SaveMedicalRecordModal } from "@/components/medical-record/SaveMedicalRecordModal";
 import { MedicalRecordDetailModal } from "@/components/medical-record/MedicalRecordDetailModal";
 import type { Appointment, AppointmentStatus } from "@/types";
 
-const STATUS_STYLES: Record<AppointmentStatus, string> = {
-  PENDING_PAYMENT: "bg-warning-soft text-warning",
-  CONFIRMED: "bg-success-soft text-success",
-  CANCELLED: "bg-danger-soft text-danger",
-  COMPLETED: "bg-primary-soft text-primary",
+const STATUS_TONES: Record<AppointmentStatus, BadgeTone> = {
+  PENDING_PAYMENT: "warning",
+  CONFIRMED: "success",
+  CANCELLED: "danger",
+  COMPLETED: "primary",
 };
 
 const STATUS_TEXT: Record<AppointmentStatus, string> = {
@@ -38,21 +38,21 @@ export function AppointmentListItem({ appointment }: { appointment: AppointmentW
 
   return (
     <>
-      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between hover:border-primary/30 transition-all duration-200">
+      <Card className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between transition-colors duration-200 hover:border-primary/30">
         <div className="flex items-start gap-3.5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-text">
             <CalendarClock className="h-5 w-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-foreground">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-foreground">
                 {appointment.patientName || `Bệnh nhân (#${appointment.patientId.slice(0, 8)})`}
               </p>
               {medicalRecord && (
-                <span className="inline-flex items-center gap-1 rounded-md bg-secondary/10 px-2 py-0.5 text-[11px] font-semibold text-secondary">
-                  <FileText className="h-3 w-3" />
+                <Badge tone="primary">
+                  <FileText className="h-3 w-3" aria-hidden="true" />
                   Đã có bệnh án
-                </span>
+                </Badge>
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -73,11 +73,9 @@ export function AppointmentListItem({ appointment }: { appointment: AppointmentW
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 sm:justify-end">
-          <span
-            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider ${STATUS_STYLES[appointment.statusLabel] || "bg-surface text-muted-foreground"}`}
-          >
+          <Badge tone={STATUS_TONES[appointment.statusLabel] ?? "neutral"}>
             {STATUS_TEXT[appointment.statusLabel] || appointment.statusLabel}
-          </span>
+          </Badge>
 
           {canAddRecord && (
             <>
@@ -86,16 +84,14 @@ export function AppointmentListItem({ appointment }: { appointment: AppointmentW
                   <Button
                     size="sm"
                     variant="outline"
-                    className="gap-1.5 text-xs"
-                    onClick={() => setDetailModalOpen(true)}
+                                        onClick={() => setDetailModalOpen(true)}
                   >
                     <FileText className="h-3.5 w-3.5 text-primary" />
                     Xem bệnh án
                   </Button>
                   <Button
                     size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => setSaveModalOpen(true)}
+                                        onClick={() => setSaveModalOpen(true)}
                   >
                     <ClipboardList className="h-3.5 w-3.5" />
                     Cập nhật bệnh án
@@ -104,8 +100,7 @@ export function AppointmentListItem({ appointment }: { appointment: AppointmentW
               ) : (
                 <Button
                   size="sm"
-                  className="gap-1.5 text-xs"
-                  onClick={() => setSaveModalOpen(true)}
+                                    onClick={() => setSaveModalOpen(true)}
                 >
                   <ClipboardList className="h-3.5 w-3.5" />
                   Ghi chú bệnh án

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, Button } from "@/components/ui";
+import { Card, CardHeader, Button, Input, Label, FieldError } from "@/components/ui";
 import { Camera, User } from "lucide-react";
 import Image from "next/image";
 
@@ -60,13 +60,13 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
   };
 
   return (
-    <Card className="p-6">
-      <h3 className="mb-6 text-lg font-bold text-foreground">Profile Settings</h3>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <Card>
+      <CardHeader title="Profile Settings" />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-5">
         
         {/* Avatar Upload Section */}
         <div className="flex flex-col items-center gap-4 sm:flex-row">
-          <div className="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-muted transition-all hover:border-primary">
+          <div className="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-surface transition-colors hover:border-primary">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
@@ -83,7 +83,8 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
             <button
               type="button"
               onClick={triggerFileInput}
-              className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
+              aria-label="Change Photo"
+              className="absolute inset-0 flex flex-col items-center justify-center bg-foreground/60 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
             >
               <Camera className="text-white" size={20} />
               <span className="mt-1 text-[10px] font-medium text-white">Change Photo</span>
@@ -91,7 +92,7 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
           </div>
           
           <div className="text-center sm:text-left">
-            <h4 className="text-sm font-semibold text-foreground">Profile Picture</h4>
+            <h3 className="text-sm font-semibold text-foreground">Profile Picture</h3>
             <p className="mt-1 text-xs text-muted-foreground">PNG or JPG. Max 2MB.</p>
             <Button
               type="button"
@@ -114,22 +115,15 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-bold text-foreground">Full Name</label>
-            <input
-              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-              {...register("fullName")}
-            />
-            {errors.fullName && <p className="mt-1 text-xs text-danger">{errors.fullName.message}</p>}
+            <Label htmlFor="profile-full-name">Full Name</Label>
+            <Input id="profile-full-name" invalid={!!errors.fullName} {...register("fullName")} />
+            <FieldError>{errors.fullName?.message}</FieldError>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold text-foreground">Date of Birth</label>
-            <input
-              type="date"
-              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-              {...register("dateOfBirth")}
-            />
-            {errors.dateOfBirth && <p className="mt-1 text-xs text-danger">{errors.dateOfBirth.message}</p>}
+            <Label htmlFor="profile-dob">Date of Birth</Label>
+            <Input id="profile-dob" type="date" invalid={!!errors.dateOfBirth} {...register("dateOfBirth")} />
+            <FieldError>{errors.dateOfBirth?.message}</FieldError>
           </div>
         </div>
 

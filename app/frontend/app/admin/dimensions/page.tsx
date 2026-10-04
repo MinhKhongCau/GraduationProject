@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, Layers } from "lucide-react";
-import { Card, Button, Spinner, Modal } from "@/components/ui";
+import { Card, Button, Spinner, Modal, Label, PageHeader, Input } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { assessmentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -65,17 +65,16 @@ export default function AdminDimensionsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Quản lý Khía Cạnh (Dimensions)</h1>
-          <p className="text-sm text-muted-foreground">
-            Thiết lập các khía cạnh (thang đo) để gán cho câu hỏi trong bài test, ví dụ: Trầm cảm, Lo âu, Căng thẳng.
-          </p>
-        </div>
-        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="flex items-center gap-1.5 self-start sm:self-auto">
-          <Plus className="h-4 w-4" /> Tạo khía cạnh mới
-        </Button>
-      </div>
+      <PageHeader
+        className="mb-0"
+        title="Quản lý Khía Cạnh (Dimensions)"
+        description="Thiết lập các khía cạnh (thang đo) để gán cho câu hỏi trong bài test, ví dụ: Trầm cảm, Lo âu, Căng thẳng."
+        actions={
+          <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Plus className="h-4 w-4" /> Tạo khía cạnh mới
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <div className="flex justify-center py-20">
@@ -87,12 +86,12 @@ export default function AdminDimensionsPage() {
             <Card key={dimension.slug} className="p-5">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-primary-soft p-2 text-primary">
-                    <Layers className="h-5 w-5" />
+                  <div className="rounded-lg bg-primary-soft p-2 text-primary-soft-text">
+                    <Layers className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
                     <h3 className="font-bold text-foreground">{dimension.name}</h3>
-                    <span className="font-mono text-xs text-primary bg-primary-soft/40 px-1.5 py-0.5 rounded">
+                    <span className="rounded-md bg-primary-soft px-1.5 py-0.5 font-mono text-xs text-primary-soft-text">
                       {dimension.code}
                     </span>
                   </div>
@@ -100,10 +99,11 @@ export default function AdminDimensionsPage() {
                 <Button
                   variant="outline"
                   size="sm"
+                  aria-label="Xóa khía cạnh"
                   onClick={() => handleDelete(dimension.slug)}
-                  className="flex items-center gap-1 border-danger/20 px-2.5 py-1 text-xs text-danger hover:bg-danger-soft shrink-0"
+                  className="w-8 px-0 border-danger/30 text-danger hover:bg-danger-soft"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
               {dimension.description && (
@@ -124,35 +124,35 @@ export default function AdminDimensionsPage() {
       <Modal open={isCreateOpen} onOpenChange={setIsCreateOpen} title="Tạo khía cạnh mới">
         <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Mã Code (e.g. DEPRESSION)</label>
-            <input
+            <Label htmlFor="dimensions-code">Mã Code (e.g. DEPRESSION)</Label>
+            <Input
+              id="dimensions-code"
               type="text"
               required
               placeholder="Nhập mã khía cạnh..."
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Tên hiển thị</label>
-            <input
+            <Label htmlFor="dimensions-name">Tên hiển thị</Label>
+            <Input
+              id="dimensions-name"
               type="text"
               required
               placeholder="e.g. Trầm cảm"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Mô tả</label>
-            <input
+            <Label htmlFor="dimensions-description">Mô tả</Label>
+            <Input
+              id="dimensions-description"
               type="text"
               placeholder="Nhập mô tả ngắn..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
 

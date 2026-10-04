@@ -23,7 +23,7 @@ export function WalletBadge() {
   if (!user) return null;
 
   return (
-    <div className="hidden items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-xs font-semibold text-muted-foreground sm:flex">
+    <div className="hidden items-center gap-1.5 h-9 rounded-lg border border-border bg-background px-3 text-xs font-semibold text-muted-foreground sm:flex">
       <Wallet className="h-3.5 w-3.5 text-primary" />
       <span className="text-foreground">
         {(wallet?.balance ?? 0).toLocaleString("vi-VN")}

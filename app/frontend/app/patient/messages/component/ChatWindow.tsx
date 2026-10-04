@@ -144,12 +144,13 @@ export function ChatWindow({
 
   return (
     <div className={`flex min-w-0 flex-1 flex-col bg-background ${className ?? ""}`}>
-      <div className="flex items-center justify-between border-b border-border p-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
           {onBack && (
             <button
+              type="button"
               onClick={onBack}
-              className="mr-1 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-surface md:hidden"
+              className="-ml-1 inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface hover:text-foreground md:hidden"
               aria-label="Back to contacts"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -167,14 +168,14 @@ export function ChatWindow({
             {(contact.role === "CHATBOT" || online) && <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background bg-success" />}
           </div>
           <div>
-            <h3 className="text-sm font-bold text-foreground">{contact.fullName}</h3>
+            <h3 className="truncate text-sm font-semibold text-foreground">{contact.fullName}</h3>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               {isTyping ? (
                 <span className="font-medium text-primary">Typing…</span>
               ) : (contact.role === "CHATBOT" || online) ? (
                 <>
-                  <Circle className="h-1 w-1 fill-border text-border" />
-                  <span className="font-medium text-primary">Active now</span>
+                  <Circle className="h-2 w-2 fill-success text-success" aria-hidden="true" />
+                  <span className="font-medium text-success">Active now</span>
                 </>
               ) : (
                 <span>Offline</span>
@@ -183,17 +184,19 @@ export function ChatWindow({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div className="flex shrink-0 items-center gap-1 text-muted-foreground">
           {contact.role !== "CHATBOT" && (
             <button
+              type="button"
               onClick={() => startCall(contact.id, contact.fullName, contact.avatarUrl)}
-              className="rounded-full p-2 transition-colors hover:bg-surface text-primary"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-surface text-primary"
               title="Video Call"
+              aria-label="Video Call"
             >
               <Video className="h-5 w-5" />
             </button>
           )}
-          <button className="rounded-full p-2 transition-colors hover:bg-surface">
+          <button type="button" aria-label="More options" className="inline-flex h-10 w-10 items-center justify-center rounded-lg transition-colors hover:bg-surface hover:text-foreground">
             <MoreVertical className="h-5 w-5" />
           </button>
         </div>
@@ -202,10 +205,10 @@ export function ChatWindow({
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 space-y-6 overflow-y-auto bg-surface/30 p-6"
+        className="flex-1 space-y-5 overflow-y-auto bg-surface/60 p-4 sm:p-6"
       >
         <div className="flex justify-center">
-          <span className="rounded-full bg-surface px-3 py-1 text-[11px] font-medium text-muted-foreground">Today</span>
+          <span className="rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground">Today</span>
         </div>
         {messages.map((message) => (
           <MessageBubble
@@ -219,8 +222,8 @@ export function ChatWindow({
         ))}
       </div>
 
-      <div className="border-t border-border bg-background p-4">
-        <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface p-2">
+      <div className="border-t border-border bg-background p-3 sm:p-4">
+        <div className="flex items-center gap-2 rounded-xl border border-border-strong bg-background p-1.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
           <VoiceRecorderButton onSend={onSendVoice} />
           <input
             type="text"
@@ -234,16 +237,20 @@ export function ChatWindow({
             }}
             onBlur={() => onTyping(false)}
             placeholder="Type your message..."
-            className="flex-1 border-none bg-transparent px-2 text-sm outline-none"
+            aria-label="Type your message"
+            className="h-10 min-w-0 flex-1 border-none bg-transparent px-2 text-sm text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none"
           />
           <button
+            type="button"
             onClick={send}
-            className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary"
+            aria-label="Send message"
+            disabled={!text.trim()}
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-surface disabled:text-muted-foreground"
           >
             <SendHorizonal className="h-5 w-5" />
           </button>
         </div>
-        <p className="mt-3 text-center text-[10px] font-medium italic text-muted-foreground">
+        <p className="mt-2 text-center text-[11px] text-muted-foreground">
           Your consultation content is strictly confidential and protected by MindCare.
         </p>
       </div>

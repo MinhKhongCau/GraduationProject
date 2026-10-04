@@ -35,7 +35,7 @@ export default function ExpertMessagesPage() {
 
   return (
     <div
-      className="flex h-[calc(100dvh-9.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--keyboard-height))] overflow-hidden rounded-2xl border border-border bg-background shadow-card sm:h-[750px]"
+      className="flex h-[calc(100dvh-9.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--keyboard-height))] overflow-hidden rounded-xl border border-border bg-background shadow-card sm:h-[750px]"
       style={{ "--keyboard-height": `${keyboardHeight}px` } as React.CSSProperties}
     >
       <ContactList

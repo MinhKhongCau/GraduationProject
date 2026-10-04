@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { Modal, Button } from "@/components/ui";
+import { Modal, Button, Label, Input, Textarea, Badge } from "@/components/ui";
 import { BookOpen, Award } from "lucide-react";
 
 const MDXEditor = dynamic(() => import("@/components/ui/MDXEditor"), {
@@ -111,11 +111,13 @@ export function TemplateModal({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title={modalTitle} size="3xl">
-      <div className="flex border-b border-border mb-4 flex-shrink-0">
+      <div role="tablist" className="mb-4 flex flex-shrink-0 gap-1 border-b border-border">
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "edit"}
           onClick={() => setActiveTab("edit")}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+          className={`-mb-px h-10 border-b-2 px-4 text-sm font-semibold transition-colors ${
             activeTab === "edit"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -125,8 +127,10 @@ export function TemplateModal({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === "preview"}
           onClick={() => setActiveTab("preview")}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${
+          className={`-mb-px h-10 border-b-2 px-4 text-sm font-semibold transition-colors ${
             activeTab === "preview"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -140,40 +144,40 @@ export function TemplateModal({
         {activeTab === "edit" ? (
           <>
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Mã Code (e.g. PHQ_9)</label>
-              <input
+              <Label htmlFor="templatemodal-code">Mã Code (e.g. PHQ_9)</Label>
+              <Input
+                id="templatemodal-code"
                 type="text"
                 required
                 placeholder="Nhập mã code viết hoa..."
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Tên bài test</label>
-              <input
+              <Label htmlFor="templatemodal-title">Tên bài test</Label>
+              <Input
+                id="templatemodal-title"
                 type="text"
                 required
                 placeholder="Nhập tên tiêu đề bài test..."
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Mô tả chi tiết</label>
-              <textarea
+              <Label htmlFor="templatemodal-description">Mô tả chi tiết</Label>
+              <Textarea
+                id="templatemodal-description"
                 rows={3}
                 placeholder="Mô tả công dụng và hướng dẫn bài test..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label className="text-sm font-medium text-foreground">Hướng dẫn (Instruction - Markdown)</label>
+                <Label className="mb-0">Hướng dẫn (Instruction - Markdown)</Label>
                 <span className={`text-xs ${countWords(instruction) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
                   {countWords(instruction)}/3000 từ
                 </span>
@@ -186,7 +190,7 @@ export function TemplateModal({
             </div>
             <div>
               <div className="flex justify-between items-center mb-1">
-                <label className="text-sm font-medium text-foreground">Chứng nhận (Certification - Markdown)</label>
+                <Label className="mb-0">Chứng nhận (Certification - Markdown)</Label>
                 <span className={`text-xs ${countWords(certification) > 3000 ? "text-danger font-bold" : "text-muted-foreground"}`}>
                   {countWords(certification)}/3000 từ
                 </span>
@@ -199,11 +203,11 @@ export function TemplateModal({
             </div>
           </>
         ) : (
-          <div className="space-y-5 rounded-xl border border-border bg-surface/30 p-5 max-h-[500px] overflow-y-auto">
+          <div className="max-h-[500px] space-y-5 overflow-y-auto rounded-xl border border-border bg-surface p-5">
             <div className="border-b border-border pb-4">
-              <span className="inline-flex rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-semibold text-primary uppercase mb-2">
+              <Badge tone="primary" className="mb-2 uppercase">
                 {code || "CODE_TEST"}
-              </span>
+              </Badge>
               <h2 className="text-lg font-bold text-foreground">{title || "Chưa nhập tên tiêu đề"}</h2>
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                 {description || "Chưa nhập mô tả chi tiết bài đánh giá."}
@@ -215,7 +219,7 @@ export function TemplateModal({
               <h3 className="flex items-center gap-2 text-xs font-bold text-foreground">
                 <BookOpen className="h-4 w-4 text-primary" /> Hướng dẫn làm bài
               </h3>
-              <div className="rounded-lg bg-background border border-border p-3.5">
+              <div className="rounded-xl border border-border bg-background p-3.5">
                 <PreviewMarkdownRenderer text={instruction} />
               </div>
             </div>
@@ -225,7 +229,7 @@ export function TemplateModal({
               <h3 className="flex items-center gap-2 text-xs font-bold text-foreground">
                 <Award className="h-4 w-4 text-success" /> Chứng nhận chuyên môn & Cơ sở khoa học
               </h3>
-              <div className="rounded-lg bg-success-soft/10 border border-success/10 p-3.5">
+              <div className="rounded-xl border border-success/20 bg-success-soft p-3.5">
                 <PreviewMarkdownRenderer text={certification} />
               </div>
             </div>

@@ -7,10 +7,10 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Menu, X } from "lucide-react";
 import clsx from "clsx";
 import { useTranslation } from "@/hooks";
-import { ROUTES } from "@/constants";
+import { BrandLogo, BrandMark } from "@/components/ui";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NavAvatarMenu } from "./component/NavAvatarMenu";
-import type { NavItem } from "@/constants/nav";
+import { isNavItemActive, type NavItem } from "@/constants/nav";
 
 export interface TabletDrawerNavProps {
   navItems: NavItem[];
@@ -30,7 +30,7 @@ export function TabletDrawerNav({ navItems, settingsItem }: TabletDrawerNavProps
             <Dialog.Trigger asChild>
               <button
                 type="button"
-                className="rounded-lg p-2 text-foreground hover:bg-surface"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-surface"
                 aria-label="Open navigation menu"
               >
                 <Menu className="h-5 w-5" />
@@ -41,26 +41,27 @@ export function TabletDrawerNav({ navItems, settingsItem }: TabletDrawerNavProps
               <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex h-full w-72 flex-col bg-background p-4 shadow-elevated focus:outline-none">
                 <div className="mb-6 flex items-center justify-between">
                   <Dialog.Title className="flex items-center gap-2 text-lg font-bold text-foreground">
-                    <span className="rounded-lg bg-primary p-1 text-white">🧠</span>
+                    <BrandMark />
                     MindCare
                   </Dialog.Title>
-                  <Dialog.Close aria-label="Close" className="rounded-full p-1 text-muted-foreground hover:bg-surface">
-                    <X className="h-4 w-4" />
+                  <Dialog.Close aria-label="Close" className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface hover:text-foreground">
+                    <X className="h-5 w-5" />
                   </Dialog.Close>
                 </div>
 
                 <nav className="flex-1 space-y-1">
                   {navItems.map((item) => {
-                    const isActive = pathname === item.href;
+                    const isActive = isNavItemActive(item, pathname);
                     const Icon = item.icon;
                     return (
                       <Link
                         key={item.id}
                         href={item.href}
                         onClick={() => setOpen(false)}
+                        aria-current={isActive ? "page" : undefined}
                         className={clsx(
-                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                          isActive ? "bg-primary-soft text-primary-soft-text" : "text-muted-foreground hover:bg-surface"
+                          "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+                          isActive ? "bg-primary-soft text-primary-soft-text font-semibold" : "text-muted-foreground hover:bg-surface hover:text-foreground"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -71,7 +72,7 @@ export function TabletDrawerNav({ navItems, settingsItem }: TabletDrawerNavProps
                   <Link
                     href={settingsItem.href}
                     onClick={() => setOpen(false)}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-surface"
+                    className="flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
                   >
                     <settingsItem.icon className="h-4 w-4" />
                     {t(settingsItem.labelKey, settingsItem.label)}
@@ -85,10 +86,7 @@ export function TabletDrawerNav({ navItems, settingsItem }: TabletDrawerNavProps
             </Dialog.Portal>
           </Dialog.Root>
 
-          <Link href={ROUTES.HOME} className="flex items-center gap-2 text-base font-bold text-foreground">
-            <span className="rounded-lg bg-primary p-1 text-white">🧠</span>
-            MindCare
-          </Link>
+          <BrandLogo className="text-base" />
         </div>
 
         <NavAvatarMenu settingsItem={settingsItem} />

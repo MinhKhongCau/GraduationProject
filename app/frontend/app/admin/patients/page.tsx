@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, Edit2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, Button, Spinner, Pagination } from "@/components/ui";
+import { Card, Button, Input, PageHeader, Spinner, Pagination } from "@/components/ui";
 import { useApiQuery, useApiMutation, useDebounce } from "@/hooks";
 import { patientApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -44,26 +44,26 @@ export default function AdminPatientsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Quản lý bệnh nhân</h1>
-          <p className="text-sm text-muted-foreground">
-            Danh sách bệnh nhân đã đăng ký và hồ sơ chi tiết.
-          </p>
-        </div>
+      <PageHeader
+        className="mb-0"
+        title="Quản lý bệnh nhân"
+        description="Danh sách bệnh nhân đã đăng ký và hồ sơ chi tiết."
+        actions={
         <div className="relative w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
+            aria-label="Tìm theo tên"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setPage(1);
             }}
             placeholder="Tìm theo tên..."
-            className="w-full rounded-xl border border-border bg-background py-2 pl-9 pr-3 text-sm text-foreground outline-none focus:border-primary"
+            className="pl-9"
           />
         </div>
-      </div>
+        }
+      />
 
       {isLoading ? (
         <div className="flex justify-center py-20">
@@ -73,38 +73,38 @@ export default function AdminPatientsPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
-              <thead className="border-b border-border bg-surface text-xs font-semibold uppercase text-muted-foreground">
+              <thead className="border-b border-border bg-surface text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-6 py-4">Họ và tên</th>
-                  <th className="px-6 py-4">Liên hệ</th>
-                  <th className="px-6 py-4">Ngày sinh</th>
-                  <th className="px-6 py-4">Giới tính</th>
-                  <th className="px-6 py-4">Địa chỉ</th>
-                  <th className="px-6 py-4 text-right">Thao tác</th>
+                  <th className="px-4 py-3">Họ và tên</th>
+                  <th className="px-4 py-3">Liên hệ</th>
+                  <th className="px-4 py-3">Ngày sinh</th>
+                  <th className="px-4 py-3">Giới tính</th>
+                  <th className="px-4 py-3">Địa chỉ</th>
+                  <th className="px-4 py-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border bg-background">
                 {patients.map((patient) => (
-                  <tr key={patient.patientId} className="hover:bg-surface/30">
-                    <td className="px-6 py-4 font-medium text-foreground">{patient.fullName}</td>
-                    <td className="px-6 py-4 text-muted-foreground">
+                  <tr key={patient.patientId} className="transition-colors hover:bg-surface/60">
+                    <td className="px-4 py-3 font-medium text-foreground">{patient.fullName}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
                       <div>{patient.email || "—"}</div>
                       <div className="text-xs">{patient.phoneNumber || "—"}</div>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {patient.dateOfBirth ? patient.dateOfBirth.slice(0, 10) : "—"}
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">{patient.gender || "—"}</td>
-                    <td className="max-w-xs truncate px-6 py-4 text-muted-foreground">
+                    <td className="px-4 py-3 text-muted-foreground">{patient.gender || "—"}</td>
+                    <td className="max-w-xs truncate px-4 py-3 text-muted-foreground">
                       {patient.address || "—"}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex items-center justify-end">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditAccountId(patient.accountId)}
-                          className="flex items-center gap-1 text-primary hover:bg-primary-soft/50"
+                          className="text-primary hover:bg-primary-soft"
                         >
                           <Edit2 className="h-3.5 w-3.5" /> Xem / Sửa
                         </Button>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, Layers, ChevronDown, ChevronUp } from "lucide-react";
-import { Card, Button, Spinner, Modal } from "@/components/ui";
+import { Card, Button, Spinner, Modal, Label, PageHeader, Input } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { assessmentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -103,17 +103,16 @@ export default function AdminOptionGroupsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Quản lý Nhóm Phương Án (Option Groups)</h1>
-          <p className="text-sm text-muted-foreground">
-            Thiết lập danh sách và điểm số cho các phương án lựa chọn trong câu hỏi.
-          </p>
-        </div>
-        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }} className="flex items-center gap-1.5 self-start sm:self-auto">
-          <Plus className="h-4 w-4" /> Tạo nhóm mới
-        </Button>
-      </div>
+      <PageHeader
+        className="mb-0"
+        title="Quản lý Nhóm Phương Án (Option Groups)"
+        description="Thiết lập danh sách và điểm số cho các phương án lựa chọn trong câu hỏi."
+        actions={
+          <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+            <Plus className="h-4 w-4" /> Tạo nhóm mới
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <div className="flex justify-center py-20">
@@ -127,13 +126,13 @@ export default function AdminOptionGroupsPage() {
               <Card key={group.slug} className="p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-primary-soft p-2 text-primary">
+                    <div className="rounded-lg bg-primary-soft p-2 text-primary-soft-text">
                       <Layers className="h-5 w-5" />
                     </div>
                     <div>
                       <h3 className="font-bold text-foreground">{group.groupName}</h3>
                       <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                        <span className="font-mono text-primary bg-primary-soft/40 px-1.5 py-0.5 rounded">
+                        <span className="rounded-md bg-primary-soft px-1.5 py-0.5 font-mono text-primary-soft-text">
                           Code: {group.groupCode}
                         </span>
                         <span className="font-mono text-muted-foreground">
@@ -151,7 +150,6 @@ export default function AdminOptionGroupsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => toggleExpand(group.slug)}
-                      className="flex items-center gap-1 px-2.5 py-1 text-xs"
                     >
                       {isExpanded ? (
                         <>Thu gọn <ChevronUp className="h-3.5 w-3.5" /></>
@@ -163,9 +161,9 @@ export default function AdminOptionGroupsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(group.slug)}
-                      className="flex items-center gap-1 border-danger/20 px-2.5 py-1 text-xs text-danger hover:bg-danger-soft"
+                      className="border-danger/30 text-danger hover:bg-danger-soft"
                     >
-                      <Trash2 className="h-3 w-3" /> Xóa
+                      <Trash2 className="h-3.5 w-3.5" /> Xóa
                     </Button>
                   </div>
                 </div>
@@ -188,7 +186,7 @@ export default function AdminOptionGroupsPage() {
                         .map((opt: any) => (
                           <div
                             key={opt.slug}
-                            className="flex flex-col rounded-lg border border-border bg-surface p-3"
+                            className="flex flex-col rounded-xl border border-border bg-surface p-3"
                           >
                             <span className="text-xs font-semibold text-muted-foreground">
                               Thứ tự {opt.orderIndex}
@@ -196,7 +194,7 @@ export default function AdminOptionGroupsPage() {
                             <span className="mt-1 font-medium text-foreground">
                               {opt.label}
                             </span>
-                            <div className="mt-2 flex items-center justify-between text-xs border-t border-border/40 pt-1.5 font-mono">
+                            <div className="mt-2 flex items-center justify-between text-xs border-t border-border pt-1.5 font-mono">
                               <span className="text-muted-foreground">Value: "{opt.value}"</span>
                               <span className="font-bold text-primary">Score: {opt.scoreValue}</span>
                             </div>
@@ -222,96 +220,96 @@ export default function AdminOptionGroupsPage() {
         <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Mã Code (e.g. GAD7_FREQ)</label>
-              <input
+              <Label htmlFor="option-groups-groupCode">Mã Code (e.g. GAD7_FREQ)</Label>
+              <Input
+                id="option-groups-groupCode"
                 type="text"
                 required
                 placeholder="Nhập mã nhóm..."
                 value={groupCode}
                 onChange={(e) => setGroupCode(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Tên nhóm</label>
-              <input
+              <Label htmlFor="option-groups-groupName">Tên nhóm</Label>
+              <Input
+                id="option-groups-groupName"
                 type="text"
                 required
                 placeholder="Tên hiển thị nhóm phương án..."
                 value={groupName}
                 onChange={(e) => setGroupName(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Mô tả</label>
-            <input
+            <Label htmlFor="option-groups-description">Mô tả</Label>
+            <Input
+              id="option-groups-description"
               type="text"
               placeholder="Nhập mô tả ngắn..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
 
           <div className="border-t border-border pt-4">
             <div className="mb-3 flex items-center justify-between">
-              <label className="text-sm font-bold text-foreground">Các tùy chọn trả lời</label>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddOption} className="flex items-center gap-1">
+              <Label className="mb-0 font-semibold">Các tùy chọn trả lời</Label>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddOption}>
                 <Plus className="h-3.5 w-3.5" /> Thêm tùy chọn
               </Button>
             </div>
 
             <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
               {options.map((opt, index) => (
-                <div key={index} className="flex flex-col gap-2 rounded-lg border border-border bg-surface/50 p-3 sm:flex-row sm:items-center">
+                <div key={index} className="flex flex-col gap-2 rounded-xl border border-border bg-surface/50 p-3 sm:flex-row sm:items-center">
                   <div className="flex-1">
-                    <input
+                    <Input
                       type="text"
                       required
                       placeholder="Nhãn phương án (e.g. Rất nhiều)"
                       value={opt.label}
                       onChange={(e) => handleOptionChange(index, "label", e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary"
+                      className="h-9 text-xs"
                     />
                   </div>
                   <div className="w-20">
-                    <input
+                    <Input
                       type="text"
                       required
                       placeholder="Value"
                       value={opt.value}
                       onChange={(e) => handleOptionChange(index, "value", e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground text-center outline-none focus:border-primary"
+                      className="h-9 text-center text-xs"
                     />
                   </div>
                   <div className="w-20">
-                    <input
+                    <Input
                       type="number"
                       required
                       min={0}
                       placeholder="Score"
                       value={opt.scoreValue}
                       onChange={(e) => handleOptionChange(index, "scoreValue", parseInt(e.target.value) || 0)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground text-center outline-none focus:border-primary"
+                      className="h-9 text-center text-xs"
                     />
                   </div>
                   <div className="w-16">
-                    <input
+                    <Input
                       type="number"
                       required
                       min={1}
                       placeholder="Order"
                       value={opt.orderIndex}
                       onChange={(e) => handleOptionChange(index, "orderIndex", parseInt(e.target.value) || 1)}
-                      className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground text-center outline-none focus:border-primary"
+                      className="h-9 text-center text-xs"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveOption(index)}
-                    className="self-end p-1.5 text-danger hover:bg-danger-soft rounded-md sm:self-auto"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-lg text-danger transition-colors hover:bg-danger-soft sm:self-auto"
                     aria-label="Remove option"
                   >
                     <Trash2 className="h-4 w-4" />

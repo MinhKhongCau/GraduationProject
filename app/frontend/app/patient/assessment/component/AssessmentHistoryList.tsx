@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui";
+import { Badge, Card } from "@/components/ui";
 import type { AssessmentHistoryItem } from "@/types";
 
 export interface AssessmentHistoryListProps {
@@ -16,13 +16,13 @@ export function AssessmentHistoryList({ history }: AssessmentHistoryListProps) {
         <Card key={item.resultId} className="p-4">
           <div className="mb-1 flex items-center justify-between gap-3">
             <div>
-              <span className="inline-flex rounded-full bg-primary-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
+              <Badge tone="primary" className="uppercase">
                 {item.templateCode}
-              </span>
-              <p className="mt-1 text-sm font-bold text-foreground">{item.templateTitle}</p>
+              </Badge>
+              <p className="mt-1.5 text-sm font-semibold text-foreground">{item.templateTitle}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Score</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Score</p>
               <p className="text-lg font-extrabold text-foreground">{item.totalScore}</p>
             </div>
           </div>
@@ -32,7 +32,7 @@ export function AssessmentHistoryList({ history }: AssessmentHistoryListProps) {
               {Object.entries(item.dimensionScores).map(([dimension, score]) => (
                 <span
                   key={dimension}
-                  className="rounded-md bg-surface/60 px-2 py-1 text-xs text-muted-foreground"
+                  className="rounded-lg border border-border bg-surface px-2 py-1 text-xs text-muted-foreground"
                 >
                   {dimension}: <span className="font-semibold text-foreground">{score}</span>
                 </span>

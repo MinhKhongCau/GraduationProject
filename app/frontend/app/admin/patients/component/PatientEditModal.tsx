@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Modal, Button, Spinner } from "@/components/ui";
+import { Modal, Button, Spinner, Label, Input, Select } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { patientApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -67,67 +67,67 @@ export function PatientEditModal({
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Họ và tên</label>
-            <input
+            <Label htmlFor="patienteditmodal-fullName">Họ và tên</Label>
+            <Input
+              id="patienteditmodal-fullName"
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Số điện thoại</label>
-              <input
+              <Label htmlFor="patienteditmodal-phoneNumber">Số điện thoại</Label>
+              <Input
+                id="patienteditmodal-phoneNumber"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Email</label>
-              <input
+              <Label htmlFor="patienteditmodal-email">Email</Label>
+              <Input
+                id="patienteditmodal-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Ngày sinh</label>
-              <input
+              <Label htmlFor="patienteditmodal-dateOfBirth">Ngày sinh</Label>
+              <Input
+                id="patienteditmodal-dateOfBirth"
                 type="date"
                 required
                 value={dateOfBirth}
                 onChange={(e) => setDateOfBirth(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Giới tính</label>
-              <select
+              <Label htmlFor="patienteditmodal-gender">Giới tính</Label>
+              <Select
+                id="patienteditmodal-gender"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               >
                 <option value="">—</option>
                 <option value="MALE">Nam</option>
                 <option value="FEMALE">Nữ</option>
                 <option value="OTHER">Khác</option>
-              </select>
+              </Select>
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Địa chỉ</label>
-            <input
+            <Label htmlFor="patienteditmodal-address">Địa chỉ</Label>
+            <Input
+              id="patienteditmodal-address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
 
@@ -140,7 +140,7 @@ export function PatientEditModal({
                 {patient.medicalHistories.map((history) => (
                   <div
                     key={history.historyId}
-                    className="rounded-lg border border-border bg-surface/50 p-3 text-xs"
+                    className="rounded-xl border border-border bg-surface/50 p-3 text-xs"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-foreground">{history.conditionName}</span>

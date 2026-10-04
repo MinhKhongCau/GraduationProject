@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ExpertFilterBar } from "./component/ExpertFilterBar";
 import { ExpertCard } from "./component/ExpertCard";
-import { Spinner } from "@/components/ui";
+import { PageHeader, Spinner } from "@/components/ui";
 import { useApiQuery, useDebounce } from "@/hooks";
 import { expertApi, specializationApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -26,7 +26,7 @@ export default function FindExpertsPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">Find an expert</h1>
+      <PageHeader title="Find an expert" />
 
       <ExpertFilterBar
         query={query}

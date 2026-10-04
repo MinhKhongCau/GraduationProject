@@ -46,7 +46,7 @@ export function NavAvatarMenu({ settingsItem }: NavAvatarMenuProps) {
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
-          className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border bg-surface text-sm font-bold text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary-soft"
+          className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border-strong bg-surface text-sm font-bold text-muted-foreground transition-shadow hover:ring-2 hover:ring-primary/20"
           aria-label="Account menu"
         >
           {displayAvatar ? (
@@ -85,7 +85,7 @@ export function NavAvatarMenu({ settingsItem }: NavAvatarMenuProps) {
           <DropdownMenu.Item asChild>
             <Link
               href={settingsItem.href}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground outline-none hover:bg-surface"
+              className="flex h-10 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium text-foreground outline-none hover:bg-surface data-[highlighted]:bg-surface"
             >
               <Settings className="h-4 w-4" />
               {t(settingsItem.labelKey, settingsItem.label)}
@@ -93,7 +93,7 @@ export function NavAvatarMenu({ settingsItem }: NavAvatarMenuProps) {
           </DropdownMenu.Item>
           <DropdownMenu.Item
             onSelect={logout}
-            className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-danger outline-none hover:bg-danger-soft"
+            className="flex h-10 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium text-danger outline-none hover:bg-danger-soft data-[highlighted]:bg-danger-soft"
           >
             <LogOut className="h-4 w-4" />
             {t("nav.logout", "Log out")}

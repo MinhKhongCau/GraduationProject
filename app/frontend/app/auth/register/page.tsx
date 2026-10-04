@@ -103,12 +103,12 @@ export default function RegisterPage() {
           {...register("confirmPassword")}
         />
 
-        <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
-          <UserPlus className="h-5 w-5" />
+        <Button type="submit" size="lg" className="w-full" disabled={registerMutation.isPending}>
+          <UserPlus className="h-4 w-4" />
           {registerMutation.isPending ? "Creating account..." : "Create Account"}
         </Button>
         {submitted && (
-          <p className="text-center text-xs text-success">Account created — please sign in.</p>
+          <p role="status" className="text-center text-sm font-medium text-success">Account created — please sign in.</p>
         )}
       </form>
 

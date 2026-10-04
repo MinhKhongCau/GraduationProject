@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ShieldAlert } from "lucide-react";
-import { Button } from "@/components/ui";
+import { buttonClasses } from "@/components/ui";
 import { useAuthContext } from "@/context/AuthContext";
 import { ROUTES } from "@/constants";
 import { dashboardForRole } from "@/router";
@@ -17,8 +17,8 @@ export default function ForbiddenPage() {
       <p className="max-w-md text-sm text-muted-foreground">
         Your account role doesn&apos;t have permission to view this section of MindCare.
       </p>
-      <Link href={user ? dashboardForRole(user.role) : ROUTES.HOME}>
-        <Button>Go to my dashboard</Button>
+      <Link href={user ? dashboardForRole(user.role) : ROUTES.HOME} className={buttonClasses("primary", "md")}>
+        Go to my dashboard
       </Link>
     </div>
   );

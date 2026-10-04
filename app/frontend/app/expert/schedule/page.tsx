@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { WeekTemplateGrid, type WeekTemplateState } from "./component/WeekTemplateGrid";
 import { GenerateSlotsPanel } from "./component/GenerateSlotsPanel";
 import { SlotCalendarPreview } from "./component/SlotCalendarPreview";
-import { Spinner } from "@/components/ui";
+import { PageHeader, Spinner } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { bookingApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -82,13 +82,12 @@ export default function ExpertSchedulePage() {
   const isLoading = isLoadingTemplates || isLoadingAvailabilities;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8">
-      <div>
-        <h1 className="mb-2 text-2xl font-bold text-foreground">Weekly Schedule Template</h1>
-        <p className="text-sm text-muted-foreground">
-          Build your recurring weekly availability once, then generate bookable slots for patients from it.
-        </p>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <PageHeader
+        className="mb-0"
+        title="Weekly Schedule Template"
+        description="Build your recurring weekly availability once, then generate bookable slots for patients from it."
+      />
 
       {isLoading ? (
         <Spinner className="h-6 w-6" />

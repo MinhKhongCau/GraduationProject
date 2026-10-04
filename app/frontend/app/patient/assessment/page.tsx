@@ -2,7 +2,7 @@
 
 import { AssessmentCard } from "./component/AssessmentCard";
 import { AssessmentHistoryList } from "./component/AssessmentHistoryList";
-import { Spinner } from "@/components/ui";
+import { PageHeader, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { assessmentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -21,10 +21,10 @@ export default function AssessmentListPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-10">
       <div>
-        <h1 className="mb-2 text-2xl font-bold text-foreground">Psychological Assessments</h1>
-        <p className="mb-6 text-sm text-muted-foreground">
-          Take a short assessment to help your expert understand you better.
-        </p>
+        <PageHeader
+          title="Psychological Assessments"
+          description="Take a short assessment to help your expert understand you better."
+        />
 
         {isLoading ? (
           <Spinner className="h-6 w-6" />
@@ -40,7 +40,7 @@ export default function AssessmentListPage() {
       </div>
 
       <div>
-        <h2 className="mb-4 text-lg font-bold text-foreground">My Assessment History</h2>
+        <h2 className="mb-4 text-lg font-semibold text-foreground">My Assessment History</h2>
         {isHistoryLoading ? <Spinner className="h-6 w-6" /> : <AssessmentHistoryList history={history} />}
       </div>
     </div>

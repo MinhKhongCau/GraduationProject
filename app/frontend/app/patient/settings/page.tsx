@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfileEditForm, type ProfileFormValues } from "./component/ProfileEditForm";
 import { ChangePasswordForm } from "./component/ChangePasswordForm";
 import { DeleteAccountSection } from "./component/DeleteAccountSection";
+import { PageHeader } from "@/components/ui";
 import { useApiMutation } from "@/hooks";
 import { authApi, patientApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -48,7 +49,7 @@ export default function PatientSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+      <PageHeader title="Settings" className="mb-0" />
 
       <ProfileEditForm
         defaultValues={{

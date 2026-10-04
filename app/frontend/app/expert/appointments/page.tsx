@@ -1,7 +1,7 @@
 "use client";
 
 import { AppointmentListItem } from "./component/AppointmentListItem";
-import { Spinner } from "@/components/ui";
+import { Card, PageHeader, Spinner } from "@/components/ui";
 import { useExpertAppointments } from "@/hooks";
 
 export default function ExpertAppointmentsPage() {
@@ -9,12 +9,12 @@ export default function ExpertAppointmentsPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">My Appointments</h1>
+      <PageHeader title="My Appointments" />
 
       {isLoading ? (
         <Spinner className="h-6 w-6" />
       ) : appointments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">You don&apos;t have any appointments yet.</p>
+        <Card className="p-8 text-center text-sm text-muted-foreground">You don&apos;t have any appointments yet.</Card>
       ) : (
         <div className="space-y-3">
           {appointments.map((appointment) => (

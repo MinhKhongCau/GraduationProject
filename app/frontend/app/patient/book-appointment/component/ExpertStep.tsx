@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Check } from "lucide-react";
-import { Button, Spinner } from "@/components/ui";
+import { Button, PageHeader, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { expertApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -23,7 +23,7 @@ export function ExpertStep({ selectedExpert, onSelectExpert, onBack, onNext }: E
 
   return (
     <div className="flex h-full flex-col">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">Choose your expert</h1>
+      <PageHeader title="Choose your expert" />
 
       {isLoading ? (
         <Spinner className="h-6 w-6" />
@@ -36,8 +36,9 @@ export function ExpertStep({ selectedExpert, onSelectExpert, onBack, onNext }: E
                 key={expert.expertId}
                 type="button"
                 onClick={() => onSelectExpert(expert)}
-                className={`relative flex items-center gap-3 rounded-2xl border p-4 text-left transition-all ${
-                  isSelected ? "border-primary bg-primary-soft/50 shadow-elevated" : "border-border hover:shadow-card"
+                aria-pressed={isSelected}
+                className={`relative flex items-center gap-3 rounded-xl border bg-background p-4 text-left transition-all ${
+                  isSelected ? "border-primary bg-primary-soft ring-1 ring-primary" : "border-border-strong hover:border-primary/40 hover:shadow-card"
                 }`}
               >
                 {isSelected && (
@@ -54,7 +55,7 @@ export function ExpertStep({ selectedExpert, onSelectExpert, onBack, onNext }: E
                   className="h-11 w-11 rounded-full object-cover"
                 />
                 <div>
-                  <p className="text-sm font-bold text-foreground">{expert.fullName}</p>
+                  <p className="text-sm font-semibold text-foreground">{expert.fullName}</p>
                   <p className="text-xs text-muted-foreground">
                     {expert.specializations.map((spec) => spec.name).join(", ") || "General counseling"}
                   </p>

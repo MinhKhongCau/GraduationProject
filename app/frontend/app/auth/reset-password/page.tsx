@@ -62,12 +62,12 @@ export default function ResetPasswordPage() {
           error={errors.confirmPassword?.message}
           {...register("confirmPassword")}
         />
-        <Button type="submit" className="w-full" disabled={!token || resetPasswordMutation.isPending}>
+        <Button type="submit" size="lg" className="w-full" disabled={!token || resetPasswordMutation.isPending}>
           <KeyRound className="h-4 w-4" />
           {resetPasswordMutation.isPending ? "Resetting..." : "Reset password"}
         </Button>
         {!token && (
-          <p className="text-center text-xs text-danger">
+          <p role="alert" className="text-center text-sm font-medium text-danger">
             This link is missing a reset token — please use the link from your email.
           </p>
         )}

@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import type { Category, Tag } from "@/types";
+import { Input, Select } from "@/components/ui";
 
 export interface PostFiltersProps {
   search: string;
@@ -31,18 +32,20 @@ export function PostFilters({
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">
             <Search className="h-4 w-4" />
           </div>
-          <input
-            type="text"
+          <Input
+            type="search"
+            aria-label="Search posts"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Search posts..."
-            className="w-full rounded-xl border border-border py-2.5 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            className="pl-10"
           />
         </div>
-        <select
+        <Select
+          aria-label="Category"
           value={categoryId ?? ""}
           onChange={(e) => onCategoryChange(e.target.value ? Number(e.target.value) : null)}
-          className="rounded-xl border border-border px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+          className="sm:w-56"
         >
           <option value="">All categories</option>
           {categories.map((category) => (
@@ -50,15 +53,17 @@ export function PostFilters({
               {category.name}
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           <button
+            type="button"
             onClick={() => onTagChange(null)}
-            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-              !tag ? "bg-primary text-white" : "bg-surface text-muted-foreground hover:bg-border/50"
+            aria-pressed={!tag}
+            className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+              !tag ? "border-primary bg-primary text-white" : "border-border bg-background text-muted-foreground hover:bg-surface hover:text-foreground"
             }`}
           >
             All tags
@@ -66,9 +71,11 @@ export function PostFilters({
           {tags.map((t) => (
             <button
               key={t.id}
+              type="button"
               onClick={() => onTagChange(t.slug)}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                tag === t.slug ? "bg-primary text-white" : "bg-surface text-muted-foreground hover:bg-border/50"
+              aria-pressed={tag === t.slug}
+              className={`inline-flex h-8 items-center rounded-full border px-3 text-xs font-medium transition-colors ${
+                tag === t.slug ? "border-primary bg-primary text-white" : "border-border bg-background text-muted-foreground hover:bg-surface hover:text-foreground"
               }`}
             >
               {t.name}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Modal, Button, Spinner } from "@/components/ui";
+import { Modal, Button, Spinner, Label, Input, Textarea } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { expertApi, specializationApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -79,56 +79,56 @@ export function ExpertEditModal({
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Họ và tên</label>
-            <input
+            <Label htmlFor="experteditmodal-fullName">Họ và tên</Label>
+            <Input
+              id="experteditmodal-fullName"
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Số điện thoại</label>
-              <input
+              <Label htmlFor="experteditmodal-phoneNumber">Số điện thoại</Label>
+              <Input
+                id="experteditmodal-phoneNumber"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">Email</label>
-              <input
+              <Label htmlFor="experteditmodal-email">Email</Label>
+              <Input
+                id="experteditmodal-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
               />
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Video giới thiệu (URL)</label>
-            <input
+            <Label htmlFor="experteditmodal-introductionVideoUrl">Video giới thiệu (URL)</Label>
+            <Input
+              id="experteditmodal-introductionVideoUrl"
               value={introductionVideoUrl}
               onChange={(e) => setIntroductionVideoUrl(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">Tiểu sử</label>
-            <textarea
+            <Label htmlFor="experteditmodal-bio">Tiểu sử</Label>
+            <Textarea
+              id="experteditmodal-bio"
               rows={3}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-medium text-foreground">Chuyên khoa</label>
+            <Label className="mb-2">Chuyên khoa</Label>
             <div className="flex flex-wrap gap-2">
               {allSpecializations.map((spec) => {
                 const isSelected = specializationIds.includes(spec.specId);
@@ -136,10 +136,11 @@ export function ExpertEditModal({
                   <button
                     key={spec.specId}
                     type="button"
+                    aria-pressed={isSelected}
                     onClick={() => toggleSpecialization(spec.specId)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    className={`h-8 rounded-lg border px-3 text-xs font-medium transition-colors ${
                       isSelected
-                        ? "border-primary bg-primary-soft text-primary"
+                        ? "border-primary bg-primary-soft text-primary-soft-text"
                         : "border-border text-muted-foreground hover:bg-surface"
                     }`}
                   >

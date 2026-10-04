@@ -24,7 +24,7 @@ export default function ExpertForumPostPage() {
       </Card>
 
       <Card className="p-6">
-        <h2 className="mb-4 text-lg font-bold text-foreground">Comments ({post.commentCount})</h2>
+        <h2 className="mb-4 text-lg font-semibold text-foreground">Comments ({post.commentCount})</h2>
         <div className="mb-6">
           <CommentComposer postId={post.id} />
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Modal, Button } from "@/components/ui";
+import { Modal, Button, Label, Textarea, FieldError } from "@/components/ui";
 import type { AppointmentWithExpert } from "@/hooks";
 
 export interface CancelBookingDialogProps {
@@ -43,18 +43,19 @@ export function CancelBookingDialog({ appointment, onOpenChange, onConfirm, isSu
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">Reason for cancellation</label>
-          <textarea
+          <Label htmlFor="cancel-reason">Reason for cancellation</Label>
+          <Textarea
+            id="cancel-reason"
             rows={3}
+            invalid={touched && !trimmedReason}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             disabled={isSubmitting}
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
           />
-          {touched && !trimmedReason && <p className="mt-1 text-xs text-danger">A reason is required.</p>}
+          <FieldError>{touched && !trimmedReason ? "A reason is required." : undefined}</FieldError>
         </div>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             Keep booking
           </Button>

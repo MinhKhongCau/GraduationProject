@@ -28,13 +28,16 @@ export function BookmarkButton({ postId, initialBookmarkCount }: BookmarkButtonP
 
   return (
     <button
+      type="button"
       onClick={onClick}
+      aria-pressed={bookmarked}
+      aria-label="Bookmark"
       disabled={toggleBookmark.isPending}
-      className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-        bookmarked ? "border-primary bg-primary-soft text-primary" : "border-border text-muted-foreground hover:bg-surface"
+      className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors disabled:opacity-60 ${
+        bookmarked ? "border-primary/30 bg-primary-soft text-primary" : "border-border-strong bg-background text-muted-foreground hover:bg-surface hover:text-foreground"
       }`}
     >
-      <Bookmark className={`h-4 w-4 ${bookmarked ? "fill-primary" : ""}`} />
+      <Bookmark aria-hidden="true" className={`h-4 w-4 ${bookmarked ? "fill-primary" : ""}`} />
       {count}
     </button>
   );

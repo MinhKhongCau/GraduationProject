@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Textarea } from "@/components/ui";
 import { useCreateComment } from "@/hooks";
 
 export interface CommentComposerProps {
@@ -31,12 +31,13 @@ export function CommentComposer({ postId, parentId = null, placeholder = "Write 
 
   return (
     <div className="flex flex-col gap-2">
-      <textarea
+      <Textarea
+        aria-label={placeholder}
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder={placeholder}
         rows={2}
-        className="w-full resize-none rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+        className="resize-none"
       />
       <div className="flex justify-end gap-2">
         {onDone && (

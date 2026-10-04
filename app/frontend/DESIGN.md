@@ -87,6 +87,8 @@ One shared shell renders three nav variants and lets Tailwind's own breakpoints 
 - **Tablet** (`sm:`–`lg:` — `TabletDrawerNav.tsx`): slim top bar with a hamburger that opens a left Radix Dialog sheet.
 - **Mobile** (`<sm:` — `MobileBottomNav.tsx`): fixed bottom tab bar with the 4–5 highest-value nav items (`PATIENT_BOTTOM_NAV_ITEMS`/`EXPERT_BOTTOM_NAV_ITEMS` in `constants/nav.ts`).
 
+**Core nav vs. dashboard features**: every nav surface (desktop header, tablet drawer, mobile bottom bar, admin sidebar) shows only a short core list per role (`*_HEADER_NAV_ITEMS` in `constants/nav.ts`). Every other page is reached from that role's dashboard, which renders the grouped `*_DASHBOARD_FEATURES` lists through `components/dashboard/FeatureGrid.tsx`. To add a page, add it to the role's `*_NAV_ITEMS` with a `description`, then put its id in either the header list or a dashboard group. `*_NAV_ITEMS` itself stays the full list, used for lookups such as the admin topbar title.
+
 `ClientShell` is used by both `app/patient/layout.tsx` and `app/expert/layout.tsx`, each passing its own `navItems`/`settingsItem` — this is the "client" layout the requirements referred to (a shared shell for both patient and expert "clients" of the platform), as distinct from `landing` (public marketing) and `admin` (a separate, desktop-first sidebar layout in `components/layout/admin-shell/`, since admin panels are conventionally desktop tools and weren't worth building a second three-way responsive system for in this pass).
 
 `hooks/useBreakpoint.ts`/`useMediaQuery.ts` still exist (built on `useSyncExternalStore`, SSR-safe) for genuine JS-only behavior that CSS can't express — they are not used to decide what to render in the shell.
@@ -94,6 +96,13 @@ One shared shell renders three nav variants and lets Tailwind's own breakpoints 
 ## Design tokens (`app/index.css` + `tailwind.config.js`)
 
 Tailwind v4 is CSS-first: `app/index.css`'s `@theme inline` block is the **single real source of truth** for color/radius/shadow tokens (`--color-primary`, `--color-danger`, etc.), migrated from the ad hoc hex values scattered across the original prototype pages. `tailwind.config.js` exists because it was explicitly requested, and is kept intentionally thin — `theme.extend` mirrors the same CSS variables for tooling that expects a JS config, plus a `safelist` for dynamically-built class names Tailwind's static analyzer can't see (e.g. status-pill colors chosen by a JS switch). **Edit `app/index.css` to change a color, not `tailwind.config.js`.**
+
+UI conventions (aligned with the `ui-ux-pro-max` skill's accessibility/touch rules):
+
+- **Radius scale** — controls (buttons, inputs, selects, nav links) `rounded-lg`; cards, panels, list rows `rounded-xl`; modals and hero blocks `rounded-2xl`; `rounded-full` only for avatars, status pills and dots, never for text buttons.
+- **Contrast** — solid `primary`/`danger`/`success`/`warning` fills carry white text, so their token values are chosen to reach 4.5:1 against white.
+- **Primitives** in `components/ui/` — `Button` (+ `buttonClasses()` for a `Link` styled as a button; never nest `<Button>` in `<Link>`), `Input`/`Select`/`Textarea`/`Label`/`FieldError` (`fieldClasses()` for one-offs), `Card`/`CardHeader`, `PageHeader` (title + description + actions at the top of every portal page), `Badge` (status pills), `BrandLogo`/`BrandMark`.
+- Focus rings, pointer cursor on buttons, and `prefers-reduced-motion` are handled globally in `app/index.css`'s `@layer base`.
 
 ## i18n (`context/LocaleContext.tsx` + `hooks/useTranslation.ts` + `locales/`)
 
