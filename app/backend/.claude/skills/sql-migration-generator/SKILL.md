@@ -24,14 +24,14 @@ database or add cross-database foreign keys.
 
 | Service | Mechanism | Where / naming | Runs |
 |---|---|---|---|
-| payment (Go) | GORM `AutoMigrate` + hand-written SQL | `payment-service/migrate_vN.sql` (next: `migrate_v4.sql`) | AutoMigrate on boot; SQL run manually |
-| booking (Go) | GORM `AutoMigrate` + pre-migration + hand-written SQL | `booking-service/migrate_v<major>_<minor>_<tag>.sql` (e.g. `migrate_v0_6_outbox.sql`) | AutoMigrate on boot; SQL run manually |
-| profile (Go) | GORM `AutoMigrate` only | `profile-service/config/database.go`. Add a SQL file `profile-service/migrations/NNN_<name>.sql` for anything AutoMigrate can't do (partial indexes, CHECKs) | boot |
-| forum (Go) | **golang-migrate** embedded | `forum-service/internal/repository/db/migrations/NNNNNN_<name>.up.sql` + `.down.sql` (6 digits, next `000010`) | `RunMigrations` on boot |
-| assessment (Python) | **Alembic** | `assessment-service/migrations/versions/NNNN_<name>.py`, `revision = "NNNN_<name>"`, `down_revision` = previous file's revision | `alembic upgrade head` |
+| payment (Go) | GORM `AutoMigrate` + hand-written SQL | `payment-service/migrate_vN.sql` (next: `migrate_v5.sql`) | AutoMigrate on boot; SQL run manually |
+| booking (Go) | GORM `AutoMigrate` + pre-migration + hand-written SQL | `booking-service/migrate_v<major>_<minor>_<tag>.sql` (latest `migrate_v0_6_outbox.sql`) | AutoMigrate on boot; SQL run manually |
+| profile (Go) | GORM `AutoMigrate` only | `profile-service/config/database.go`. Plus `profile-service/migrations/NNN_<name>.sql` (next `002`) for anything AutoMigrate can't do (partial indexes, CHECKs) | boot |
+| forum (Go) | **golang-migrate** embedded | `forum-service/internal/repository/db/migrations/NNNNNN_<name>.up.sql` + `.down.sql` (6 digits, next `000012`) | `RunMigrations` on boot |
+| assessment (Python) | **Alembic** | `assessment-service/migrations/versions/NNNN_<name>.py`, `revision = "NNNN_<name>"`, `down_revision` = previous file's revision (next `0009`) | `alembic upgrade head` |
 | chatroom (Node) | **TypeORM** migrations, `synchronize: false` | `chatroom-service/migrations/<epochMs>-<PascalName>.js`. ESM class with `up`/`down` using `queryRunner.query`, and **register it in `config/db.js` `migrations: [...]`** | `dataSource.runMigrations()` on boot |
-| auth (Java) | JPA `ddl-auto: update`, no migration tool | Add an `@Entity`. For indexes/constraints JPA can't express, propose Flyway (`src/main/resources/db/migration/V<N>__<name>.sql`) and ask before adding the dependency | boot |
-| chatbot (Python) | none (tables come from SQLAlchemy models / langchain-postgres) | Propose introducing Alembic (`chatbot-service/migrations/`) and ask before adding it | — |
+| auth (Java) | JPA `ddl-auto: update` + **Flyway** (baseline 0) | `auth-service/src/main/resources/db/migration/V<N>__<name>.sql` (next `V2`). Unquoted `Identity_*` names (stored lower-case, as Hibernate expects) | Flyway on boot, before Hibernate |
+| chatbot (Python) | **Alembic** (PGVector tables unmanaged) | `chatbot-service/migrations/versions/NNNN_<name>.py` (next `0002`) | `alembic upgrade head` in Dockerfile CMD |
 
 If the table is also declared as a GORM/JPA/SQLAlchemy/TypeORM model, keep the model and the
 migration in sync: same column names, types and nullability.
@@ -39,7 +39,9 @@ migration in sync: same column names, types and nullability.
 ## 2. SQL style (match existing files)
 
 - First line is a comment: `-- V<N>: <one-line purpose>`, plus why for non-obvious steps.
-- Wrap raw SQL files in `BEGIN; ... COMMIT;`. golang-migrate, Alembic and TypeORM already run in a tx.
+- Wrap raw SQL files in `BEGIN; ... COMMIT;`. Alembic, TypeORM and Flyway already run in a tx.
+  forum's golang-migrate uses `x-multi-statement` (statements run one by one, **no** tx, naive `;`
+  split): keep every statement idempotent and never put `;` inside comments or `$$` bodies.
 - **Idempotent**: `CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`,
   `CREATE INDEX IF NOT EXISTS`, and `DROP CONSTRAINT IF EXISTS` before `ADD CONSTRAINT`.
 - Names:

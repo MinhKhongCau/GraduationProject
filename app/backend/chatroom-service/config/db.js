@@ -4,6 +4,7 @@ import { ENV } from "./env.js";
 import { RoomEntity } from "../entities/room.entity.js";
 import { MessageEntity } from "../entities/message.entity.js";
 import { CreateChatroomTables1700000000000 } from "../migrations/1700000000000-CreateChatroomTables.js";
+import { CreateOutboxInboxTables1791136060543 } from "../migrations/1791136060543-CreateOutboxInboxTables.js";
 
 export const dataSource = new DataSource({
   type: "postgres",
@@ -16,7 +17,7 @@ export const dataSource = new DataSource({
   synchronize: false, // Do not synchronize automatically, use migrations!
   logging: ENV.NODE_ENV === "development" ? ["query", "error"] : ["error"],
   entities: [RoomEntity, MessageEntity],
-  migrations: [CreateChatroomTables1700000000000],
+  migrations: [CreateChatroomTables1700000000000, CreateOutboxInboxTables1791136060543],
 });
 
 export async function initDb() {

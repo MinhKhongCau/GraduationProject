@@ -30,10 +30,12 @@ RUN pip install --timeout 600 openai-whisper && \
 # Copy source code
 COPY app/ app/
 COPY scripts/ scripts/
+COPY alembic.ini .
+COPY migrations/ migrations/
 
 # Tạo thư mục
 RUN mkdir -p temp_audio data/rag_docs/processed models
 
 EXPOSE 8086
 
-CMD ["sh", "-c", "python scripts/ingest_vector_db.py || true && uvicorn app.main:app --host 0.0.0.0 --port 8086"]
+CMD ["sh", "-c", "alembic upgrade head && (python scripts/ingest_vector_db.py || true) && uvicorn app.main:app --host 0.0.0.0 --port 8086"]

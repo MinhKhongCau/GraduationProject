@@ -1,6 +1,7 @@
 # Plan: Outbox / Inbox migration files
 
-Status: **plan only, no migration files created yet**
+Status: **migration files implemented** (2026-10-05), verified on PostgreSQL 16: apply, re-run (idempotent), rollback/down, re-apply.
+ORM entities, relay and consumers are not part of this step (see "Code" notes per service).
 Implements phase 1 of [OUTBOX_PATTERN_PLAN.md](./OUTBOX_PATTERN_PLAN.md) §4 and §11.
 Follows `.claude/skills/sql-migration-generator/SKILL.md` and CODING-CONVENTION §5.
 
@@ -73,6 +74,11 @@ Steps:
    - `payload_bin BYTEA`
 
    `exchange`, `payload_type` and `content_type` are added **nullable**. Existing `payload TEXT` (JSON) is kept: rows created before the switch have no protobuf bytes.
+
+   **As implemented:** the running binary must keep inserting rows after the migration, so
+   `content_type` defaults to `application/json` (flip to protobuf in a later migration),
+   `payload_type` stays nullable for JSON rows, and `payload` drops `NOT NULL`. Two CHECKs
+   enforce the shape: JSON rows need `payload`, protobuf rows need `payload_bin` + `payload_type`.
 2. Backfill existing rows:
    - `content_type = 'application/json'`
    - `exchange = 'payment.exchange'`
@@ -83,7 +89,8 @@ Steps:
 3. `SET NOT NULL` on `exchange`, `payload_type` and `content_type`, and set the defaults
    (`'payment.exchange'`, `'application/x-protobuf'`).
 4. Add a CHECK: `payload_bin IS NOT NULL OR content_type = 'application/json'`.
-5. Resurrect the withdrawal rows wrongly marked `DEAD` with `terminal_reason_code` = unsupported event type:
+5. *(Separate file `migrate_v4_replay_withdrawals.sql`, run **after** the new relay is deployed;
+   otherwise the old relay marks them DEAD again.)* Resurrect the withdrawal rows wrongly marked `DEAD` with `terminal_reason_code` = unsupported event type:
    - `status = 'PENDING'`, `attempt_count = 0`, `next_attempt_at = NULL`, `last_error = NULL`
    - **Guarded by a WHERE on `event_type LIKE 'wallet.withdrawal.%'`**, so DEAD booking deliveries are not replayed.
 6. Add the index `ix_payment_outbox_events_aggregate (aggregate_type, aggregate_id, created_at)`.
@@ -115,7 +122,7 @@ Run it before deploy.
 
 JPA `ddl-auto: update` can create the tables but not the partial index or CHECKs.
 
-- **Option A (recommended): introduce Flyway.**
+- **Option A (implemented): introduce Flyway** (`spring-boot-starter-flyway` + `flyway-database-postgresql` 11.x, resolved against Boot 4.0.5).
   - Add the `flyway-core` and `flyway-database-postgresql` dependencies.
   - Set `spring.flyway.baseline-on-migrate: true`, `baseline-version: 0`.
   - Add `src/main/resources/db/migration/V1__create_outbox_inbox.sql`.
@@ -168,7 +175,7 @@ Code: SQLAlchemy models in `app/models.py`.
 
 TypeORM, `synchronize: false`.
 
-**File:** `migrations/<Date.now()>-CreateOutboxInboxTables.js`
+**File:** `migrations/1791136060543-CreateOutboxInboxTables.js` (registered in `config/db.js`)
 - class `CreateOutboxInboxTables<ts>`
 - `up` creates the `outbox_events` and `inbox_events` tables via `queryRunner.query` (BIGINT ms, matching `messages.created_at`)
 - `down` drops them
@@ -179,7 +186,7 @@ Code:
 
 ### 3.8 chatbot-service (phase 7)
 
-No migration tool today. **Needs team approval:**
+No migration tool today. **Implemented with Alembic** (`alembic.ini`, `migrations/env.py` reading the same `POSTGRES_*` env as `app/db/postgres.py`, `target_metadata = None` so PGVector tables are never touched):
 - add `alembic` to `requirements.txt` and `chatbot-service/alembic.ini`
 - add `migrations/versions/0001_create_outbox_inbox.py` (only the new tables; existing `chat_sessions` / `chat_messages` and langchain tables are not touched)
 - run `alembic upgrade head` in the Dockerfile CMD before `ingest_vector_db.py`
@@ -190,14 +197,14 @@ Fallback if Alembic is rejected: `chatbot-service/migrations/001_create_outbox_i
 
 | # | Service | File(s) | Mechanism | Tables | Time type | Needs approval |
 |---|---|---|---|---|---|---|
-| 1 | payment | `migrate_v4.sql` | raw SQL (manual) | extend `payment_outbox_events`, new `payment_inbox_events` | BIGINT ms | no |
+| 1 | payment | `migrate_v4.sql` + `migrate_v4_replay_withdrawals.sql` (post-deploy) | raw SQL (manual) | extend `payment_outbox_events`, new `payment_inbox_events` | BIGINT ms | no |
 | 2 | booking | `migrate_v0_6_outbox.sql` | raw SQL (manual) + AutoMigrate | `"Booking_Outbox_Events"`, `"Booking_Inbox_Events"` | BIGINT ms | no |
-| 3 | auth | `db/migration/V1__create_outbox_inbox.sql` | Flyway (new) | `Identity_Outbox_Events`, `Identity_Inbox_Events` | TIMESTAMPTZ | **yes** (Flyway) |
+| 3 | auth | `db/migration/V1__create_outbox_inbox.sql` | Flyway (new) | `Identity_Outbox_Events`, `Identity_Inbox_Events` | TIMESTAMPTZ | done (Flyway added) |
 | 4 | profile | `migrations/001_create_outbox_inbox.sql` | raw SQL (manual) + AutoMigrate | `outbox_events`, `inbox_events` | TIMESTAMPTZ | no |
 | 5 | forum | `000010_*`, `000011_*` up/down | golang-migrate | `outbox_events`, `inbox_events` | TIMESTAMPTZ | no |
 | 6 | assessment | `0008_create_outbox_inbox.py` | Alembic | `outbox_events`, `inbox_events` | TIMESTAMPTZ | no |
-| 7 | chatroom | `<ts>-CreateOutboxInboxTables.js` | TypeORM | `outbox_events`, `inbox_events` | BIGINT ms | no |
-| 8 | chatbot | `0001_create_outbox_inbox.py` | Alembic (new) | `outbox_events`, `inbox_events` | TIMESTAMPTZ | **yes** (Alembic) |
+| 7 | chatroom | `1791136060543-CreateOutboxInboxTables.js` | TypeORM | `outbox_events`, `inbox_events` | BIGINT ms | no |
+| 8 | chatbot | `0001_create_outbox_inbox.py` | Alembic (new) | `outbox_events`, `inbox_events` | TIMESTAMPTZ | done (Alembic added) |
 
 ## 5. Verification per migration
 

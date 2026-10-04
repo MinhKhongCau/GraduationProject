@@ -19,6 +19,14 @@ spring:
     password: ${DB_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
 
+  # Flyway runs before Hibernate. Existing databases (tables created by ddl-auto) are baselined
+  # at version 0 so V1+ still apply. Switch ddl-auto to validate once all tables have migrations.
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+
   jpa:
     hibernate:
       ddl-auto: update
