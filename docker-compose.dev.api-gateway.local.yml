@@ -16,7 +16,7 @@ name: "dev-booking-local"
 #
 # Luồng test:
 #   1. Lấy JWT: POST https://api.qmcloud.io.vn/api/v1/auth/login
-#   2. Chạy Booking Go: go run ./cmd/api       (port 8083)
+#   2. Chạy Booking Go: go run ./cmd           (port 8083)
 #   3. Chạy file này:   docker compose -f docker-compose.dev.booking.yml up -d
 #   4. Gọi API:         http://localhost:8000/api/v1/slots/available-dates
 #      (Kèm header:     Authorization: Bearer <JWT lấy ở bước 1>)
