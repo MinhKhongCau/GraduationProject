@@ -4,7 +4,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -p 2 -o booking-service ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -p 2 -o booking-service ./cmd
 
 # ---- Runtime ----
 FROM alpine:3.20 AS runner
