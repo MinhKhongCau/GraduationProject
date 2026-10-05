@@ -1,4 +1,4 @@
-import * as store from "../stores/chat.store.js";
+import * as store from "../../infrastructure/persistence/stores/chat.store.js";
 
 export async function addChat(roomId, message) {
   await store.pushMessage(roomId, message);

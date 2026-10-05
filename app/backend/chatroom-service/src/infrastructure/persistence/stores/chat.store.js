@@ -1,6 +1,6 @@
-import { dataSource } from "../config/db.js";
+import { dataSource } from "../../../../config/db.js";
 import { MessageEntity } from "../entities/message.entity.js";
-import { redisPub as r } from "../config/redis.js";
+import { redisPub as r } from "../../../../config/redis.js";
 import { LessThan } from "typeorm";
 
 const key = (roomId) => `room:${roomId}:chat`;

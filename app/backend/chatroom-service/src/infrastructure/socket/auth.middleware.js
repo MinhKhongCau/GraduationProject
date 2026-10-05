@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { ENV } from "../config/env.js";
+import { ENV } from "../../../config/env.js";
 
 function loadPublicKey() {
   const raw = (ENV.JWT_PUBLIC_KEY || "").replace(/\s+/g, "");

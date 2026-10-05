@@ -1,7 +1,7 @@
-import { joinRoom, leaveRoom } from "../../services/room.service.js";
-import { addChat, getChatHistory } from "../../services/chat.service.js";
-import { setOnline, setOffline } from "../../stores/presence.store.js";
-import { updateRoomUserCount, getRoomList } from "../../services/room.service.js";
+import { joinRoom, leaveRoom } from "../../../application/services/room.service.js";
+import { addChat, getChatHistory } from "../../../application/services/chat.service.js";
+import { setOnline, setOffline } from "../../persistence/stores/presence.store.js";
+import { updateRoomUserCount, getRoomList } from "../../../application/services/room.service.js";
 
 export function roomSocketController(io, socket) {
   const sysMsg = async (roomId, text) => {// system message helper

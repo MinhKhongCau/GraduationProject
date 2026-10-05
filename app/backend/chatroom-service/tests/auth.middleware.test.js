@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { socketAuthMiddleware } from "../socket/auth.middleware.js";
+import { socketAuthMiddleware } from "../src/infrastructure/socket/auth.middleware.js";
 import jwt from "jsonwebtoken";
 
 describe("UC-09: Socket Authentication Middleware", () => {

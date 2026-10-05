@@ -1,9 +1,9 @@
 import { Server } from "socket.io";
 import { createAdapter } from "@socket.io/redis-adapter";
-import { redisPub, redisSub } from "../config/redis.js";
-import { ENV } from "../config/env.js";
+import { redisPub, redisSub } from "../../../config/redis.js";
+import { ENV } from "../../../config/env.js";
 import { socketAuthMiddleware } from "./auth.middleware.js";
-import { setOnline, setOffline } from "../stores/presence.store.js";
+import { setOnline, setOffline } from "../persistence/stores/presence.store.js";
 
 import { roomSocketController } from "./controllers/room.socket.controller.js";
 import { chatSocketController } from "./controllers/chat.socket.controller.js";

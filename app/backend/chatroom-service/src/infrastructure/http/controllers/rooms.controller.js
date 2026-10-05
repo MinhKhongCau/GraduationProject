@@ -1,4 +1,4 @@
-import { getActiveRooms } from "../services/room.service.js";
+import { getActiveRooms } from "../../../application/services/room.service.js";
 
 export async function listRooms(req, res, next) {
   try {

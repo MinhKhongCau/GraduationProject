@@ -1,6 +1,6 @@
 import { EVENTS } from "../events.js";
-import { setSpeaking, getSpeaking } from "../../services/presence.service.js";
-import { getUserSocket } from "../../stores/presence.store.js";
+import { setSpeaking, getSpeaking } from "../../../application/services/presence.service.js";
+import { getUserSocket } from "../../persistence/stores/presence.store.js";
 
 export function presenceSocketController(io, socket) {
   socket.on(EVENTS.PRESENCE_SPEAKING, async ({ isSpeaking }) => {

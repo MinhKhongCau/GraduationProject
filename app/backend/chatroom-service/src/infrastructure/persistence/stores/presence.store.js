@@ -1,4 +1,4 @@
-import { redisPub as r } from "../config/redis.js";
+import { redisPub as r } from "../../../../config/redis.js";
 
 const key = (name) => `presence:user:${name}`;
 

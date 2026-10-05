@@ -1,4 +1,4 @@
-import { logger } from "../utils/logger.js";
+import { logger } from "../../../utils/logger.js";
 
 export function errorMiddleware(err, req, res, next) {
   logger.error(err?.message || err);

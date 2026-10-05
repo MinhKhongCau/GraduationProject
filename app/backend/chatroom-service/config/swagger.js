@@ -16,7 +16,7 @@ const options = {
       { url: "/api/v1/chatroom", description: "Direct or via API gateway" },
     ],
   },
-  apis: ["./routes/*.routes.js"],
+  apis: ["./src/infrastructure/http/routes/*.routes.js"],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

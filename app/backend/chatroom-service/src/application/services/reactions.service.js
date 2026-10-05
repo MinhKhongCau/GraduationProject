@@ -1,4 +1,4 @@
-import { getReactions, setReactions } from "../stores/reactions.store.js";
+import { getReactions, setReactions } from "../../infrastructure/persistence/stores/reactions.store.js";
 
 export async function toggleReaction(roomId, messageId, emoji, userName) {
   const all = await getReactions(roomId);

@@ -1,5 +1,5 @@
-import { addChat, getChatHistory } from "../../services/chat.service.js";
-import { toggleReaction } from "../../services/reactions.service.js";
+import { addChat, getChatHistory } from "../../../application/services/chat.service.js";
+import { toggleReaction } from "../../../application/services/reactions.service.js";
 
 export function chatSocketController(io, socket) {
   // ====== CHAT HISTORY ======

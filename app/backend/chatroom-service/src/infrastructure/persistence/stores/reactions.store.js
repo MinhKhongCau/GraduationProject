@@ -1,4 +1,4 @@
-import { redisPub as r } from "../config/redis.js";
+import { redisPub as r } from "../../../../config/redis.js";
 
 const key = (roomId) => `room:${roomId}:reactions`; 
 // field = messageId, value = json map { "🔥": ["naina","khushi"] }

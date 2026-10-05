@@ -15,7 +15,7 @@ Tài liệu này chứa Ma trận dò vết và Bảng kế hoạch Unit Test ch
 
 ## 2. BẢNG KẾ HOẠCH UNIT TEST CHI TIẾT - UC-19
 
-Dưới đây là bảng kế hoạch chi tiết kiểm thử tầng DM Store (`stores/dm.store.js`) tương tác với Redis Cache:
+Dưới đây là bảng kế hoạch chi tiết kiểm thử tầng DM Store (`src/infrastructure/persistence/stores/dm.store.js`) tương tác với Redis Cache:
 
 <table>
   <thead>

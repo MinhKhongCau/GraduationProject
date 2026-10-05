@@ -1,47 +1,70 @@
-server/
+chatroom-service/
+├── index.js                          # entrypoint: http server + socket init + start (Dockerfile: `node index.js`)
+│
+├── config/                           # env & infra configuration
+│   ├── env.js                        # env loader/validation
+│   ├── cors.js                       # cors config
+│   ├── db.js                         # TypeORM DataSource (entities + migrations)
+│   ├── redis.js                      # redis clients + adapter setup
+│   └── swagger.js                    # swagger-jsdoc spec (scans src/infrastructure/http/routes/*.routes.js)
+│
 ├── src/
-│   ├── app.js                  # express app config (middlewares, routes)
-│   ├── server.js               # http server + socket init + start
+│   ├── app.js                        # express app config (middlewares, routes)
 │   │
-│   ├── config/
-│   │   ├── env.js              # env loader/validation
-│   │   ├── cors.js             # cors config
-│   │   └── redis.js            # redis clients + adapter setup
+│   ├── application/                  # business logic (use cases)
+│   │   └── services/
+│   │       ├── chat.service.js
+│   │       ├── presence.service.js
+│   │       ├── reactions.service.js
+│   │       ├── room.service.js
+│   │       └── webrtc.service.js     # mostly relays + validation
 │   │
-│   ├── routes/                 # REST routes (optional but professional)
-│   │   ├── index.js
-│   │   ├── health.routes.js
-│   │   └── rooms.routes.js     # list rooms / create room (optional)
-│   │
-│   ├── controllers/            # REST controllers
-│   │   ├── health.controller.js
-│   │   └── rooms.controller.js
-│   │
-│   ├── socket/                 # socket layer
-│   │   ├── socket.js           # create io instance + adapter
-│   │   ├── events.js           # event names (constants)
-│   │   └── controllers/        # socket controllers (like express controllers)
-│   │       ├── room.socket.controller.js
-│   │       ├── webrtc.socket.controller.js
-│   │       └── presence.socket.controller.js
-│   │
-│   ├── services/               # business logic (used by controllers)
-│   │   ├── room.service.js
-│   │   ├── presence.service.js
-│   │   └── webrtc.service.js   # mostly relays + validation
-│   │
-│   ├── stores/                 # data layer (redis/db)
-│   │   └── room.store.js       # redis: room users, TTL, etc
-│   │
-│   ├── middlewares/
-│   │   ├── error.middleware.js
-│   │   └── validate.middleware.js (optional)
+│   ├── infrastructure/
+│   │   ├── http/                     # REST layer
+│   │   │   ├── controllers/
+│   │   │   │   ├── health.controller.js
+│   │   │   │   └── rooms.controller.js
+│   │   │   ├── middlewares/
+│   │   │   │   └── error.middleware.js
+│   │   │   └── routes/
+│   │   │       ├── index.js
+│   │   │       ├── health.routes.js
+│   │   │       └── rooms.routes.js
+│   │   │
+│   │   ├── socket/                   # Socket.IO layer
+│   │   │   ├── socket.js             # create io instance + adapter
+│   │   │   ├── events.js             # event names (constants)
+│   │   │   ├── auth.middleware.js    # JWT handshake auth
+│   │   │   └── controllers/          # socket controllers (like express controllers)
+│   │   │       ├── call.socket.controller.js
+│   │   │       ├── chat.socket.controller.js
+│   │   │       ├── dm.socket.controller.js
+│   │   │       ├── presence.socket.controller.js
+│   │   │       ├── room.socket.controller.js
+│   │   │       ├── typing.socket.controller.js
+│   │   │       └── webrtc.socket.controller.js
+│   │   │
+│   │   └── persistence/              # data layer (redis/postgres)
+│   │       ├── entities/             # TypeORM EntitySchemas
+│   │       │   ├── message.entity.js
+│   │       │   └── room.entity.js
+│   │       └── stores/
+│   │           ├── chat.store.js
+│   │           ├── dm.store.js
+│   │           ├── presence.store.js
+│   │           ├── reactions.store.js
+│   │           └── room.store.js
 │   │
 │   ├── utils/
 │   │   └── logger.js
 │   │
-│   └── types/                  # optional (shared shapes/docs)
+│   └── types/                        # shared shapes/constants
 │       └── index.js
+│
+├── migrations/                       # TypeORM migrations (imported by config/db.js)
+│   └── 1700000000000-CreateChatroomTables.js
+│
+├── tests/                            # jest tests
 │
 ├── .env
 ├── package.json

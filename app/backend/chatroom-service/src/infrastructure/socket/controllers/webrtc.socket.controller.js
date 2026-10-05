@@ -1,5 +1,5 @@
 import { EVENTS } from "../events.js";
-import { validateSignalPayload } from "../../services/webrtc.service.js";
+import { validateSignalPayload } from "../../../application/services/webrtc.service.js";
 
 export function webrtcSocketController(io, socket) {
   socket.on(EVENTS.WEBRTC_OFFER, ({ to, offer }) => {

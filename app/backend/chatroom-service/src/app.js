@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
 import swaggerUi from "swagger-ui-express";
-import routes from "./routes/index.js";
-import { corsOptions } from "./config/cors.js";
-import { errorMiddleware } from "./middlewares/error.middleware.js";
-import { healthCheck } from "./controllers/health.controller.js";
-import { swaggerSpec } from "./config/swagger.js";
+import routes from "./infrastructure/http/routes/index.js";
+import { corsOptions } from "../config/cors.js";
+import { errorMiddleware } from "./infrastructure/http/middlewares/error.middleware.js";
+import { healthCheck } from "./infrastructure/http/controllers/health.controller.js";
+import { swaggerSpec } from "../config/swagger.js";
 
 export function createApp() {
   const app = express();

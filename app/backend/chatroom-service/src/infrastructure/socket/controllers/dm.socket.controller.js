@@ -1,8 +1,8 @@
-import { getDMHistory, pushDM, makeDmId } from "../../stores/dm.store.js";
-import { getUserSocket } from "../../stores/presence.store.js";
-import { toggleReaction } from "../../services/reactions.service.js";
-import { CHATBOT_ID } from "../../types/index.js";
-import { ENV } from "../../config/env.js";
+import { getDMHistory, pushDM, makeDmId } from "../../persistence/stores/dm.store.js";
+import { getUserSocket } from "../../persistence/stores/presence.store.js";
+import { toggleReaction } from "../../../application/services/reactions.service.js";
+import { CHATBOT_ID } from "../../../types/index.js";
+import { ENV } from "../../../../config/env.js";
 
 // Helper function to read the chatbot API streaming response and emit chunks to the client
 async function handleChatbotStream(fromId, toUser, dmId, response, socket) {

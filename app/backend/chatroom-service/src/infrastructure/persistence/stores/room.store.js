@@ -1,6 +1,6 @@
-import { dataSource } from "../config/db.js";
+import { dataSource } from "../../../../config/db.js";
 import { RoomEntity } from "../entities/room.entity.js";
-import { redisPub as r } from "../config/redis.js";
+import { redisPub as r } from "../../../../config/redis.js";
 
 const ROOMS_KEY = "app:rooms";
 

@@ -1,4 +1,4 @@
-import * as roomsStore from "../stores/room.store.js";
+import * as roomsStore from "../../infrastructure/persistence/stores/room.store.js";
 
 // Map to track users in each room
 const roomUsers = new Map(); // roomId -> Map(socketId -> user)
