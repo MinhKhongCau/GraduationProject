@@ -1,0 +1,11 @@
+package category
+
+import "time"
+
+type Category struct {
+	ID          int64
+	Name        string
+	Slug        string
+	Description string
+	CreatedAt   time.Time
+}
