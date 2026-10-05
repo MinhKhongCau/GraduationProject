@@ -1,8 +1,8 @@
 package com.mindcare.auth.infrastructure.persistence.adapter;
 
 import com.mindcare.auth.application.port.out.RefreshTokenPort;
-import com.mindcare.auth.domain.entity.RefreshToken;
-import com.mindcare.auth.infrastructure.persistence.RefreshTokenJpaRepository;
+import com.mindcare.auth.domain.token.RefreshToken;
+import com.mindcare.auth.infrastructure.persistence.repository.RefreshTokenJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

@@ -1,7 +1,7 @@
 package com.mindcare.auth.application.port.out;
 
-import com.mindcare.auth.domain.entity.VerificationToken;
-import com.mindcare.auth.domain.enums.TokenType;
+import com.mindcare.auth.domain.token.VerificationToken;
+import com.mindcare.auth.domain.token.TokenType;
 import java.util.Optional;
 
 public interface VerificationTokenPort {

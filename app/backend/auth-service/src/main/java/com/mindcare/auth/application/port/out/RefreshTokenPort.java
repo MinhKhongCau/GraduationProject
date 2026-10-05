@@ -1,6 +1,6 @@
 package com.mindcare.auth.application.port.out;
 
-import com.mindcare.auth.domain.entity.RefreshToken;
+import com.mindcare.auth.domain.token.RefreshToken;
 import java.util.Optional;
 
 public interface RefreshTokenPort {
