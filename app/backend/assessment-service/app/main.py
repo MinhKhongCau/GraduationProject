@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
-from .middleware import ResponseEnvelopeMiddleware
-from .api import (
+from .infrastructure.http.middleware import ResponseEnvelopeMiddleware
+from .infrastructure.http.routes import (
     templates_router,
     dimensions_router,
     option_groups_router,

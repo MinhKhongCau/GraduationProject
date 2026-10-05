@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Eye, Ban, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Card, Button, Spinner, Pagination } from "@/components/ui";
+import { Card, Button, Spinner, Pagination, PageHeader, Select, Badge, type BadgeTone } from "@/components/ui";
 import { useApiQuery, useApiMutation, useForumAuthorName } from "@/hooks";
 import { forumApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -19,10 +19,10 @@ const STATUS_OPTIONS: { value: PostStatus; label: string }[] = [
   { value: "ARCHIVED", label: "Đã chặn" },
 ];
 
-const STATUS_BADGE: Record<PostStatus, string> = {
-  PUBLISHED: "bg-success-soft text-success",
-  DRAFT: "bg-surface text-muted-foreground",
-  ARCHIVED: "bg-danger-soft text-danger",
+const STATUS_BADGE: Record<PostStatus, BadgeTone> = {
+  PUBLISHED: "success",
+  DRAFT: "neutral",
+  ARCHIVED: "danger",
 };
 
 function AuthorCell({ authorId }: { authorId: string }) {
@@ -76,26 +76,28 @@ export default function AdminForumPostsPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Quản lý bài viết cộng đồng</h1>
-          <p className="text-sm text-muted-foreground">Kiểm duyệt, chặn hoặc xóa bài viết trên diễn đàn.</p>
-        </div>
-        <select
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value as PostStatus);
-            setPage(1);
-          }}
-          className="rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <PageHeader
+        className="mb-0"
+        title="Quản lý bài viết cộng đồng"
+        description="Kiểm duyệt, chặn hoặc xóa bài viết trên diễn đàn."
+        actions={
+          <Select
+            aria-label="Lọc theo trạng thái"
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value as PostStatus);
+              setPage(1);
+            }}
+            className="w-full sm:w-48"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+        }
+      />
 
       {isLoading ? (
         <div className="flex justify-center py-20">
@@ -105,39 +107,37 @@ export default function AdminForumPostsPage() {
         <Card className="overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left text-sm">
-              <thead className="border-b border-border bg-surface text-xs font-semibold uppercase text-muted-foreground">
+              <thead className="border-b border-border bg-surface text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-6 py-4">Tiêu đề</th>
-                  <th className="px-6 py-4">Tác giả</th>
-                  <th className="px-6 py-4">Trạng thái</th>
-                  <th className="px-6 py-4">Lượt thích</th>
-                  <th className="px-6 py-4">Bình luận</th>
-                  <th className="px-6 py-4 text-right">Thao tác</th>
+                  <th className="px-4 py-3">Tiêu đề</th>
+                  <th className="px-4 py-3">Tác giả</th>
+                  <th className="px-4 py-3">Trạng thái</th>
+                  <th className="px-4 py-3">Lượt thích</th>
+                  <th className="px-4 py-3">Bình luận</th>
+                  <th className="px-4 py-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border bg-background">
                 {posts.map((post) => (
-                  <tr key={post.id} className="hover:bg-surface/30">
-                    <td className="max-w-xs truncate px-6 py-4 font-medium text-foreground">{post.title}</td>
-                    <td className="px-6 py-4 text-muted-foreground">
+                  <tr key={post.id} className="transition-colors hover:bg-surface/60">
+                    <td className="max-w-xs truncate px-4 py-3 font-medium text-foreground">{post.title}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
                       <AuthorCell authorId={post.authorId} />
                     </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium ${STATUS_BADGE[post.status]}`}
-                      >
+                    <td className="px-4 py-3">
+                      <Badge tone={STATUS_BADGE[post.status]}>
                         {STATUS_OPTIONS.find((o) => o.value === post.status)?.label ?? post.status}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-6 py-4 text-muted-foreground">{post.likeCount}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{post.commentCount}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3 text-muted-foreground">{post.likeCount}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{post.commentCount}</td>
+                    <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setPreviewSlug(post.slug)}
-                          className="flex items-center gap-1 text-primary hover:bg-primary-soft/50"
+                          className="text-primary hover:bg-primary-soft"
                         >
                           <Eye className="h-3.5 w-3.5" /> Xem
                         </Button>
@@ -147,7 +147,7 @@ export default function AdminForumPostsPage() {
                             size="sm"
                             disabled={changeStatusMutation.isPending}
                             onClick={() => handleBlock(post)}
-                            className="flex items-center gap-1 text-danger hover:bg-danger-soft/50"
+                            className="text-danger hover:bg-danger-soft"
                           >
                             <Ban className="h-3.5 w-3.5" /> Chặn
                           </Button>
@@ -157,7 +157,7 @@ export default function AdminForumPostsPage() {
                           size="sm"
                           disabled={deleteMutation.isPending}
                           onClick={() => handleDelete(post)}
-                          className="flex items-center gap-1 text-danger hover:bg-danger-soft/50"
+                          className="text-danger hover:bg-danger-soft"
                         >
                           <Trash2 className="h-3.5 w-3.5" /> Xóa
                         </Button>

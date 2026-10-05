@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarCheck } from "lucide-react";
-import { Button, Card } from "@/components/ui";
+import { Button, Card, PageHeader } from "@/components/ui";
 import { CHANNELING_FEE, BOOKING_TOPICS } from "@/constants";
 import type { ExpertProfile, AvailableTimeSlot } from "@/types";
 
@@ -25,20 +25,20 @@ export function ReviewStep({ expert, slot, date, topics, onBack, onConfirm, isSu
 
   return (
     <div className="flex h-full flex-col">
-      <h1 className="mb-6 text-2xl font-bold text-foreground">Review your booking</h1>
+      <PageHeader title="Review your booking" />
 
-      <Card className="mb-8 max-w-xl space-y-4 p-6">
-        <div className="flex items-center justify-between">
+      <Card className="mb-6 max-w-xl space-y-4 p-6">
+        <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">Expert</span>
-          <span className="text-sm font-bold text-foreground">{expert.fullName}</span>
+          <span className="text-right text-sm font-semibold text-foreground">{expert.fullName}</span>
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">Topics</span>
-          <span className="text-sm font-bold text-foreground">{topicLabels}</span>
+          <span className="text-right text-sm font-semibold text-foreground">{topicLabels}</span>
         </div>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">Date &amp; time</span>
-          <span className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
             <CalendarCheck className="h-4 w-4 text-primary" />
             {dateLabel} · {timeLabel}
           </span>

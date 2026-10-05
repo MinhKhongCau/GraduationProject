@@ -3,6 +3,7 @@
 import { GoogleLogin } from "@react-oauth/google";
 import { Capacitor } from "@capacitor/core";
 import { useErrorContext } from "@/context/ErrorContext";
+import { Button } from "@/components/ui";
 
 const GOOGLE_AUTH_ENABLED = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_AUTH === "true";
 // Google Identity Services is a web SDK. Native Capacitor apps must use a
@@ -27,7 +28,7 @@ export function SocialAuthButtons({ onGoogleCredential }: SocialAuthButtonsProps
     <div className="space-y-3">
       <div className="relative flex items-center py-1">
         <div className="flex-grow border-t border-border" />
-        <span className="mx-4 shrink-0 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+        <span className="mx-4 shrink-0 text-xs font-medium text-muted-foreground">
           Or continue with
         </span>
         <div className="flex-grow border-t border-border" />
@@ -45,23 +46,18 @@ export function SocialAuthButtons({ onGoogleCredential }: SocialAuthButtonsProps
             />
           </div>
         ) : (
-          <button
+          <Button
             type="button"
+            variant="outline"
             disabled
             title={GOOGLE_AUTH_ENABLED ? "Google sign-in is available on the web only" : "Google sign-in is not available yet"}
-            className="flex cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-border py-2 text-sm font-semibold text-muted-foreground opacity-60"
           >
             Google
-          </button>
+          </Button>
         )}
-        <button
-          type="button"
-          disabled
-          title="Facebook sign-in is not available yet"
-          className="flex cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-border py-2 text-sm font-semibold text-muted-foreground opacity-60"
-        >
+        <Button type="button" variant="outline" disabled title="Facebook sign-in is not available yet">
           Facebook
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, Button } from "@/components/ui";
+import { Card, CardHeader, Button, Input, Label, FieldError } from "@/components/ui";
 import { PASSWORD_MIN_LENGTH } from "@/constants";
 import type { ChangePasswordRequest } from "@/types";
 
@@ -32,41 +32,29 @@ export function ChangePasswordForm({ onSubmit, isSubmitting }: ChangePasswordFor
   } = useForm<ChangePasswordRequest>({ resolver: zodResolver(schema) });
 
   return (
-    <Card className="p-6">
-      <h3 className="mb-4 text-sm font-bold text-foreground">Change Password</h3>
+    <Card>
+      <CardHeader title="Change Password" />
       <form
         onSubmit={handleSubmit((values) => {
           onSubmit(values);
           reset();
         })}
-        className="max-w-md space-y-4"
+        className="max-w-md space-y-4 p-5"
       >
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">Current Password</label>
-          <input
-            type="password"
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-            {...register("oldPassword")}
-          />
-          {errors.oldPassword && <p className="mt-1 text-xs text-danger">{errors.oldPassword.message}</p>}
+          <Label htmlFor="old-password">Current Password</Label>
+          <Input id="old-password" type="password" invalid={!!errors.oldPassword} {...register("oldPassword")} />
+          <FieldError>{errors.oldPassword?.message}</FieldError>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">New Password</label>
-          <input
-            type="password"
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-            {...register("newPassword")}
-          />
-          {errors.newPassword && <p className="mt-1 text-xs text-danger">{errors.newPassword.message}</p>}
+          <Label htmlFor="new-password">New Password</Label>
+          <Input id="new-password" type="password" invalid={!!errors.newPassword} {...register("newPassword")} />
+          <FieldError>{errors.newPassword?.message}</FieldError>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">Confirm New Password</label>
-          <input
-            type="password"
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-            {...register("confirmNewPassword")}
-          />
-          {errors.confirmNewPassword && <p className="mt-1 text-xs text-danger">{errors.confirmNewPassword.message}</p>}
+          <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+          <Input id="confirm-new-password" type="password" invalid={!!errors.confirmNewPassword} {...register("confirmNewPassword")} />
+          <FieldError>{errors.confirmNewPassword?.message}</FieldError>
         </div>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Updating..." : "Update password"}

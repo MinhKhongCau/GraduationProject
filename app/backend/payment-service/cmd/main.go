@@ -6,25 +6,19 @@ import (
 	"os"
 	"time"
 
-	"payment-service/internal/config"
-	"payment-service/pkg/database"
-	"payment-service/pkg/internal_auth"
-	"payment-service/pkg/rabbitmq"
-	"payment-service/pkg/redis"
-	"payment-service/routes"
-
-	paymentHTTP "payment-service/internal/payment/adapter/in/http"
-	bookingrest "payment-service/internal/payment/adapter/out/bookingrest"
-	"payment-service/internal/payment/adapter/out/outbox"
-	paymentpostgres "payment-service/internal/payment/adapter/out/postgres"
-	"payment-service/internal/payment/adapter/out/vnpay"
-	apppayment "payment-service/internal/payment/application"
-
-	"payment-service/internal/wallet"
-	walletHandler "payment-service/internal/wallet/handler"
-
-	"payment-service/internal/withdrawal"
-	withdrawalHandler "payment-service/internal/withdrawal/handler"
+	"payment-service/config"
+	apppayment "payment-service/internal/application/payment"
+	appwallet "payment-service/internal/application/wallet"
+	appwithdrawal "payment-service/internal/application/withdrawal"
+	"payment-service/internal/infrastructure/client/bookingrest"
+	"payment-service/internal/infrastructure/client/internalauth"
+	"payment-service/internal/infrastructure/client/vnpay"
+	paymentHandler "payment-service/internal/infrastructure/http/handlers/payment"
+	walletHandler "payment-service/internal/infrastructure/http/handlers/wallet"
+	withdrawalHandler "payment-service/internal/infrastructure/http/handlers/withdrawal"
+	"payment-service/internal/infrastructure/http/routes"
+	"payment-service/internal/infrastructure/messaging"
+	"payment-service/internal/infrastructure/persistence/repository"
 
 	_ "payment-service/docs" // Import swagger docs
 
@@ -46,11 +40,11 @@ func main() {
 	config.LoadConfig()
 
 	// 1.1 Cache RSA Public Key từ Auth Service (dùng để verify JWT user và internal JWT)
-	internal_auth.InitPublicKey(config.AppConfig.AuthServiceInternalURL)
+	internalauth.InitPublicKey(config.AppConfig.AuthServiceInternalURL)
 
 	// 1.2 Khởi tạo TokenManager nội bộ — dùng để GỌI sang service khác
 	// TokenManager được lưu lại để inject vào BookingServiceClient
-	tokenManager := internal_auth.NewTokenManager(
+	tokenManager := internalauth.NewTokenManager(
 		config.AppConfig.AuthServiceInternalURL,
 		config.AppConfig.InternalClientID,
 		config.AppConfig.InternalClientSecret,
@@ -65,21 +59,21 @@ func main() {
 	)
 
 	// 2. Kết nối CSDL & Chạy Migration
-	database.ConnectDB()
+	config.ConnectDB()
 
 	// 3. Kết nối hạ tầng RabbitMQ & Redis (hoạt động chế độ fallback nếu lỗi)
-	rabbitmq.InitRabbitMQ()
-	redis.InitRedis()
+	messaging.InitRabbitMQ()
+	config.InitRedis()
 
 	// 4. Khởi tạo các tầng nghiệp vụ
 	// Repositories
-	walletRepo := wallet.NewRepository(database.DB)
-	paymentRepo := paymentpostgres.NewRepository(database.DB)
-	withdrawalRepo := withdrawal.NewRepository(database.DB)
-	outboxRepo := outbox.NewRepository(database.DB)
+	walletRepo := repository.NewWalletRepository(config.DB)
+	paymentRepo := repository.NewPaymentRepository(config.DB)
+	withdrawalRepo := repository.NewWithdrawalRepository(config.DB)
+	outboxRepo := repository.NewOutboxRepository(config.DB)
 
 	// Usecases
-	walletUsecase := wallet.NewUsecase(walletRepo)
+	walletUsecase := appwallet.NewUsecase(walletRepo)
 
 	vnpTmnCode := os.Getenv("VNP_TMN_CODE")
 	vnpHashSecret := os.Getenv("VNP_HASH_SECRET")
@@ -87,16 +81,16 @@ func main() {
 	vnpReturnURL := os.Getenv("VNP_RETURN_URL")
 	vnpayClient := vnpay.NewVNPayClient(vnpTmnCode, vnpHashSecret, vnpPaymentURL, vnpReturnURL)
 
-	paymentUoW := paymentpostgres.NewUnitOfWork(database.DB, walletUsecase)
+	paymentUoW := repository.NewUnitOfWork(config.DB, walletUsecase)
 	paymentUsecase := apppayment.NewUsecaseWithOptions(paymentRepo, paymentUoW, vnpayClient, bookingSvcClient, apppayment.Options{
 		OrderTTL:      config.AppConfig.PaymentOrderTTL,
 		MinimumWindow: config.AppConfig.PaymentMinUsableWindow,
 	})
-	withdrawalUsecase := withdrawal.NewUsecase(withdrawalRepo, walletUsecase)
+	withdrawalUsecase := appwithdrawal.NewUsecase(withdrawalRepo, walletUsecase)
 
 	// Handlers
 	wHandler := walletHandler.NewHandler(walletUsecase)
-	pHandler := paymentHTTP.NewHandler(paymentUsecase)
+	pHandler := paymentHandler.NewHandler(paymentUsecase)
 	wdHandler := withdrawalHandler.NewHandler(withdrawalUsecase)
 
 	// 5. Khởi chạy Tần số quét (Background Workers)
@@ -113,15 +107,15 @@ func main() {
 	} else {
 		holdDuration = 1 * time.Minute // Mặc định dev là 1 phút
 	}
-	walletWorker := wallet.NewWorker(database.DB, walletRepo, holdDuration)
+	walletWorker := appwallet.NewWorker(config.DB, walletRepo, holdDuration)
 	go walletWorker.Start(ctx)
 
 	// Worker 2: Xử lý timeout của các yêu cầu rút PROCESSING quá 5 phút
-	withdrawalWorker := withdrawal.NewWorker(database.DB, withdrawalUsecase, 5*time.Minute)
+	withdrawalWorker := appwithdrawal.NewWorker(config.DB, withdrawalUsecase, 5*time.Minute)
 	go withdrawalWorker.Start(ctx)
 
 	// Worker 3: Quét Outbox events để dispatch (RabbitMQ / Internal REST Call sang Booking)
-	outboxPublisher := outbox.NewPublisherWithOptions(outboxRepo, bookingSvcClient, outbox.PublisherOptions{
+	outboxPublisher := messaging.NewPublisherWithOptions(outboxRepo, bookingSvcClient, messaging.PublisherOptions{
 		PollInterval: config.AppConfig.OutboxPollInterval,
 		MaxAttempts:  config.AppConfig.OutboxMaxAttempts,
 		BaseBackoff:  config.AppConfig.OutboxBaseBackoff,
@@ -131,7 +125,7 @@ func main() {
 	go outboxPublisher.Start(ctx)
 
 	// Worker 4: Đối soát ví (Ledger Audit) & Đối soát giao dịch VNPay
-	reconciliationWorker := wallet.NewReconciliationWorker(database.DB)
+	reconciliationWorker := appwallet.NewReconciliationWorker(config.DB)
 	go reconciliationWorker.Start(ctx)
 
 	// 6. Khởi tạo Gin Router

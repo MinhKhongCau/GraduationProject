@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { dmSocketController } from "../socket/controllers/dm.socket.controller.js";
+import { dmSocketController } from "../src/infrastructure/socket/controllers/dm.socket.controller.js";
 import { redisPub as r } from "../config/redis.js";
 import { dataSource } from "../config/db.js";
 

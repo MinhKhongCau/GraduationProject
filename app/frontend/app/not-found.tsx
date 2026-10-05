@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Compass } from "lucide-react";
-import { Button } from "@/components/ui";
+import { buttonClasses } from "@/components/ui";
 import { ROUTES } from "@/constants";
 
 export default function NotFoundPage() {
@@ -11,8 +11,8 @@ export default function NotFoundPage() {
       <p className="max-w-md text-sm text-muted-foreground">
         The page you&apos;re looking for doesn&apos;t exist or has moved.
       </p>
-      <Link href={ROUTES.HOME}>
-        <Button>Back to home</Button>
+      <Link href={ROUTES.HOME} className={buttonClasses("primary", "md")}>
+        Back to home
       </Link>
     </div>
   );

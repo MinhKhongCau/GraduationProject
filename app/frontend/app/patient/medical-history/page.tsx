@@ -7,7 +7,7 @@ import { PersonalInfoSection } from "./component/PersonalInfoSection";
 import { MedicalHistoryList } from "./component/MedicalHistoryList";
 import { ConsultationRecordList } from "./component/ConsultationRecordList";
 import { AddMedicalHistoryDialog } from "./component/AddMedicalHistoryDialog";
-import { Button, Spinner } from "@/components/ui";
+import { Card, PageHeader, Spinner, buttonClasses } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { patientApi } from "@/api";
 import { QUERY_KEYS, ROUTES } from "@/constants";
@@ -59,50 +59,53 @@ export default function MedicalHistoryPage() {
 
   if (isError || !profile) {
     return (
-      <div className="mx-auto max-w-2xl rounded-3xl bg-surface p-10 text-center">
+      <Card className="mx-auto max-w-2xl p-10 text-center">
         <p className="mb-4 text-sm text-muted-foreground">
           Vui lòng hoàn tất thông tin cá nhân trong mục Cài đặt trước khi xem hồ sơ bệnh án.
         </p>
-        <Link href={ROUTES.PATIENT.SETTINGS}>
-          <Button>Đi tới Cài đặt</Button>
+        <Link href={ROUTES.PATIENT.SETTINGS} className={buttonClasses()}>
+          Đi tới Cài đặt
         </Link>
-      </div>
+      </Card>
     );
   }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Hồ Sơ Y Tế & Bệnh Án</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Theo dõi các kết luận chẩn đoán, lời dặn của chuyên gia và thông tin tiền sử bệnh cá nhân.
-        </p>
-      </div>
+      <PageHeader
+        title="Hồ Sơ Y Tế & Bệnh Án"
+        description="Theo dõi các kết luận chẩn đoán, lời dặn của chuyên gia và thông tin tiền sử bệnh cá nhân."
+        className="mb-0"
+      />
 
       {/* Tabs Switcher */}
-      <div className="flex rounded-2xl bg-surface p-1 max-w-md border border-border">
+      <div role="tablist" className="flex max-w-md gap-1 rounded-lg border border-border bg-background p-1">
         <button
           type="button"
           onClick={() => setActiveTab("consultation")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
+          role="tab"
+          aria-selected={activeTab === "consultation"}
+          className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors ${
             activeTab === "consultation"
-              ? "bg-background text-primary shadow-sm"
+              ? "bg-background text-primary shadow-card"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Stethoscope className="h-4 w-4" />
+          <Stethoscope className="h-4 w-4" aria-hidden="true" />
           Bệnh án từ Chuyên gia
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("personal")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
+          role="tab"
+          aria-selected={activeTab === "personal"}
+          className={`flex h-9 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors ${
             activeTab === "personal"
-              ? "bg-background text-primary shadow-sm"
+              ? "bg-background text-primary shadow-card"
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <UserCheck className="h-4 w-4" />
+          <UserCheck className="h-4 w-4" aria-hidden="true" />
           Tiền sử y tế cá nhân
         </button>
       </div>
@@ -110,17 +113,17 @@ export default function MedicalHistoryPage() {
       {activeTab === "consultation" ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
+            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <FileText className="h-4 w-4 text-primary" aria-hidden="true" />
               Danh sách kết luận khám & hồ sơ bệnh án
-            </h3>
+            </h2>
           </div>
           <ConsultationRecordList />
         </div>
       ) : (
         <div className="space-y-6">
           <div>
-            <h3 className="mb-4 text-sm font-bold text-foreground">Thông tin cá nhân</h3>
+            <h2 className="mb-3 text-base font-semibold text-foreground">Thông tin cá nhân</h2>
             <PersonalInfoSection profile={profile} />
           </div>
 

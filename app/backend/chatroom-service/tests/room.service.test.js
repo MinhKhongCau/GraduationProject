@@ -8,7 +8,7 @@ import {
   joinRoom, 
   leaveRoom, 
   getRoomUsers 
-} from "../services/room.service.js";
+} from "../src/application/services/room.service.js";
 import { redisPub as r } from "../config/redis.js";
 import { dataSource } from "../config/db.js";
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/components/ui";
+import { Button, FieldError, Input, Label, Select } from "@/components/ui";
 import { TagInput } from "./TagInput";
 import { useForumCategories, useCreatePost, useUpdatePost } from "@/hooks";
 
@@ -81,44 +81,33 @@ export function PostForm({ basePath, mode = "create", postId, initialValues }: P
   const isPending = isEdit ? updatePost.isPending : createPost.isPending;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div>
-        <label className="mb-1 block text-xs font-bold text-foreground">Category</label>
-        <select
-          {...register("categoryId")}
-          className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-        >
+        <Label htmlFor="post-category">Category</Label>
+        <Select id="post-category" invalid={!!errors.categoryId} {...register("categoryId")}>
           <option value="">Select a category</option>
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
             </option>
           ))}
-        </select>
-        {errors.categoryId && <p className="mt-1 text-xs text-danger">{errors.categoryId.message}</p>}
+        </Select>
+        <FieldError>{errors.categoryId?.message}</FieldError>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-bold text-foreground">Title</label>
-        <input
-          type="text"
-          {...register("title")}
-          className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-        />
-        {errors.title && <p className="mt-1 text-xs text-danger">{errors.title.message}</p>}
+        <Label htmlFor="post-title">Title</Label>
+        <Input id="post-title" type="text" invalid={!!errors.title} {...register("title")} />
+        <FieldError>{errors.title?.message}</FieldError>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-bold text-foreground">Summary</label>
-        <input
-          type="text"
-          {...register("summary")}
-          className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-        />
+        <Label htmlFor="post-summary">Summary</Label>
+        <Input id="post-summary" type="text" {...register("summary")} />
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-bold text-foreground">Content</label>
+        <Label>Content</Label>
         <Controller
           name="content"
           control={control}
@@ -126,11 +115,11 @@ export function PostForm({ basePath, mode = "create", postId, initialValues }: P
             <ContentEditor value={field.value ?? ""} onChange={field.onChange} placeholder="Share your thoughts..." />
           )}
         />
-        {errors.content && <p className="mt-1 text-xs text-danger">{errors.content.message}</p>}
+        <FieldError>{errors.content?.message}</FieldError>
       </div>
 
       <div>
-        <label className="mb-1 block text-xs font-bold text-foreground">Tags</label>
+        <Label>Tags</Label>
         <Controller
           name="tags"
           control={control}
@@ -140,7 +129,7 @@ export function PostForm({ basePath, mode = "create", postId, initialValues }: P
         />
       </div>
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" size="lg" className="w-full" disabled={isPending}>
         {isEdit ? (isPending ? "Saving..." : "Save changes") : isPending ? "Publishing..." : "Publish post"}
       </Button>
     </form>

@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { getAllRooms, addRoom, updateUsers, removeRoom } from "../stores/room.store.js";
+import { getAllRooms, addRoom, updateUsers, removeRoom } from "../src/infrastructure/persistence/stores/room.store.js";
 import { redisPub as r } from "../config/redis.js";
 import { dataSource } from "../config/db.js";
 

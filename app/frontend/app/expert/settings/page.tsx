@@ -8,6 +8,7 @@ import { authApi, expertApi } from "@/api";
 import { useAuthContext } from "@/context/AuthContext";
 import { useErrorContext } from "@/context/ErrorContext";
 import type { ChangePasswordRequest } from "@/types";
+import { PageHeader } from "@/components/ui";
 
 export default function ExpertSettingsPage() {
   const { user } = useAuthContext();
@@ -44,7 +45,7 @@ export default function ExpertSettingsPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+      <PageHeader title="Settings" className="mb-0" />
 
       <ExpertProfileEditForm
         defaultValues={{

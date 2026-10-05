@@ -30,6 +30,7 @@ module.exports = {
         background: "var(--color-background)",
         surface: "var(--color-surface)",
         border: "var(--color-border)",
+        "border-strong": "var(--color-border-strong)",
         foreground: "var(--color-foreground)",
         "muted-foreground": "var(--color-muted-foreground)",
       },

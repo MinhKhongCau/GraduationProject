@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Modal, Button } from "@/components/ui";
+import { Modal, Button, Input, Label, FieldError } from "@/components/ui";
 import type { CreateWithdrawalRequest } from "@/types";
 
 const withdrawSchema = z.object({
@@ -36,24 +36,20 @@ export function WithdrawDialog({ open, onOpenChange, onSubmit, isSubmitting }: W
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">Amount (đ)</label>
-          <input
-            type="number"
-            step="1000"
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
-            {...register("amount")}
-          />
-          {errors.amount && <p className="mt-1 text-xs text-danger">{errors.amount.message}</p>}
+          <Label htmlFor="withdraw-amount">Amount (đ)</Label>
+          <Input id="withdraw-amount" type="number" step="1000" invalid={!!errors.amount} {...register("amount")} />
+          <FieldError>{errors.amount?.message}</FieldError>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-bold text-foreground">Bank account details</label>
-          <input
+          <Label htmlFor="withdraw-bank">Bank account details</Label>
+          <Input
+            id="withdraw-bank"
             type="text"
             placeholder="Bank name, account number"
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            invalid={!!errors.bankInfo}
             {...register("bankInfo")}
           />
-          {errors.bankInfo && <p className="mt-1 text-xs text-danger">{errors.bankInfo.message}</p>}
+          <FieldError>{errors.bankInfo?.message}</FieldError>
         </div>
         <Button type="submit" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? "Submitting..." : "Request withdrawal"}

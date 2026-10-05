@@ -40,7 +40,7 @@ export function TagInput({ value, onChange, placeholder }: TagInputProps) {
   const removeTag = (tag: string) => onChange(value.filter((t) => t !== tag));
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border px-3 py-2 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-soft">
+    <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-lg border border-border-strong bg-background px-3 py-1.5 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
       {value.map((tag) => (
         <span
           key={tag}
@@ -51,7 +51,7 @@ export function TagInput({ value, onChange, placeholder }: TagInputProps) {
             type="button"
             onClick={() => removeTag(tag)}
             aria-label={`Remove tag ${tag}`}
-            className="text-primary-soft-text/70 hover:text-primary-soft-text"
+            className="inline-flex h-4 w-4 items-center justify-center rounded-full text-primary-soft-text/70 hover:bg-primary/10 hover:text-primary-soft-text"
           >
             <X className="h-3 w-3" />
           </button>
@@ -64,6 +64,7 @@ export function TagInput({ value, onChange, placeholder }: TagInputProps) {
         onKeyDown={handleKeyDown}
         onBlur={commitDraft}
         placeholder={value.length === 0 ? placeholder : undefined}
+        aria-label={placeholder ?? "Add tag"}
         className="min-w-[120px] flex-1 border-none bg-transparent py-0.5 text-sm text-foreground outline-none"
       />
     </div>

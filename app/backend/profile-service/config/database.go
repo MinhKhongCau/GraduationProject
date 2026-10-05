@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"profile-service/internal/models" // Đổi 'profile-service' thành tên module của bạn nếu khác
+	"profile-service/internal/infrastructure/persistence/models" // Đổi 'profile-service' thành tên module của bạn nếu khác
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

@@ -1,8 +1,8 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import { ENV } from "./env.js";
-import { RoomEntity } from "../entities/room.entity.js";
-import { MessageEntity } from "../entities/message.entity.js";
+import { RoomEntity } from "../src/infrastructure/persistence/entities/room.entity.js";
+import { MessageEntity } from "../src/infrastructure/persistence/entities/message.entity.js";
 import { CreateChatroomTables1700000000000 } from "../migrations/1700000000000-CreateChatroomTables.js";
 
 export const dataSource = new DataSource({

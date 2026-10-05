@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { makeDmId, pushDM, getDMHistory } from "../stores/dm.store.js";
+import { makeDmId, pushDM, getDMHistory } from "../src/infrastructure/persistence/stores/dm.store.js";
 import { redisPub as r } from "../config/redis.js";
 import { dataSource } from "../config/db.js";
 

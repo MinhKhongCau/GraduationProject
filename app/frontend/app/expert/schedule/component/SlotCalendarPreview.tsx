@@ -3,16 +3,16 @@
 import { useMemo, useState } from "react";
 import { Calendar, type DateObject } from "react-multi-date-picker";
 import { Clock } from "lucide-react";
-import { Card, Spinner } from "@/components/ui";
+import { Badge, Card, Spinner, type BadgeTone } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { bookingApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
 import type { ExpertSlot, SlotStatus } from "@/types";
 
-const STATUS_STYLES: Record<SlotStatus, string> = {
-  AVAILABLE: "bg-success-soft text-success",
-  LOCKED: "bg-warning-soft text-warning",
-  OCCUPIED: "bg-danger-soft text-danger",
+const STATUS_TONES: Record<SlotStatus, BadgeTone> = {
+  AVAILABLE: "success",
+  LOCKED: "warning",
+  OCCUPIED: "danger",
 };
 
 function toDateKey(date: Date): string {
@@ -56,8 +56,8 @@ export function SlotCalendarPreview() {
   );
 
   return (
-    <Card className="p-6">
-      <h2 className="mb-1 text-lg font-bold text-foreground">Your slot calendar</h2>
+    <Card className="p-5 sm:p-6">
+      <h2 className="mb-1 text-base font-semibold text-foreground">Your slot calendar</h2>
       <p className="mb-4 text-sm text-muted-foreground">
         Bold days already have generated slots. Select a day to see its slots.
       </p>
@@ -88,17 +88,15 @@ export function SlotCalendarPreview() {
                 {daySlots.map((slot) => (
                   <div
                     key={slot.slotId}
-                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                    className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2.5 text-sm"
                   >
                     <span className="flex items-center gap-1.5 text-foreground">
                       <Clock className="h-3.5 w-3.5" />
                       {new Date(slot.startTime).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
                     </span>
-                    <span
-                      className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase ${STATUS_STYLES[slot.statusLabel]}`}
-                    >
+                    <Badge tone={STATUS_TONES[slot.statusLabel]} className="uppercase">
                       {slot.statusLabel}
-                    </span>
+                    </Badge>
                   </div>
                 ))}
               </div>

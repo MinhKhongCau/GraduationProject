@@ -62,7 +62,7 @@ export function MessageBubble({ message, isMine, reactions, currentUserId, onRea
       onMouseLeave={() => setShowReactionBar(false)}
     >
       <div
-        className={`max-w-[70%] rounded-2xl px-5 py-3 text-sm leading-relaxed transition-transform ${isLongPressing ? "scale-[0.98]" : "scale-100"} ${
+        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm sm:max-w-[70%] leading-relaxed transition-transform ${isLongPressing ? "scale-[0.98]" : "scale-100"} ${
           isMine ? "rounded-br-sm bg-primary text-white" : "rounded-bl-sm border border-border bg-background text-foreground shadow-card"
         }`}
         onClick={handleClick}
@@ -94,9 +94,11 @@ export function MessageBubble({ message, isMine, reactions, currentUserId, onRea
           {Object.entries(reactions).map(([emoji, userIds]) => (
             <button
               key={emoji}
+              type="button"
               onClick={() => onReact(emoji)}
-              className={`rounded-full border px-1.5 py-0.5 text-[11px] ${
-                userIds.includes(currentUserId) ? "border-primary bg-primary-soft" : "border-border bg-surface"
+              aria-pressed={userIds.includes(currentUserId)}
+              className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                userIds.includes(currentUserId) ? "border-primary bg-primary-soft" : "border-border bg-background hover:bg-surface"
               }`}
             >
               {emoji} {userIds.length}
@@ -106,9 +108,9 @@ export function MessageBubble({ message, isMine, reactions, currentUserId, onRea
       )}
 
       {showReactionBar && (
-        <div className="mt-1 flex gap-0.5 rounded-full border border-border bg-background px-1.5 py-0.5 shadow-card" aria-label="Choose a reaction">
+        <div className="mt-1 flex gap-0.5 rounded-full border border-border bg-background p-1 shadow-elevated" role="group" aria-label="Choose a reaction">
           {QUICK_REACTIONS.map((emoji) => (
-            <button key={emoji} onClick={() => onReact(emoji)} className="rounded-full p-0.5 text-xs hover:bg-surface">
+            <button key={emoji} type="button" aria-label={`React ${emoji}`} onClick={() => onReact(emoji)} className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm transition-colors hover:bg-surface">
               {emoji}
             </button>
           ))}
@@ -117,7 +119,7 @@ export function MessageBubble({ message, isMine, reactions, currentUserId, onRea
 
       <div className="mt-1.5 flex items-center gap-1 px-1">
         <span className="text-[11px] text-muted-foreground">{time}</span>
-        {isMine && <CheckCheck className="h-3.5 w-3.5 text-primary" />}
+        {isMine && <CheckCheck className="h-3.5 w-3.5 text-primary" aria-hidden="true" />}
       </div>
     </div>
   );

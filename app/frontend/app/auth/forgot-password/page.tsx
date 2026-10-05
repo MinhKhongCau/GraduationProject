@@ -45,7 +45,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthCard title="Forgot your password?" subtitle="Enter your email and we'll send you a reset link.">
       {sent ? (
-        <p className="rounded-xl bg-success-soft p-4 text-sm text-success">
+        <p role="status" className="rounded-xl border border-success/20 bg-success-soft p-4 text-sm font-medium text-success">
           If an account exists for that email, a reset link is on its way.
         </p>
       ) : (
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
             error={errors.email?.message}
             {...register("email")}
           />
-          <Button type="submit" className="w-full" disabled={forgotPasswordMutation.isPending}>
+          <Button type="submit" size="lg" className="w-full" disabled={forgotPasswordMutation.isPending}>
             <Send className="h-4 w-4" />
             {forgotPasswordMutation.isPending ? "Sending..." : "Send reset link"}
           </Button>

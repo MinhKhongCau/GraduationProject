@@ -6,7 +6,7 @@ import { QuestionStep } from "./component/QuestionStep";
 import { ProgressBar } from "./component/ProgressBar";
 import { ResultSummary } from "./component/ResultSummary";
 import { MarkdownRenderer } from "../component/MarkdownRenderer";
-import { Button, Spinner, Card } from "@/components/ui";
+import { Badge, Button, Spinner, Card } from "@/components/ui";
 import { useApiQuery, useApiMutation } from "@/hooks";
 import { assessmentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -92,10 +92,10 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
     return (
       <div className="mx-auto max-w-4xl space-y-6">
         <Card className="p-6 md:p-8 space-y-6">
-          <div className="border-b border-border/60 pb-5">
-            <span className="inline-flex rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-primary uppercase mb-3">
+          <div className="border-b border-border pb-5">
+            <Badge tone="primary" className="mb-3 uppercase">
               {template.code}
-            </span>
+            </Badge>
             <h1 className="text-2xl font-bold text-foreground">{template.title}</h1>
             <p className="mt-2.5 text-sm text-muted-foreground leading-relaxed">
               {template.description || "Bài đánh giá tâm lý lâm sàng tiêu chuẩn."}
@@ -105,10 +105,10 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
           {/* Instruction Block */}
           {template.instruction && (
             <div className="space-y-3">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <BookOpen className="h-4.5 w-4.5 text-primary" /> Hướng dẫn làm bài
               </h3>
-              <div className="rounded-xl bg-surface/50 border border-border p-4.5">
+              <div className="rounded-xl border border-border bg-surface p-4.5">
                 <MarkdownRenderer text={template.instruction} />
               </div>
             </div>
@@ -117,21 +117,17 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
           {/* Certification Block */}
           {template.certification && (
             <div className="space-y-3">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-foreground">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Award className="h-4.5 w-4.5 text-success" /> Chứng nhận chuyên môn & Cơ sở khoa học
               </h3>
-              <div className="rounded-xl bg-success-soft/20 border border-success/10 p-4.5">
+              <div className="rounded-xl border border-success/20 bg-success-soft p-4.5">
                 <MarkdownRenderer text={template.certification} />
               </div>
             </div>
           )}
 
-          <div className="pt-4 flex justify-end">
-            <Button 
-              size="lg" 
-              onClick={() => setIsStarted(true)} 
-              className="w-full sm:w-auto flex items-center justify-center gap-2 font-semibold"
-            >
+          <div className="flex justify-end border-t border-border pt-5">
+            <Button size="lg" onClick={() => setIsStarted(true)} className="w-full sm:w-auto">
               <Play className="h-4 w-4 fill-current" /> Bắt đầu đánh giá
             </Button>
           </div>
@@ -143,10 +139,12 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       {/* Collapsible reference drawer during test */}
-      <Card className="overflow-hidden border border-border/80">
-        <button 
-          onClick={() => setShowInfo(!showInfo)} 
-          className="flex w-full items-center justify-between bg-surface/40 px-5 py-3 hover:bg-surface/75 transition-colors"
+      <Card className="overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowInfo(!showInfo)}
+          aria-expanded={showInfo}
+          className="flex min-h-12 w-full items-center justify-between px-5 py-3 transition-colors hover:bg-surface"
         >
           <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             <FileText className="h-4 w-4 text-primary" />
@@ -163,7 +161,7 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
             {template.instruction && (
               <div className="space-y-1.5">
                 <h4 className="text-xs font-bold text-foreground">Hướng dẫn:</h4>
-                <div className="rounded-lg bg-surface/30 p-3 border border-border/40">
+                <div className="rounded-lg border border-border bg-surface p-3">
                   <MarkdownRenderer text={template.instruction} />
                 </div>
               </div>
@@ -171,7 +169,7 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
             {template.certification && (
               <div className="space-y-1.5">
                 <h4 className="text-xs font-bold text-foreground">Chứng nhận & Cơ sở khoa học:</h4>
-                <div className="rounded-lg bg-success-soft/10 p-3 border border-success/5">
+                <div className="rounded-lg border border-success/20 bg-success-soft p-3">
                   <MarkdownRenderer text={template.certification} />
                 </div>
               </div>
@@ -192,7 +190,7 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ tem
         />
       )}
 
-      <div className="mt-6 flex justify-between">
+      <div className="mt-6 flex justify-between border-t border-border pt-5">
         <Button variant="outline" disabled={currentIndex === 0} onClick={() => setCurrentIndex((i) => i - 1)}>
           Quay lại
         </Button>

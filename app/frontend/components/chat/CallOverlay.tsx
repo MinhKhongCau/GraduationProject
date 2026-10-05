@@ -54,7 +54,7 @@ export function CallOverlay({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 text-white">
-      <div className="relative flex h-full max-h-[800px] w-full max-w-[600px] flex-col overflow-hidden rounded-3xl bg-neutral-900 border border-neutral-800 shadow-2xl">
+      <div className="relative flex h-full max-h-[800px] w-full max-w-[600px] flex-col overflow-hidden rounded-2xl bg-neutral-900 border border-neutral-800 shadow-elevated">
         {/* Active Call UI */}
         {status === "connected" && (
           <div className="relative flex-1 bg-black">
@@ -68,7 +68,7 @@ export function CallOverlay({
 
             {/* Local Video (Thumbnail overlay) */}
             {!isVideoOff && localStream && (
-              <div className="absolute right-4 top-4 h-36 w-28 overflow-hidden rounded-2xl border border-neutral-700 bg-neutral-800 shadow-md">
+              <div className="absolute right-4 top-4 h-36 w-28 overflow-hidden rounded-xl border border-neutral-700 bg-neutral-800 shadow-card">
                 <video
                   ref={localVideoRef}
                   autoPlay
@@ -81,7 +81,7 @@ export function CallOverlay({
 
             {/* Peer info Overlay */}
             <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5 backdrop-blur-sm">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
               <span className="text-xs font-semibold">{peerName}</span>
             </div>
           </div>
@@ -111,7 +111,7 @@ export function CallOverlay({
 
             <h2 className="text-xl font-bold tracking-tight">{peerName}</h2>
             
-            <p className="mt-2 text-sm text-neutral-400 font-medium">
+            <p role="status" className="mt-2 text-sm text-neutral-300 font-medium">
               {status === "incoming" && "Incoming video call..."}
               {status === "calling" && "Calling..."}
               {status === "connecting" && "Connecting..."}
@@ -125,16 +125,20 @@ export function CallOverlay({
             <>
               {/* Accept & Reject Buttons */}
               <button
+                type="button"
                 onClick={rejectCall}
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white transition-transform hover:scale-105 hover:bg-red-700"
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/85"
                 title="Decline Call"
+                aria-label="Decline Call"
               >
                 <PhoneOff className="h-6 w-6" />
               </button>
               <button
+                type="button"
                 onClick={acceptCall}
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white transition-transform hover:scale-105 hover:bg-emerald-700"
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-success text-white transition-colors hover:bg-success/85"
                 title="Accept Call"
+                aria-label="Accept Call"
               >
                 <Phone className="h-6 w-6" />
               </button>
@@ -145,21 +149,27 @@ export function CallOverlay({
               {status === "connected" && (
                 <>
                   <button
+                    type="button"
                     onClick={toggleMute}
                     className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                      isMuted ? "bg-red-600 hover:bg-red-700" : "bg-neutral-800 hover:bg-neutral-700"
+                      isMuted ? "bg-danger hover:bg-danger/85" : "bg-neutral-800 hover:bg-neutral-700"
                     }`}
                     title={isMuted ? "Unmute Mic" : "Mute Mic"}
+                    aria-label={isMuted ? "Unmute Mic" : "Mute Mic"}
+                    aria-pressed={isMuted}
                   >
                     {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                   </button>
 
                   <button
+                    type="button"
                     onClick={toggleVideo}
                     className={`flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-                      isVideoOff ? "bg-red-600 hover:bg-red-700" : "bg-neutral-800 hover:bg-neutral-700"
+                      isVideoOff ? "bg-danger hover:bg-danger/85" : "bg-neutral-800 hover:bg-neutral-700"
                     }`}
                     title={isVideoOff ? "Turn Video On" : "Turn Video Off"}
+                    aria-label={isVideoOff ? "Turn Video On" : "Turn Video Off"}
+                    aria-pressed={isVideoOff}
                   >
                     {isVideoOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
                   </button>
@@ -168,9 +178,11 @@ export function CallOverlay({
 
               {/* End / Cancel Call Button */}
               <button
+                type="button"
                 onClick={endCall}
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white transition-transform hover:scale-105 hover:bg-red-700"
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-danger text-white transition-colors hover:bg-danger/85"
                 title="End Call"
+                aria-label="End Call"
               >
                 <PhoneOff className="h-6 w-6" />
               </button>

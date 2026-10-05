@@ -1,4 +1,5 @@
 import { ArrowDownLeft, ArrowUpRight, Building, RotateCcw } from "lucide-react";
+import { Badge } from "@/components/ui";
 import type { Transaction, TransactionType } from "@/types";
 
 const TYPE_STYLES: Record<TransactionType, { icon: typeof ArrowUpRight; bg: string; text: string }> = {
@@ -25,13 +26,13 @@ export function TransactionListItem({ transaction }: { transaction: Transaction 
   const isPositive = transaction.amount > 0;
 
   return (
-    <div className="flex items-center justify-between rounded-2xl p-4 transition-colors hover:bg-surface">
-      <div className="flex items-center gap-4">
+    <div className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-surface/60">
+      <div className="flex min-w-0 items-center gap-4">
         <div className={`flex h-10 w-10 items-center justify-center rounded-full ${style.bg} ${style.text}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div>
-          <p className="text-sm font-bold text-foreground">{LABELS[transaction.transactionType]}</p>
+          <p className="text-sm font-semibold text-foreground">{LABELS[transaction.transactionType]}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {new Date(transaction.createdAt).toLocaleString("en-GB")}
           </p>
@@ -42,13 +43,9 @@ export function TransactionListItem({ transaction }: { transaction: Transaction 
           {isPositive ? "+" : ""}
           {transaction.amount.toLocaleString("vi-VN")} đ
         </p>
-        <span
-          className={`mt-1 inline-block rounded-md px-2 py-0.5 text-[10px] font-bold ${
-            transaction.status === "PENDING" ? "bg-warning-soft text-warning" : "bg-surface text-muted-foreground"
-          }`}
-        >
+        <Badge tone={transaction.status === "PENDING" ? "warning" : "neutral"} className="mt-1">
           {transaction.status}
-        </span>
+        </Badge>
       </div>
     </div>
   );

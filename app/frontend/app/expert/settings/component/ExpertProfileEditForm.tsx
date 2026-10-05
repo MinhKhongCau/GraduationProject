@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, Button } from "@/components/ui";
+import { Card, CardHeader, Button, Input, Textarea, Label, FieldError } from "@/components/ui";
 import { Camera, User } from "lucide-react";
 import Image from "next/image";
 
@@ -61,13 +61,13 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
   };
 
   return (
-    <Card className="p-6">
-      <h3 className="mb-6 text-lg font-bold text-foreground">Profile Settings</h3>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <Card>
+      <CardHeader title="Profile Settings" />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-5 sm:p-6">
         
         {/* Avatar Upload Section */}
         <div className="flex flex-col items-center gap-4 sm:flex-row">
-          <div className="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-muted transition-all hover:border-primary">
+          <div className="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-surface transition-colors hover:border-primary">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
@@ -84,7 +84,7 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
             <button
               type="button"
               onClick={triggerFileInput}
-              className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 opacity-0 transition-opacity group-hover:opacity-100"
+              className="absolute inset-0 flex flex-col items-center justify-center bg-foreground/60 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
             >
               <Camera className="text-white" size={20} />
               <span className="mt-1 text-[10px] font-medium text-white">Change Photo</span>
@@ -115,37 +115,40 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
 
         <div className="grid grid-cols-1 gap-4">
           <div>
-            <label className="mb-1 block text-xs font-bold text-foreground">Full Name</label>
-            <input
-              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+            <Label htmlFor="expert-fullName">Full Name</Label>
+            <Input
+              id="expert-fullName"
+              invalid={!!errors.fullName}
               {...register("fullName")}
             />
-            {errors.fullName && <p className="mt-1 text-xs text-danger">{errors.fullName.message}</p>}
+            <FieldError>{errors.fullName?.message}</FieldError>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold text-foreground">Introduction URL</label>
-            <input
+            <Label htmlFor="expert-introductionVideoUrl">Introduction URL</Label>
+            <Input
+              id="expert-introductionVideoUrl"
               placeholder="e.g. https://www.youtube.com/watch?v=..."
-              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              invalid={!!errors.introductionVideoUrl}
               {...register("introductionVideoUrl")}
             />
-            {errors.introductionVideoUrl && <p className="mt-1 text-xs text-danger">{errors.introductionVideoUrl.message}</p>}
+            <FieldError>{errors.introductionVideoUrl?.message}</FieldError>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-bold text-foreground">Bio</label>
-            <textarea
+            <Label htmlFor="expert-bio">Bio</Label>
+            <Textarea
+              id="expert-bio"
               rows={4}
               placeholder="Tell patients about your background, experience and philosophy..."
-              className="w-full rounded-xl border border-border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-soft"
+              invalid={!!errors.bio}
               {...register("bio")}
             />
-            {errors.bio && <p className="mt-1 text-xs text-danger">{errors.bio.message}</p>}
+            <FieldError>{errors.bio?.message}</FieldError>
           </div>
         </div>
 
-        <div>
+        <div className="flex justify-end border-t border-border pt-5">
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Saving..." : "Save changes"}
           </Button>

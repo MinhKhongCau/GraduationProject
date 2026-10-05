@@ -1,0 +1,235 @@
+package payment
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	apppayment "payment-service/internal/application/payment"
+	"payment-service/internal/domain/money"
+	paymentdomain "payment-service/internal/domain/payment"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+)
+
+func TestCreateOrderUsesTrustedHeaderAndIgnoresBodyPayerID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	trustedPayerID := uuid.New()
+	bodyPayerID := uuid.New()
+	expertID := uuid.New()
+	appointmentID := uuid.New()
+	usecase := &fakeCreateOrderUsecase{
+		order: &paymentdomain.PaymentOrder{
+			ID:               uuid.New(),
+			PayerID:          trustedPayerID,
+			ExpertID:         expertID,
+			GrossAmount:      money.Money(100000),
+			NetAmount:        money.Money(85000),
+			CommissionAmount: money.Money(15000),
+			Gateway:          "VNPAY",
+			Status:           paymentdomain.OrderStatusPending,
+			AppointmentID:    &appointmentID,
+			ExpiresAt:        1234567890000,
+		},
+		paymentURL: "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html",
+	}
+
+	body := []byte(`{
+		"payer_id":"` + bodyPayerID.String() + `",
+		"expert_id":"` + expertID.String() + `",
+		"amount":100000,
+		"gateway":"MOMO",
+		"appointment_id":"` + appointmentID.String() + `"
+	}`)
+	res := performCreateOrderRequest(usecase, trustedPayerID.String(), body)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", res.Code, res.Body.String())
+	}
+	if !usecase.createCalled {
+		t.Fatal("expected usecase to be called")
+	}
+	if usecase.payerID != trustedPayerID {
+		t.Fatalf("expected trusted header payer %s, got %s", trustedPayerID, usecase.payerID)
+	}
+	if usecase.appointmentID != appointmentID.String() {
+		t.Fatalf("expected appointment_id %s, got %s", appointmentID, usecase.appointmentID)
+	}
+	var payload struct {
+		Data CreateOrderResponse `json:"data"`
+	}
+	if err := json.Unmarshal(res.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Data.ExpiresAt != usecase.order.ExpiresAt || payload.Data.PaymentURL == "" {
+		t.Fatalf("response did not preserve payment URL and expiry: %+v", payload.Data)
+	}
+}
+
+func TestCreateOrderRejectsMissingTrustedPayerEvenWhenBodyContainsPayerID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	expertID := uuid.New()
+	bodyPayerID := uuid.New()
+	appointmentID := uuid.New()
+	usecase := &fakeCreateOrderUsecase{}
+	body := []byte(`{
+		"payer_id":"` + bodyPayerID.String() + `",
+		"expert_id":"` + expertID.String() + `",
+		"amount":100000,
+		"gateway":"VNPAY",
+		"appointment_id":"` + appointmentID.String() + `"
+	}`)
+	res := performCreateOrderRequest(usecase, "", body)
+
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", res.Code, res.Body.String())
+	}
+	if usecase.createCalled {
+		t.Fatal("expected usecase not to be called")
+	}
+}
+
+func TestCreateOrderRejectsInvalidTrustedPayer(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	usecase := &fakeCreateOrderUsecase{}
+	body := []byte(`{"appointment_id":"` + uuid.New().String() + `"}`)
+	res := performCreateOrderRequest(usecase, "not-a-uuid", body)
+
+	if res.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d: %s", res.Code, res.Body.String())
+	}
+	if usecase.createCalled {
+		t.Fatal("expected usecase not to be called")
+	}
+}
+
+func TestCreateOrderRejectsMissingOrEmptyAppointmentID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name string
+		body []byte
+	}{
+		{name: "missing", body: []byte(`{}`)},
+		{name: "legacy fields only", body: []byte(`{"payer_id":"` + uuid.New().String() + `","expert_id":"` + uuid.New().String() + `","amount":100000,"gateway":"VNPAY"}`)},
+		{name: "null", body: []byte(`{"appointment_id":null}`)},
+		{name: "empty", body: []byte(`{"appointment_id":""}`)},
+		{name: "whitespace", body: []byte(`{"appointment_id":"   "}`)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			usecase := &fakeCreateOrderUsecase{}
+			res := performCreateOrderRequest(usecase, uuid.New().String(), tt.body)
+
+			if res.Code != http.StatusBadRequest {
+				t.Fatalf("expected 400, got %d: %s", res.Code, res.Body.String())
+			}
+			if usecase.createCalled {
+				t.Fatal("expected usecase not to be called")
+			}
+		})
+	}
+}
+
+func TestCreateOrderMapsUsecaseErrors(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name       string
+		err        error
+		wantStatus int
+	}{
+		{name: "unsupported gateway", err: apppayment.ErrUnsupportedGateway, wantStatus: http.StatusBadRequest},
+		{name: "invalid request", err: apppayment.ErrInvalidCreateOrderRequest, wantStatus: http.StatusBadRequest},
+		{name: "invalid booking data", err: apppayment.ErrInvalidBookingData, wantStatus: http.StatusBadRequest},
+		{name: "ownership", err: apppayment.ErrAppointmentOwnership, wantStatus: http.StatusForbidden},
+		{name: "booking not found", err: apppayment.ErrBookingAppointmentNotFound, wantStatus: http.StatusNotFound},
+		{name: "invalid state", err: apppayment.ErrAppointmentInvalidState, wantStatus: http.StatusConflict},
+		{name: "already paid", err: apppayment.ErrAppointmentAlreadyPaid, wantStatus: http.StatusConflict},
+		{name: "short payment window", err: apppayment.ErrPaymentWindowTooShort, wantStatus: http.StatusConflict},
+		{name: "existing order conflict", err: apppayment.ErrExistingOrderConflict, wantStatus: http.StatusConflict},
+		{name: "active pending race conflict", err: apppayment.ErrActivePendingOrderExists, wantStatus: http.StatusConflict},
+		{name: "unexpected", err: errors.New("database unavailable"), wantStatus: http.StatusInternalServerError},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			usecase := &fakeCreateOrderUsecase{err: tt.err}
+			body := []byte(`{"appointment_id":"` + uuid.New().String() + `"}`)
+			res := performCreateOrderRequest(usecase, uuid.New().String(), body)
+
+			if res.Code != tt.wantStatus {
+				t.Fatalf("expected %d, got %d: %s", tt.wantStatus, res.Code, res.Body.String())
+			}
+			if !usecase.createCalled {
+				t.Fatal("expected usecase to be called")
+			}
+		})
+	}
+}
+
+func performCreateOrderRequest(usecase *fakeCreateOrderUsecase, payerID string, body []byte) *httptest.ResponseRecorder {
+	router := gin.New()
+	router.POST("/api/v1/payments/orders", NewHandler(usecase).CreateOrder)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/payments/orders", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	if payerID != "" {
+		req.Header.Set("X-User-Id", payerID)
+	}
+	res := httptest.NewRecorder()
+	router.ServeHTTP(res, req)
+	return res
+}
+
+type fakeCreateOrderUsecase struct {
+	createCalled       bool
+	payerID            uuid.UUID
+	appointmentID      string
+	order              *paymentdomain.PaymentOrder
+	paymentURL         string
+	err                error
+	processAlready     bool
+	processErr         error
+	compensationPage   *apppayment.CompensationCasePage
+	compensationCase   *apppayment.CompensationCase
+	compensationErr    error
+	listCalled         bool
+	getCalled          bool
+	compensationFilter apppayment.CompensationCaseFilter
+	compensationCaseID uuid.UUID
+}
+
+func (u *fakeCreateOrderUsecase) CreateOrder(ctx context.Context, payerID uuid.UUID, appointmentID string, ipAddr string) (*paymentdomain.PaymentOrder, string, error) {
+	u.createCalled = true
+	u.payerID = payerID
+	u.appointmentID = appointmentID
+	if u.err != nil {
+		return nil, "", u.err
+	}
+	return u.order, u.paymentURL, nil
+}
+
+func (u *fakeCreateOrderUsecase) ProcessIPN(ctx context.Context, params map[string][]string) (bool, error) {
+	return u.processAlready, u.processErr
+}
+
+func (u *fakeCreateOrderUsecase) ListCompensationCases(ctx context.Context, filter apppayment.CompensationCaseFilter) (*apppayment.CompensationCasePage, error) {
+	u.listCalled = true
+	u.compensationFilter = filter
+	return u.compensationPage, u.compensationErr
+}
+
+func (u *fakeCreateOrderUsecase) GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*apppayment.CompensationCase, error) {
+	u.getCalled = true
+	u.compensationCaseID = caseID
+	return u.compensationCase, u.compensationErr
+}

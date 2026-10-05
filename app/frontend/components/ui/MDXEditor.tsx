@@ -48,7 +48,7 @@ export default function MDXEditorWrapper({ value, onChange, placeholder, readOnl
       className={
         readOnly
           ? "w-full"
-          : "w-full rounded-lg border border-border bg-background overflow-hidden focus-within:border-primary transition-colors"
+          : "w-full overflow-hidden rounded-lg border border-border-strong bg-background transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20"
       }
     >
       <MDXEditor
@@ -73,7 +73,7 @@ export default function MDXEditorWrapper({ value, onChange, placeholder, readOnl
                 markdownShortcutPlugin(),
                 toolbarPlugin({
                   toolbarContents: () => (
-                    <div className="flex flex-wrap items-center gap-1.5 border-b border-border bg-surface/50 p-1.5 w-full">
+                    <div className="flex flex-wrap items-center gap-1.5 border-b border-border bg-surface p-1.5 w-full">
                       <UndoRedo />
                       <span className="w-px h-4 bg-border mx-1" />
                       <BoldItalicUnderlineToggles />

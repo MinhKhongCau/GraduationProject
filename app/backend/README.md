@@ -53,7 +53,7 @@ Service này viết bằng Golang, quản lý lịch khám và đặt lịch.
 *   **Thư mục:** `backend/booking-service/`
 *   **Lệnh chạy:**
     ```bash
-    go run cmd/api/main.go
+    go run cmd/main.go
     ```
 
 ### 💰 3.3. Payment Service (Cổng 8082)

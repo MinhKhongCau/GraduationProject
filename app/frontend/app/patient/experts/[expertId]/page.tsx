@@ -4,7 +4,7 @@ import { use } from "react";
 import Link from "next/link";
 import { CalendarPlus } from "lucide-react";
 import { ExpertProfileHeader } from "./component/ExpertProfileHeader";
-import { Button, Spinner } from "@/components/ui";
+import { buttonClasses, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { expertApi } from "@/api";
 import { QUERY_KEYS, ROUTES } from "@/constants";
@@ -32,11 +32,12 @@ export default function ExpertDetailPage({ params }: { params: Promise<{ expertI
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <ExpertProfileHeader expert={expert} />
-      <Link href={`${ROUTES.PATIENT.BOOK_APPOINTMENT}?expertId=${expertId}`}>
-        <Button className="w-full sm:w-auto">
-          <CalendarPlus className="h-4 w-4" />
-          Book with {expert.fullName}
-        </Button>
+      <Link
+        href={`${ROUTES.PATIENT.BOOK_APPOINTMENT}?expertId=${expertId}`}
+        className={buttonClasses("primary", "lg", "w-full sm:w-auto")}
+      >
+        <CalendarPlus className="h-4 w-4" />
+        Book with {expert.fullName}
       </Link>
     </div>
   );

@@ -1,8 +1,8 @@
 package com.mindcare.auth.infrastructure.persistence.adapter;
 
 import com.mindcare.auth.application.port.out.AccountPort;
-import com.mindcare.auth.domain.entity.Account;
-import com.mindcare.auth.infrastructure.persistence.AccountJpaRepository;
+import com.mindcare.auth.domain.account.Account;
+import com.mindcare.auth.infrastructure.persistence.repository.AccountJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
