@@ -19,23 +19,33 @@ The **Forum Service** is a microservice responsible for the community forum doma
 ```
 forum-service/
 ├── cmd/
-│   └── api/
-│       └── main.go         # Entry point: initializes config, DB, router, and starts the server
-├── configs/
-│   ├── config.go           # Loads the .env file into a struct (Viper or GoDotEnv)
-│   └── .env                # Environment file with DB/port settings (not committed to Git)
+│   └── main.go              # Entry point: loads config, connects DB/RabbitMQ, wires repos -> use cases -> handlers, starts the server
+├── config/
+│   ├── config.go            # Loads config/.env (optional) + environment variables into a Config struct
+│   └── database.go          # GORM/Postgres connection (config.DB)
+├── docs/                    # Generated Swagger docs
 ├── internal/                # All core code lives here so it can't be imported outside this module
-│   ├── api/                 # Delivery / Transport layer
-│   │   ├── http/            # HTTP REST layer (Gin, Fiber, or Echo)
-│   │   │   ├── handlers/    # Receives requests, calls services, returns responses
-│   │   │   └── router.go    # Defines API routes
-│   │   └── dto/             # Data Transfer Objects: structs validating API request/response payloads
-│   ├── app/                 # Business logic layer
-│   │   ├── entity/          # Structs representing the system's core domain objects (Post, Comment, Tag, ...)
-│   │   └── service/         # Interfaces and implementations for business logic
-│   └── repository/          # Data layer
-│       ├── dao/             # Data Access Objects: structs mapped directly to database tables
-│       └── db/              # Database connection (PostgreSQL via GORM/sqlx) and migration runner
+│   ├── domain/              # Core domain objects, one package per aggregate
+│   │   ├── post/            # Post, PostStatus, PostLike, PostBookmark
+│   │   ├── comment/         # Comment, LTree (ltree path type)
+│   │   ├── category/        # Category
+│   │   └── tag/             # Tag
+│   ├── application/         # Use cases
+│   │   ├── forum/           # Post/comment/category/tag/like/bookmark services, errors, ports.go (EventPublisher port + event payloads)
+│   │   └── sysadmin/        # Standalone in-memory admin use cases (notifications, service catalog, user admin) + tests
+│   └── infrastructure/      # Adapters
+│       ├── http/
+│       │   ├── handlers/    # Gin handlers: receive requests, call use cases, return responses
+│       │   ├── middleware/  # Identity headers (X-User-Id / X-User-Role) helpers
+│       │   ├── response/    # Standard JSON response envelope
+│       │   ├── routes/      # Route definitions (SetupRoutes)
+│       │   └── schemas/     # Request/response payload structs (DTOs)
+│       ├── messaging/       # RabbitMQ connection, event publisher (forum.events), profile RPC + seed-author consumers
+│       └── persistence/
+│           ├── migrate.go   # golang-migrate runner (SQL embedded into the binary)
+│           ├── migrations/  # Versioned *.sql migrations (schema + seed data)
+│           ├── models/      # GORM row structs mapped to tables (+ entity mapping)
+│           └── repository/  # GORM repositories
 ├── go.mod
 └── go.sum
 ```

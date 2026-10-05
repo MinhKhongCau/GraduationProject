@@ -5,9 +5,12 @@ import (
 	"os"
 
 	"profile-service/config"
-	"profile-service/internal/consumer"
-	"profile-service/internal/messaging"
-	"profile-service/routes"
+	"profile-service/internal/application/expertprofile"
+	"profile-service/internal/infrastructure/http/handlers"
+	"profile-service/internal/infrastructure/http/routes"
+	"profile-service/internal/infrastructure/messaging"
+	"profile-service/internal/infrastructure/messaging/consumer"
+	"profile-service/internal/infrastructure/persistence/repository"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -41,7 +44,16 @@ func main() {
 	// 3. Khởi tạo Gin Router
 	r := gin.Default()
 
-	routes.SetupRoutes(r)
+	// 3b. Composition root: Infrastructure -> Application -> HTTP adapter
+	expertRepo := repository.NewExpertRepository(config.DB)
+	specRepo := repository.NewSpecializationRepository(config.DB)
+	eventPublisher := messaging.LogEventPublisher{}
+	expertHandler := handlers.NewExpertHandler(
+		expertprofile.NewReplaceExpertProfile(expertRepo, specRepo, eventPublisher),
+		expertprofile.NewPatchExpertProfile(expertRepo, specRepo, eventPublisher),
+	)
+
+	routes.SetupRoutes(r, routes.Handlers{Expert: expertHandler})
 
 	// Swagger endpoint
 	r.GET("/swagger-ui/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

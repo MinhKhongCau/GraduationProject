@@ -1,0 +1,50 @@
+package com.mindcare.auth.application.token;
+import com.mindcare.auth.application.auth.LoginResponse;
+import com.mindcare.auth.application.port.out.RefreshTokenPort;
+import com.mindcare.auth.domain.account.Account;
+import com.mindcare.auth.domain.token.RefreshToken;
+import com.mindcare.auth.infrastructure.security.JwtUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class RefreshTokenUseCase {
+    private final JwtUtils jwtUtils;
+    private final RefreshTokenPort refreshTokenPort;
+
+    public LoginResponse execute(TokenRefreshCommand command) {
+        String requestRefreshToken = command.getRefreshToken();
+        if (!jwtUtils.validateJwtToken(requestRefreshToken)) {
+            throw new RuntimeException("Invalid refresh token!");
+        }
+        String hashedRequestToken = jwtUtils.hashToken(requestRefreshToken);
+        RefreshToken refreshToken = refreshTokenPort.findByTokenHash(hashedRequestToken)
+                .orElseThrow(() -> new RuntimeException("Session not found!"));
+        if (refreshToken.getIsRevoked()) {
+            throw new RuntimeException("Session has been revoked (Replay Attack check)!");
+        }
+        if (refreshToken.getExpiresAt() < System.currentTimeMillis()) {
+            throw new RuntimeException("Session has expired. Please login again!");
+        }
+        refreshToken.setIsRevoked(true);
+        refreshTokenPort.save(refreshToken);
+        Account account = refreshToken.getAccount();
+        String newAccessToken = jwtUtils.generateAccessToken(account);
+        String newRefreshTokenString = jwtUtils.generateRefreshToken(account);
+        RefreshToken newRefreshToken = RefreshToken.builder()
+                .account(account)
+                .tokenHash(jwtUtils.hashToken(newRefreshTokenString))
+                .expiresAt(System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000L)
+                .build();
+        refreshTokenPort.save(newRefreshToken);
+        return LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshTokenString)
+                .accountId(account.getAccountId().toString())
+                .fullName(account.getFullName())
+                .role(account.getRole())
+                .build();
+    }
+}

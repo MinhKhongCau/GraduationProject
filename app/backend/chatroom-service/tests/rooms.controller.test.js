@@ -1,5 +1,5 @@
 import { jest } from "@jest/globals";
-import { listRooms } from "../controllers/rooms.controller.js";
+import { listRooms } from "../src/infrastructure/http/controllers/rooms.controller.js";
 import { redisPub as r } from "../config/redis.js";
 
 describe("Rooms Controller Unit Tests", () => {

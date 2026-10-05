@@ -7,8 +7,8 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
-from app.database import get_db
-from app.models import Base
+from app.config.database import get_db
+from app.infrastructure.persistence.models import Base
 from app.main import app
 
 # Compile PostgreSQL types for SQLite in-memory test database

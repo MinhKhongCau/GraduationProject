@@ -1,7 +1,7 @@
 import uuid
 import pytest
 from unittest.mock import patch
-from app import models
+from app.infrastructure.persistence import models
 
 USER_UUID = "11111111-1111-1111-1111-111111111111"
 
@@ -81,7 +81,7 @@ def test_submit_assessment_success(client, db_session):
         ]
     }
 
-    with patch("app.api.assessments.generate_psychological_advice", return_value="Nhận xét từ AI: Bạn có mức độ trầm cảm nhẹ."):
+    with patch("app.infrastructure.http.routes.assessments.generate_psychological_advice", return_value="Nhận xét từ AI: Bạn có mức độ trầm cảm nhẹ."):
         response = client.post(
             "/api/v1/assessments/submit",
             json=payload,

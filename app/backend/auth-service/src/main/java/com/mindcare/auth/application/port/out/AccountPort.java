@@ -1,6 +1,6 @@
 package com.mindcare.auth.application.port.out;
 
-import com.mindcare.auth.domain.entity.Account;
+import com.mindcare.auth.domain.account.Account;
 import java.util.Optional;
 
 public interface AccountPort {

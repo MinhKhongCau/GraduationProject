@@ -1,8 +1,8 @@
 package com.mindcare.auth.infrastructure.persistence.adapter;
 import com.mindcare.auth.application.port.out.VerificationTokenPort;
-import com.mindcare.auth.domain.entity.VerificationToken;
-import com.mindcare.auth.domain.enums.TokenType;
-import com.mindcare.auth.infrastructure.persistence.VerificationTokenJpaRepository;
+import com.mindcare.auth.domain.token.VerificationToken;
+import com.mindcare.auth.domain.token.TokenType;
+import com.mindcare.auth.infrastructure.persistence.repository.VerificationTokenJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.util.Optional;

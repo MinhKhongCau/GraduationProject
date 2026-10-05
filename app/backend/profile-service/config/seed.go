@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"profile-service/internal/models"
+	"profile-service/internal/infrastructure/persistence/models"
 	"profile-service/internal/utils"
 
 	"github.com/google/uuid"

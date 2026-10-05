@@ -162,7 +162,7 @@ Mở các cửa sổ Terminal riêng biệt:
 - **Booking Service**:
   ```bash
   cd app/backend/booking-service
-  go run cmd/api/main.go
+  go run cmd/main.go
   ```
 - **Payment Service**:
   ```bash
