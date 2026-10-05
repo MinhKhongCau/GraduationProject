@@ -2,17 +2,18 @@ import uuid
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models, types
-from ..services.ai_service import generate_psychological_advice
-from .dependencies import get_template_by_slug, get_current_user_id
+from app.config.database import get_db
+from app.infrastructure.persistence import models
+from app.infrastructure.http import schemas
+from app.application.ai.ai_service import generate_psychological_advice
+from app.infrastructure.http.dependencies import get_template_by_slug, get_current_user_id
 
 router = APIRouter(prefix="/api/v1/assessments", tags=["Assessments"])
 
 
 @router.post("/submit")
 def submit_assessment(
-    payload: types.AssessmentSubmit,
+    payload: schemas.AssessmentSubmit,
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
@@ -101,7 +102,7 @@ def submit_assessment(
     }
 
 
-@router.get("/self", response_model=List[types.AssessmentResultResponse])
+@router.get("/self", response_model=List[schemas.AssessmentResultResponse])
 def get_my_assessments(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id)

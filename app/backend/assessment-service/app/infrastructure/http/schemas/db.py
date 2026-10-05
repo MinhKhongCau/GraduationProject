@@ -1,4 +1,4 @@
-# File: app/schemas.py
+# File: app/infrastructure/http/schemas/db.py
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import uuid

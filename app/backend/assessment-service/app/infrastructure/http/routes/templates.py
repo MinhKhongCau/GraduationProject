@@ -1,16 +1,17 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models, types
-from .dependencies import get_template_by_slug, check_admin_role, generate_unique_slug
+from app.config.database import get_db
+from app.infrastructure.persistence import models
+from app.infrastructure.http import schemas
+from app.infrastructure.http.dependencies import get_template_by_slug, check_admin_role, generate_unique_slug
 
 router = APIRouter(prefix="/api/v1/assessments/templates", tags=["Templates"])
 
 
 @router.post("")
 def create_template(
-    template: types.TemplateCreate,
+    template: schemas.TemplateCreate,
     db: Session = Depends(get_db)
 ):
     db_template = (
@@ -45,13 +46,13 @@ def create_template(
 
     return {
         "message": "Tạo bài test thành công!",
-        "data": types.TemplateResponse.model_validate(new_template)
+        "data": schemas.TemplateResponse.model_validate(new_template)
     }
 
 
 @router.get(
     "",
-    response_model=List[types.TemplateResponse]
+    response_model=List[schemas.TemplateResponse]
 )
 def get_all_templates(db: Session = Depends(get_db)):
     templates = (
@@ -64,7 +65,7 @@ def get_all_templates(db: Session = Depends(get_db)):
 
 @router.get(
     "/{slug}",
-    response_model=types.TemplateResponse
+    response_model=schemas.TemplateResponse
 )
 def get_template(slug: str, db: Session = Depends(get_db)):
     template = get_template_by_slug(slug, db)
@@ -78,11 +79,11 @@ def get_template(slug: str, db: Session = Depends(get_db)):
 
 @router.patch(
     "/{slug}",
-    response_model=types.TemplateResponse
+    response_model=schemas.TemplateResponse
 )
 def update_template(
     slug: str,
-    payload: types.TemplateUpdate,
+    payload: schemas.TemplateUpdate,
     db: Session = Depends(get_db)
 ):
     template = get_template_by_slug(slug, db)

@@ -1,9 +1,10 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models, types
-from .dependencies import (
+from app.config.database import get_db
+from app.infrastructure.persistence import models
+from app.infrastructure.http import schemas
+from app.infrastructure.http.dependencies import (
     get_dimension_by_slug,
     get_question_by_slug,
     check_admin_role,
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/api/v1/assessments/dimensions", tags=["Dimensions"])
 
 @router.post("")
 def create_dimension(
-    payload: types.DimensionCreate,
+    payload: schemas.DimensionCreate,
     db: Session = Depends(get_db),
     is_admin: bool = Depends(check_admin_role)
 ):
@@ -49,13 +50,13 @@ def create_dimension(
 
     return {
         "message": "Tạo khía cạnh (dimension) thành công!",
-        "data": types.DimensionResponse.model_validate(new_dimension)
+        "data": schemas.DimensionResponse.model_validate(new_dimension)
     }
 
 
 @router.get(
     "",
-    response_model=List[types.DimensionResponse]
+    response_model=List[schemas.DimensionResponse]
 )
 def get_all_dimensions(db: Session = Depends(get_db)):
     dimensions = (
@@ -68,7 +69,7 @@ def get_all_dimensions(db: Session = Depends(get_db)):
 
 @router.get(
     "/{slug}",
-    response_model=types.DimensionResponse
+    response_model=schemas.DimensionResponse
 )
 def get_dimension(slug: str, db: Session = Depends(get_db)):
     dimension = get_dimension_by_slug(slug, db)
@@ -82,11 +83,11 @@ def get_dimension(slug: str, db: Session = Depends(get_db)):
 
 @router.patch(
     "/{slug}",
-    response_model=types.DimensionResponse
+    response_model=schemas.DimensionResponse
 )
 def update_dimension(
     slug: str,
-    payload: types.DimensionUpdate,
+    payload: schemas.DimensionUpdate,
     db: Session = Depends(get_db),
     is_admin: bool = Depends(check_admin_role)
 ):
@@ -118,7 +119,7 @@ def update_dimension(
 @router.patch("/{slug}/questions/bulk")
 def bulk_assign_questions_to_dimension(
     slug: str,
-    payload: types.DimensionQuestionsBulkAssign,
+    payload: schemas.DimensionQuestionsBulkAssign,
     db: Session = Depends(get_db),
     is_admin: bool = Depends(check_admin_role)
 ):
@@ -158,8 +159,8 @@ def bulk_assign_questions_to_dimension(
     return {
         "message": f"Đã gán {len(questions)} câu hỏi vào khía cạnh '{dimension.name}'!",
         "data": {
-            "dimension": types.DimensionResponse.model_validate(dimension),
-            "questions": [types.QuestionResponse.model_validate(q) for q in questions]
+            "dimension": schemas.DimensionResponse.model_validate(dimension),
+            "questions": [schemas.QuestionResponse.model_validate(q) for q in questions]
         }
     }
 

@@ -1,14 +1,15 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models, types
-from .dependencies import get_option_group_by_slug, check_admin_role, generate_unique_slug
+from app.config.database import get_db
+from app.infrastructure.persistence import models
+from app.infrastructure.http import schemas
+from app.infrastructure.http.dependencies import get_option_group_by_slug, check_admin_role, generate_unique_slug
 
 router = APIRouter(prefix="/api/v1/assessments/option-groups", tags=["Option Groups"])
 
 
-@router.get("", response_model=List[types.OptionGroupResponse])
+@router.get("", response_model=List[schemas.OptionGroupResponse])
 def list_option_groups(db: Session = Depends(get_db)):
     groups = (
         db.query(models.AssessOptionGroup)
@@ -27,12 +28,12 @@ def list_option_groups(db: Session = Depends(get_db)):
             .all()
         )
         result.append(
-            types.OptionGroupResponse(
+            schemas.OptionGroupResponse(
                 group_code=g.group_code,
                 group_name=g.group_name,
                 description=g.description,
                 slug=g.slug,
-                options=[types.OptionResponse.model_validate(opt) for opt in options]
+                options=[schemas.OptionResponse.model_validate(opt) for opt in options]
             )
         )
     return result
@@ -40,7 +41,7 @@ def list_option_groups(db: Session = Depends(get_db)):
 
 @router.post("")
 def create_option_group(
-    group: types.OptionGroupCreate,
+    group: schemas.OptionGroupCreate,
     db: Session = Depends(get_db)
 ):
     db_group = (
@@ -94,7 +95,7 @@ def create_option_group(
 
 @router.get(
     "/{slug}",
-    response_model=types.OptionGroupResponse
+    response_model=schemas.OptionGroupResponse
 )
 def get_option_group(slug: str, db: Session = Depends(get_db)):
     group = get_option_group_by_slug(slug, db)
@@ -112,22 +113,22 @@ def get_option_group(slug: str, db: Session = Depends(get_db)):
         .order_by(models.AssessOption.order_index.asc())
         .all()
     )
-    return types.OptionGroupResponse(
+    return schemas.OptionGroupResponse(
         group_code=group.group_code,
         group_name=group.group_name,
         description=group.description,
         slug=group.slug,
-        options=[types.OptionResponse.model_validate(opt) for opt in options]
+        options=[schemas.OptionResponse.model_validate(opt) for opt in options]
     )
 
 
 @router.patch(
     "/{slug}",
-    response_model=types.OptionGroupResponse
+    response_model=schemas.OptionGroupResponse
 )
 def update_option_group(
     slug: str,
-    payload: types.OptionGroupUpdate,
+    payload: schemas.OptionGroupUpdate,
     db: Session = Depends(get_db)
 ):
     group = get_option_group_by_slug(slug, db)
@@ -162,12 +163,12 @@ def update_option_group(
         .order_by(models.AssessOption.order_index.asc())
         .all()
     )
-    return types.OptionGroupResponse(
+    return schemas.OptionGroupResponse(
         group_code=group.group_code,
         group_name=group.group_name,
         description=group.description,
         slug=group.slug,
-        options=[types.OptionResponse.model_validate(opt) for opt in options]
+        options=[schemas.OptionResponse.model_validate(opt) for opt in options]
     )
 
 

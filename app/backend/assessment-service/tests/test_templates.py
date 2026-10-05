@@ -1,5 +1,5 @@
 import uuid
-from app import models
+from app.infrastructure.persistence import models
 
 
 def test_create_template_success(client):

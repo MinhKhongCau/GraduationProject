@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models, types
-from .dependencies import get_option_by_slug, check_admin_role
+from app.config.database import get_db
+from app.infrastructure.persistence import models
+from app.infrastructure.http import schemas
+from app.infrastructure.http.dependencies import get_option_by_slug, check_admin_role
 
 router = APIRouter(prefix="/api/v1/assessments/options", tags=["Options"])
 
 
 @router.get(
     "/{slug}",
-    response_model=types.OptionResponse
+    response_model=schemas.OptionResponse
 )
 def get_option(slug: str, db: Session = Depends(get_db)):
     option = get_option_by_slug(slug, db)
@@ -23,11 +24,11 @@ def get_option(slug: str, db: Session = Depends(get_db)):
 
 @router.patch(
     "/{slug}",
-    response_model=types.OptionResponse
+    response_model=schemas.OptionResponse
 )
 def update_option(
     slug: str,
-    payload: types.OptionUpdate,
+    payload: schemas.OptionUpdate,
     db: Session = Depends(get_db)
 ):
     option = get_option_by_slug(slug, db)

@@ -4,8 +4,8 @@ import string
 from typing import Optional
 from fastapi import Header, HTTPException, Depends
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models
+from app.config.database import get_db
+from app.infrastructure.persistence import models
 
 def get_current_user_id(x_user_id: Optional[str] = Header(None, alias="X-User-Id")):
     if not x_user_id:

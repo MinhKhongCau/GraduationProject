@@ -1,9 +1,10 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models, types
-from .dependencies import (
+from app.config.database import get_db
+from app.infrastructure.persistence import models
+from app.infrastructure.http import schemas
+from app.infrastructure.http.dependencies import (
     get_template_by_slug,
     get_option_group_by_slug,
     get_question_by_slug,
@@ -17,7 +18,7 @@ router = APIRouter(prefix="/api/v1/assessments", tags=["Questions"])
 
 @router.post("/questions/bulk")
 def create_bulk_questions(
-    payload: types.QuestionBulkCreate,
+    payload: schemas.QuestionBulkCreate,
     db: Session = Depends(get_db)
 ):
     added_questions = []
@@ -61,13 +62,13 @@ def create_bulk_questions(
 
     return {
         "message": f"Đã thêm thành công {len(added_questions)} câu hỏi vào bài test!",
-        "data": [types.QuestionResponse.model_validate(q) for q in added_questions]
+        "data": [schemas.QuestionResponse.model_validate(q) for q in added_questions]
     }
 
 
 @router.get(
     "/questions/{slug}",
-    response_model=types.QuestionResponse
+    response_model=schemas.QuestionResponse
 )
 def get_question(slug: str, db: Session = Depends(get_db)):
     question = get_question_by_slug(slug, db)
@@ -81,11 +82,11 @@ def get_question(slug: str, db: Session = Depends(get_db)):
 
 @router.patch(
     "/questions/{slug}",
-    response_model=types.QuestionResponse
+    response_model=schemas.QuestionResponse
 )
 def update_question(
     slug: str,
-    payload: types.QuestionUpdate,
+    payload: schemas.QuestionUpdate,
     db: Session = Depends(get_db),
     is_admin: bool = Depends(check_admin_role)
 ):
@@ -138,7 +139,7 @@ def delete_question(
 
 @router.get(
     "/templates/{slug}/questions",
-    response_model=List[types.QuestionWithOptionsResponse]
+    response_model=List[schemas.QuestionWithOptionsResponse]
 )
 def get_questions_by_template(
     slug: str,
@@ -173,13 +174,13 @@ def get_questions_by_template(
             .all()
         )
 
-        q_data = types.QuestionWithOptionsResponse(
+        q_data = schemas.QuestionWithOptionsResponse(
             content=q.content,
             dimension=q.dimension,
             question_order=q.question_order,
             slug=q.slug,
             options=[
-                types.OptionResponse.model_validate(opt)
+                schemas.OptionResponse.model_validate(opt)
                 for opt in options
             ]
         )

@@ -8,7 +8,7 @@ from sqlalchemy import engine_from_config, pool
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.models import Base  # noqa: E402
+from app.infrastructure.persistence.models import Base  # noqa: E402
 
 load_dotenv()
 
