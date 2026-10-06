@@ -10,7 +10,8 @@ import (
 
 // Handlers gom các HTTP adapter đã được khởi tạo với use case (dependency injection từ cmd/main.go).
 type Handlers struct {
-	Expert *handlers.ExpertHandler
+	Expert        *handlers.ExpertHandler
+	PatientRecord *handlers.PatientRecordHandler
 }
 
 func SetupRoutes(r *gin.Engine, h Handlers) {
@@ -34,6 +35,16 @@ func SetupRoutes(r *gin.Engine, h Handlers) {
 			self.PATCH("", handlers.PatchMe(h.Expert))
 			self.GET("/medical-histories", handlers.ListMyMedicalHistories)
 			self.POST("/medical-histories", handlers.AddMyMedicalHistory)
+
+			// Hồ sơ người khám (chọn khi đặt lịch): chỉ bệnh nhân
+			records := self.Group("/patient-records", middleware.RequireRole("PATIENT"))
+			records.GET("", h.PatientRecord.ListMine)
+			records.POST("", h.PatientRecord.CreateMine)
+
+			// Chuyên khoa của chính mình: chỉ chuyên gia
+			mySpecs := self.Group("/specializations", middleware.RequireRole("EXPERT"))
+			mySpecs.POST("/:specId", h.Expert.AddMySpecialization)
+			mySpecs.DELETE("/:specId", h.Expert.RemoveMySpecialization)
 		}
 
 		// --- Duyệt danh sách chuyên gia/chuyên khoa: public ---
@@ -68,6 +79,11 @@ func SetupRoutes(r *gin.Engine, h Handlers) {
 
 			// Chuyên khoa
 			admin.POST("/specializations", handlers.CreateSpecialization)
+			admin.GET("/specializations/all", handlers.ListAllSpecializations)
+			admin.GET("/specializations/:specId", handlers.GetSpecialization)
+			admin.PUT("/specializations/:specId", handlers.UpdateSpecialization)
+			admin.PATCH("/specializations/:specId/status", handlers.UpdateSpecializationStatus)
+			admin.DELETE("/specializations/:specId", handlers.DeleteSpecialization)
 		}
 	}
 }

@@ -9,16 +9,18 @@ import { QUERY_KEYS } from "@/constants";
 import type { ExpertProfile } from "@/types";
 
 export interface ExpertStepProps {
+  /** When set, only experts practising this specialization are listed. */
+  specializationId?: string;
   selectedExpert: ExpertProfile | null;
   onSelectExpert: (expert: ExpertProfile) => void;
   onBack: () => void;
   onNext: () => void;
 }
 
-export function ExpertStep({ selectedExpert, onSelectExpert, onBack, onNext }: ExpertStepProps) {
+export function ExpertStep({ specializationId, selectedExpert, onSelectExpert, onBack, onNext }: ExpertStepProps) {
   const { data: experts = [], isLoading } = useApiQuery({
-    queryKey: QUERY_KEYS.experts(),
-    queryFn: () => expertApi.getAllExperts(),
+    queryKey: QUERY_KEYS.experts({ specializationId }),
+    queryFn: () => expertApi.getAllExperts(specializationId),
   });
 
   return (
@@ -27,6 +29,8 @@ export function ExpertStep({ selectedExpert, onSelectExpert, onBack, onNext }: E
 
       {isLoading ? (
         <Spinner className="h-6 w-6" />
+      ) : experts.length === 0 ? (
+        <p className="mb-8 text-sm text-muted-foreground">No experts are available for this specialization yet.</p>
       ) : (
         <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {experts.map((expert) => {

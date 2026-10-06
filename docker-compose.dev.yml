@@ -10,7 +10,7 @@ services:
       - "${PORT_FRONTEND}:3000"
     environment:
       - NODE_ENV=${NODE_ENV}
-      - REACT_APP_API_URL=${REACT_APP_API_URL}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     networks:
       - app-network
 
@@ -165,6 +165,8 @@ services:
       - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
       - INTERNAL_CLIENT_ID=${PROFILE_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PROFILE}
+      # gRPC nội bộ cho booking-service (không publish ra host, không qua Kong)
+      - GRPC_PORT=${PROFILE_GRPC_PORT:-9002}
 
   payment-service:
     build:
@@ -224,6 +226,8 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
+      profile-service:
+        condition: service_started
     networks:
       - app-network
     environment:
@@ -240,6 +244,8 @@ services:
       - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME:-booking-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING}
       - ROLLING_SLOT_DAYS=${ROLLING_SLOT_DAYS:-30}
+      # gRPC tới profile-service (trang xác nhận + tạo cuộc hẹn)
+      - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:

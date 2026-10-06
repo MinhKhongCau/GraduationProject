@@ -1,5 +1,6 @@
 export * as authApi from "./auth";
 export * as patientApi from "./patient";
+export * as patientRecordApi from "./patient-record";
 export * as expertApi from "./expert";
 export * as specializationApi from "./specialization";
 export * as bookingApi from "./booking";

@@ -2,12 +2,14 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExpertProfileEditForm, type ExpertProfileFormValues } from "./component/ExpertProfileEditForm";
+import { MySpecializationsCard } from "./component/MySpecializationsCard";
 import { ChangePasswordForm } from "@/app/patient/settings/component/ChangePasswordForm";
-import { useApiMutation } from "@/hooks";
-import { authApi, expertApi } from "@/api";
+import { useApiMutation, useApiQuery } from "@/hooks";
+import { authApi, expertApi, specializationApi } from "@/api";
+import { QUERY_KEYS } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
 import { useErrorContext } from "@/context/ErrorContext";
-import type { ChangePasswordRequest } from "@/types";
+import type { ChangePasswordRequest, ExpertProfile } from "@/types";
 import { PageHeader } from "@/components/ui";
 
 export default function ExpertSettingsPage() {
@@ -16,7 +18,7 @@ export default function ExpertSettingsPage() {
   const { showSuccess } = useErrorContext();
 
   const { data: profile } = useQuery({
-    queryKey: ["expert", "profile", "me"],
+    queryKey: QUERY_KEYS.myExpertProfile(),
     queryFn: () => expertApi.getMyProfile(),
     enabled: !!user,
     retry: 0,
@@ -34,7 +36,34 @@ export default function ExpertSettingsPage() {
     },
     onSuccess: () => {
       showSuccess("Profile updated.");
-      queryClient.invalidateQueries({ queryKey: ["expert", "profile", "me"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myExpertProfile() });
+    },
+  });
+
+  const { data: activeSpecializations = [] } = useApiQuery({
+    queryKey: QUERY_KEYS.specializations(),
+    queryFn: () => specializationApi.getAllSpecializations(),
+  });
+
+  function onSpecializationsChanged(updated: ExpertProfile) {
+    queryClient.setQueryData(QUERY_KEYS.myExpertProfile(), updated);
+    // Public expert listings (booking, find-experts) filter by specialization.
+    queryClient.invalidateQueries({ queryKey: ["experts"] });
+  }
+
+  const addSpecializationMutation = useApiMutation({
+    mutationFn: (specId: string) => expertApi.addMySpecialization(specId),
+    onSuccess: (updated) => {
+      showSuccess("Specialization added.");
+      onSpecializationsChanged(updated);
+    },
+  });
+
+  const removeSpecializationMutation = useApiMutation({
+    mutationFn: (specId: string) => expertApi.removeMySpecialization(specId),
+    onSuccess: (updated) => {
+      showSuccess("Specialization removed.");
+      onSpecializationsChanged(updated);
     },
   });
 
@@ -56,6 +85,14 @@ export default function ExpertSettingsPage() {
         }}
         onSubmit={(values) => updateProfileMutation.mutate(values)}
         isSubmitting={updateProfileMutation.isPending}
+      />
+
+      <MySpecializationsCard
+        current={profile?.specializations ?? []}
+        available={activeSpecializations}
+        onAdd={(specId) => addSpecializationMutation.mutate(specId)}
+        onRemove={(specId) => removeSpecializationMutation.mutate(specId)}
+        isPending={addSpecializationMutation.isPending || removeSpecializationMutation.isPending}
       />
 
       <ChangePasswordForm

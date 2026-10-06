@@ -8,7 +8,7 @@ services:
       - "${PORT_FRONTEND}:3000"
     environment:
       - NODE_ENV=${NODE_ENV}
-      - REACT_APP_API_URL=${REACT_APP_API_URL}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     networks:
       - app-network
 

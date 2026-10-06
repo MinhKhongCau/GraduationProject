@@ -1,12 +1,14 @@
 package appointment
 
 import (
+	"context"
+
 	bookingquery "booking-service/internal/application/query"
 	appointmentdomain "booking-service/internal/domain/appointment"
 )
 
 type Usecase interface {
-	CreateAppointment(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error)
+	CreateAppointment(ctx context.Context, command CreateAppointmentCommand) (*appointmentdomain.Appointment, error)
 	GetAppointmentByID(appointmentID string) (*appointmentdomain.Appointment, error)
 	GetPaymentEligibility(command GetPaymentEligibilityCommand) (PaymentEligibility, error)
 	CancelAppointment(appointmentID, userID, userRole, reason string) error
@@ -28,12 +30,18 @@ type ReadUsecase interface {
 }
 
 type appointmentUsecase struct {
-	repo Repository
-	uow  UnitOfWork
+	repo     Repository
+	uow      UnitOfWork
+	profiles ProfileGateway
 }
 
 func NewUsecase(repo Repository) Usecase {
-	usecase := &appointmentUsecase{repo: repo}
+	return NewUsecaseWithProfiles(repo, nil)
+}
+
+// NewUsecaseWithProfiles cho phép tạo cuộc hẹn/trang xác nhận, cần đọc hồ sơ từ profile-service.
+func NewUsecaseWithProfiles(repo Repository, profiles ProfileGateway) Usecase {
+	usecase := &appointmentUsecase{repo: repo, profiles: profiles}
 	if uow, ok := repo.(UnitOfWork); ok {
 		usecase.uow = uow
 	}

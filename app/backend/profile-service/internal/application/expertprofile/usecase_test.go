@@ -68,8 +68,8 @@ type fixture struct {
 
 func newFixture() *fixture {
 	authID := uuid.New()
-	existingSpec := specialization.Specialization{ID: uuid.New(), Name: "Trầm cảm"}
-	newSpec := specialization.Specialization{ID: uuid.New(), Name: "Lo âu"}
+	existingSpec := specialization.Specialization{ID: uuid.New(), Name: "Trầm cảm", IsActive: true}
+	newSpec := specialization.Specialization{ID: uuid.New(), Name: "Lo âu", IsActive: true}
 	return &fixture{
 		authID: authID,
 		spec:   newSpec,
@@ -110,7 +110,7 @@ func TestReplaceExpertProfile(t *testing.T) {
 		assert.False(t, f.experts.saved.SpecializationsChanged())
 	})
 
-	t.Run("specialization_ids rỗng xoá hết, id không tồn tại bị bỏ qua", func(t *testing.T) {
+	t.Run("specialization_ids rỗng xoá hết", func(t *testing.T) {
 		f := newFixture()
 		uc := NewReplaceExpertProfile(f.experts, f.specs, f.publisher)
 
@@ -122,11 +122,43 @@ func TestReplaceExpertProfile(t *testing.T) {
 		view, err = uc.Execute(context.Background(), ReplaceCommand{
 			AuthID:            f.authID,
 			UserInformation:   profile.UserInformation{FullName: "Dr. A"},
-			SpecializationIDs: []string{f.spec.ID.String(), uuid.NewString()},
+			SpecializationIDs: []string{f.spec.ID.String(), f.spec.ID.String()},
 		})
 		require.NoError(t, err)
-		require.Len(t, view.ExpertProfile.Specializations, 1)
+		require.Len(t, view.ExpertProfile.Specializations, 1, "id trùng lặp chỉ tính 1 lần")
 		assert.Equal(t, f.spec.ID, view.ExpertProfile.Specializations[0].SpecID)
+	})
+
+	t.Run("id chuyên khoa không tồn tại hoặc sai định dạng bị từ chối", func(t *testing.T) {
+		for _, badID := range []string{uuid.NewString(), "not-a-uuid"} {
+			f := newFixture()
+			uc := NewReplaceExpertProfile(f.experts, f.specs, f.publisher)
+
+			_, err := uc.Execute(context.Background(), ReplaceCommand{
+				AuthID:            f.authID,
+				UserInformation:   profile.UserInformation{FullName: "Dr. A"},
+				SpecializationIDs: []string{f.spec.ID.String(), badID},
+			})
+			assert.ErrorIs(t, err, specialization.ErrSpecializationNotFound)
+			assert.Nil(t, f.experts.saved, "không lưu khi danh sách không hợp lệ")
+		}
+	})
+
+	t.Run("không đăng ký mới chuyên khoa ngừng hoạt động nhưng được giữ chuyên khoa đã có", func(t *testing.T) {
+		f := newFixture()
+		inactive := specialization.Specialization{ID: uuid.New(), Name: "Cũ", IsActive: false}
+		f.specs.specs[inactive.ID.String()] = inactive
+		uc := NewReplaceExpertProfile(f.experts, f.specs, f.publisher)
+
+		_, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: f.authID, UserInformation: profile.UserInformation{FullName: "Dr. A"}, SpecializationIDs: []string{inactive.ID.String()}})
+		assert.ErrorIs(t, err, specialization.ErrSpecializationInactive)
+
+		snapshot := f.experts.experts[f.authID]
+		snapshot.Specializations = append(snapshot.Specializations, inactive)
+		f.experts.experts[f.authID] = snapshot
+		view, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: f.authID, UserInformation: profile.UserInformation{FullName: "Dr. A"}, SpecializationIDs: []string{inactive.ID.String(), f.spec.ID.String()}})
+		require.NoError(t, err)
+		assert.Len(t, view.ExpertProfile.Specializations, 2)
 	})
 
 	t.Run("không tìm thấy chuyên gia", func(t *testing.T) {

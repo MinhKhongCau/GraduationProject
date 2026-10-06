@@ -2,28 +2,37 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { TopicStep } from "./component/TopicStep";
+import { SpecializationStep } from "./component/SpecializationStep";
 import { ExpertStep } from "./component/ExpertStep";
 import { SlotStep } from "./component/SlotStep";
-import { ReviewStep } from "./component/ReviewStep";
+import { PatientProfileStep } from "./component/PatientProfileStep";
+import { ConfirmStep } from "./component/ConfirmStep";
 import { PaymentStep } from "./component/PaymentStep";
 import { useApiQuery, useApiMutation, usePaymentRedirect } from "@/hooks";
 import { bookingApi, expertApi, paymentApi } from "@/api";
+import { normalizeError } from "@/api/http/errorNormalizer";
 import { QUERY_KEYS, CHANNELING_FEE } from "@/constants";
 import { useErrorContext } from "@/context/ErrorContext";
-import type { ExpertProfile, AvailableTimeSlot, CreateAppointmentResponse } from "@/types";
+import type {
+  ExpertProfile,
+  AvailableTimeSlot,
+  CreateAppointmentResponse,
+  PatientRecord,
+  Specialization,
+} from "@/types";
 
-type WizardStep = "topic" | "expert" | "slot" | "review" | "payment";
+type WizardStep = "specialization" | "expert" | "slot" | "profile" | "confirm" | "payment";
 
 export default function BookAppointmentPage() {
   const searchParams = useSearchParams();
   const preselectedExpertId = searchParams.get("expertId");
 
-  const [step, setStep] = useState<WizardStep>("topic");
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [step, setStep] = useState<WizardStep>(preselectedExpertId ? "slot" : "specialization");
+  const [selectedSpecialization, setSelectedSpecialization] = useState<Specialization | null>(null);
   const [selectedExpert, setSelectedExpert] = useState<ExpertProfile | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<AvailableTimeSlot | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<PatientRecord | null>(null);
   const [createdAppointment, setCreatedAppointment] = useState<CreateAppointmentResponse | null>(null);
   const { showError } = useErrorContext();
   const { isPaymentBrowserOpen, openPayment } = usePaymentRedirect({
@@ -41,18 +50,39 @@ export default function BookAppointmentPage() {
     onSuccess: setSelectedExpert,
   });
 
+  /** The slot hold was lost (expired or taken): drop the slot and let the patient pick again. */
+  function backToSlotSelection() {
+    setSelectedSlot(null);
+    setStep("slot");
+  }
+
+  const lockMutation = useApiMutation({
+    mutationFn: () => {
+      if (!selectedSlot) throw new Error("Missing slot selection");
+      return bookingApi.lockSlot(selectedSlot.slotId);
+    },
+    onSuccess: () => setStep("confirm"),
+    onError: (error) => {
+      if (normalizeError(error).statusCode === 409) backToSlotSelection();
+    },
+  });
+
   const bookMutation = useApiMutation({
-    mutationFn: async () => {
-      if (!selectedExpert || !selectedSlot) throw new Error("Missing expert or slot selection");
-      await bookingApi.lockSlot(selectedSlot.slotId);
+    mutationFn: () => {
+      if (!selectedExpert || !selectedSlot || !selectedRecord) throw new Error("Missing booking selection");
       return bookingApi.createAppointment({
         slotId: selectedSlot.slotId,
         expertId: selectedExpert.accountId,
+        patientRecordId: selectedRecord.recordId,
+        specializationId: selectedSpecialization?.specId,
       });
     },
     onSuccess: (appointment) => {
       setCreatedAppointment(appointment);
       setStep("payment");
+    },
+    onError: (error) => {
+      if (normalizeError(error).statusCode === 409) backToSlotSelection();
     },
   });
 
@@ -72,14 +102,22 @@ export default function BookAppointmentPage() {
     },
   });
 
-  function toggleTopic(topicId: string) {
-    setSelectedTopics((current) =>
-      current.includes(topicId) ? current.filter((id) => id !== topicId) : [...current, topicId]
-    );
+  function selectSpecialization(specialization: Specialization) {
+    if (specialization.specId !== selectedSpecialization?.specId) {
+      // Experts are filtered by specialization, so a previous pick may no longer apply.
+      setSelectedExpert(null);
+      setSelectedDate(null);
+      setSelectedSlot(null);
+    }
+    setSelectedSpecialization(specialization);
   }
 
-  function goToExpertOrSlot() {
-    setStep(selectedExpert ? "slot" : "expert");
+  function selectExpert(expert: ExpertProfile) {
+    if (expert.accountId !== selectedExpert?.accountId) {
+      setSelectedDate(null);
+      setSelectedSlot(null);
+    }
+    setSelectedExpert(expert);
   }
 
   function selectDate(date: string) {
@@ -89,14 +127,19 @@ export default function BookAppointmentPage() {
 
   return (
     <div className="mx-auto flex h-full max-w-5xl flex-col">
-      {step === "topic" && (
-        <TopicStep selectedTopics={selectedTopics} onToggleTopic={toggleTopic} onNext={goToExpertOrSlot} />
+      {step === "specialization" && (
+        <SpecializationStep
+          selectedSpecialization={selectedSpecialization}
+          onSelectSpecialization={selectSpecialization}
+          onNext={() => setStep("expert")}
+        />
       )}
       {step === "expert" && (
         <ExpertStep
+          specializationId={selectedSpecialization?.specId}
           selectedExpert={selectedExpert}
-          onSelectExpert={setSelectedExpert}
-          onBack={() => setStep("topic")}
+          onSelectExpert={selectExpert}
+          onBack={() => setStep("specialization")}
           onNext={() => setStep("slot")}
         />
       )}
@@ -107,17 +150,29 @@ export default function BookAppointmentPage() {
           onSelectDate={selectDate}
           selectedSlot={selectedSlot}
           onSelectSlot={setSelectedSlot}
-          onBack={() => setStep(preselectedExpertId ? "topic" : "expert")}
-          onNext={() => setStep("review")}
+          onBack={() => setStep("expert")}
+          onNext={() => setStep("profile")}
         />
       )}
-      {step === "review" && selectedExpert && selectedSlot && selectedDate && (
-        <ReviewStep
-          expert={selectedExpert}
-          slot={selectedSlot}
-          date={selectedDate}
-          topics={selectedTopics}
+      {step === "profile" && (
+        <PatientProfileStep
+          selectedRecord={selectedRecord}
+          onSelectRecord={setSelectedRecord}
           onBack={() => setStep("slot")}
+          onNext={() => lockMutation.mutate()}
+          isSubmitting={lockMutation.isPending}
+        />
+      )}
+      {step === "confirm" && selectedExpert && selectedSlot && selectedRecord && (
+        <ConfirmStep
+          params={{
+            slotId: selectedSlot.slotId,
+            expertId: selectedExpert.accountId,
+            patientRecordId: selectedRecord.recordId,
+            specializationId: selectedSpecialization?.specId,
+          }}
+          onBack={() => setStep("profile")}
+          onPickAnotherSlot={backToSlotSelection}
           onConfirm={() => bookMutation.mutate()}
           isSubmitting={bookMutation.isPending}
         />

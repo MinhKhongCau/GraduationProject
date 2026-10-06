@@ -1,0 +1,68 @@
+// Hợp đồng gRPC nội bộ giữa booking-service (client) và profile-service (server).
+// Chỉ dùng trong mạng Docker nội bộ, KHÔNG public qua API Gateway.
+//
+// Sinh code: chạy scripts/gen-proto.sh ở thư mục gốc repo. Code sinh ra được commit vào
+// từng service (internal/infrastructure/grpc/profilepb) vì mỗi service build với Docker
+// context riêng.
+syntax = "proto3";
+
+package mindcare.profile.v1;
+
+service ProfileQueryService {
+  // GetBookingInfo trả về thông tin cần cho trang xác nhận đặt lịch và lúc tạo cuộc hẹn:
+  // chuyên gia, hồ sơ người khám (phải thuộc owner_id) và chuyên khoa đã chọn (nếu có).
+  //
+  // Lỗi:
+  //   INVALID_ARGUMENT    - id không phải UUID hợp lệ
+  //   NOT_FOUND           - không có chuyên gia, hoặc hồ sơ không tồn tại/không thuộc owner_id
+  //   FAILED_PRECONDITION - chuyên gia không phụ trách chuyên khoa specialization_id
+  rpc GetBookingInfo(GetBookingInfoRequest) returns (GetBookingInfoResponse);
+}
+
+message GetBookingInfoRequest {
+  // Auth account id của chuyên gia (chính là expert_id trong booking-service).
+  string expert_id = 1;
+  // Id hồ sơ người khám (patient_records.record_id).
+  string patient_record_id = 2;
+  // Auth account id của người đặt lịch; hồ sơ phải thuộc tài khoản này.
+  string owner_id = 3;
+  // Tuỳ chọn: chuyên khoa bệnh nhân chọn ở bước đầu.
+  string specialization_id = 4;
+}
+
+message GetBookingInfoResponse {
+  ExpertSummary expert = 1;
+  PatientRecord patient_record = 2;
+  // Chỉ có giá trị khi request truyền specialization_id.
+  Specialization specialization = 3;
+}
+
+message ExpertSummary {
+  string expert_id = 1;
+  string full_name = 2;
+  string avatar_url = 3;
+  string email = 4;
+  string verification_status = 5;
+  repeated Specialization specializations = 6;
+}
+
+message Specialization {
+  string spec_id = 1;
+  string code = 2;
+  string name = 3;
+}
+
+message PatientRecord {
+  string record_id = 1;
+  string owner_id = 2;
+  string full_name = 3;
+  // YYYY-MM-DD, rỗng nếu chưa khai báo.
+  string date_of_birth = 4;
+  // MALE / FEMALE / OTHER, rỗng nếu chưa khai báo.
+  string gender = 5;
+  string phone_number = 6;
+  string email = 7;
+  string address = 8;
+  // SELF / PARENT / CHILD / SPOUSE / SIBLING / RELATIVE / OTHER
+  string relationship = 9;
+}

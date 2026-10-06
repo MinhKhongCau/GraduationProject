@@ -23,13 +23,13 @@ func TestCreateAppointmentUsesUnitOfWorkPath(t *testing.T) {
 		LockedExpiresAt: &expiresAt,
 	})
 
-	appt, err := NewUsecase(repo).CreateAppointment(patientID, expertID, slotID)
+	appt, err := createWithFakeProfiles(repo, patientID, expertID, slotID)
 	if err != nil {
 		t.Fatalf("expected create success, got %v", err)
 	}
 
 	assertUOWCalled(t, repo)
-	assertCalls(t, repo.tx, []string{"load_slot:" + slotID, "create_appointment"})
+	assertCalls(t, repo.tx, []string{"load_slot:" + slotID, "active_appointment:" + slotID, "create_appointment"})
 	if repo.tx.createdAppointment == nil {
 		t.Fatal("expected appointment to be created")
 	}
@@ -61,7 +61,7 @@ func TestCreateAppointmentUnitOfWorkValidationPreventsPersistence(t *testing.T) 
 		LockedExpiresAt: &expiresAt,
 	})
 
-	_, err := NewUsecase(repo).CreateAppointment(patientID, expertID, slotID)
+	_, err := createWithFakeProfiles(repo, patientID, expertID, slotID)
 	if err == nil {
 		t.Fatal("expected invalid slot lock error")
 	}
@@ -81,7 +81,7 @@ func TestCreateAppointmentRejectsTimeOffCoveredSlot(t *testing.T) {
 	expiresAt := time.Now().Add(time.Minute).UnixMilli()
 	repo := newUOWTestRepo(appointmentdomain.Appointment{}, slotdomain.ExpertSlot{SlotID: slotID, ExpertID: expertID, Status: slotdomain.SlotStatusLocked, LockedBy: &patientID, LockedExpiresAt: &expiresAt})
 	repo.tx.coveredByTimeOff = true
-	if _, err := NewUsecase(repo).CreateAppointment(patientID, expertID, slotID); err == nil {
+	if _, err := createWithFakeProfiles(repo, patientID, expertID, slotID); err == nil {
 		t.Fatal("expected covered slot rejection")
 	}
 	if repo.tx.createAppointmentCalls != 0 {
@@ -135,7 +135,7 @@ func TestCreateAppointmentUnitOfWorkPreservesCurrentErrorMessages(t *testing.T) 
 			})
 			tt.txSetup(repo.tx)
 
-			_, err := NewUsecase(repo).CreateAppointment(patientID, expertID, slotID)
+			_, err := createWithFakeProfiles(repo, patientID, expertID, slotID)
 			if err == nil {
 				t.Fatal("expected error")
 			}
@@ -481,6 +481,12 @@ type fakeAppointmentTx struct {
 	lastSlotUpdates        map[string]interface{}
 	lastExpectedSlotStatus *slotdomain.SlotStatus
 	coveredByTimeOff       bool
+	hasActiveAppointment   bool
+}
+
+func (tx *fakeAppointmentTx) HasActiveAppointmentForSlot(ctx context.Context, slotID string) (bool, error) {
+	tx.calls = append(tx.calls, "active_appointment:"+slotID)
+	return tx.hasActiveAppointment, nil
 }
 
 func (tx *fakeAppointmentTx) IsSlotCoveredByTimeOff(context.Context, slotdomain.ExpertSlot) (bool, error) {
@@ -532,6 +538,16 @@ func (tx *fakeAppointmentTx) UpdateSlot(ctx context.Context, slotID string, expe
 		tx.lastExpectedSlotStatus = &status
 	}
 	return tx.slotRows, tx.updateSlotErr
+}
+
+// createWithFakeProfiles tạo cuộc hẹn với profile-service giả luôn trả hồ sơ hợp lệ.
+func createWithFakeProfiles(repo *fakeUOWRepository, patientID, expertID, slotID string) (*appointmentdomain.Appointment, error) {
+	return NewUsecaseWithProfiles(repo, &fakeProfileGateway{}).CreateAppointment(context.Background(), CreateAppointmentCommand{
+		PatientID:       patientID,
+		ExpertID:        expertID,
+		SlotID:          slotID,
+		PatientRecordID: "record-1",
+	})
 }
 
 func assertUOWCalled(t *testing.T, repo *fakeUOWRepository) {
