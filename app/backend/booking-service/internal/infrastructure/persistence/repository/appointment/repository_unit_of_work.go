@@ -52,6 +52,17 @@ func (tx *gormTx) IsSlotCoveredByTimeOff(ctx context.Context, slot slotdomain.Ex
 	return isSlotCoveredByTimeOff(tx.db.WithContext(ctx), slot)
 }
 
+func (tx *gormTx) HasActiveAppointmentForSlot(ctx context.Context, slotID string) (bool, error) {
+	var count int64
+	err := tx.db.WithContext(ctx).Model(&appointmentdomain.Appointment{}).
+		Where("slot_id = ? AND status IN ?", slotID, []appointmentdomain.AppointmentStatus{
+			appointmentdomain.AppointmentStatusPendingPayment,
+			appointmentdomain.AppointmentStatusConfirmed,
+		}).
+		Count(&count).Error
+	return count > 0, err
+}
+
 func (tx *gormTx) CreateAppointment(ctx context.Context, appointment *appointmentdomain.Appointment) error {
 	return tx.db.WithContext(ctx).Create(appointment).Error
 }

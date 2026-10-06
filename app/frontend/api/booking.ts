@@ -7,6 +7,8 @@ import type {
   LockSlotResponse,
   CreateAppointmentRequest,
   CreateAppointmentResponse,
+  BookingConfirmation,
+  BookingConfirmationParams,
   BookingListResponse,
   GetExpertAppointmentsParams,
   Appointment,
@@ -40,6 +42,17 @@ export async function getAvailableTimes(expertId: string, date: string): Promise
 export async function lockSlot(slotId: string): Promise<LockSlotResponse> {
   const response = await bookingClient.post<ServiceEnvelope<LockSlotResponse>>(
     BOOKING_ENDPOINTS.LOCK_SLOT(slotId)
+  );
+  return response.data.data;
+}
+
+/** [PATIENT] Confirm-page data for a slot the patient currently holds (409 if the hold is gone). */
+export async function getBookingConfirmation(
+  params: BookingConfirmationParams
+): Promise<BookingConfirmation> {
+  const response = await bookingClient.get<ServiceEnvelope<BookingConfirmation>>(
+    BOOKING_ENDPOINTS.APPOINTMENT_CONFIRMATION,
+    { params }
   );
   return response.data.data;
 }

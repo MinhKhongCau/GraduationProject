@@ -52,6 +52,14 @@ export function ExpertEditModal({
     }
   }, [open, expert]);
 
+  // The public list is active-only; keep the expert's own (possibly deactivated) ones visible so they can be removed.
+  const selectableSpecializations = [
+    ...allSpecializations,
+    ...(expert?.specializations ?? []).filter(
+      (assigned) => !allSpecializations.some((spec) => spec.specId === assigned.specId)
+    ),
+  ];
+
   function toggleSpecialization(specId: string) {
     setSpecializationIds((current) =>
       current.includes(specId) ? current.filter((id) => id !== specId) : [...current, specId]
@@ -130,7 +138,7 @@ export function ExpertEditModal({
           <div>
             <Label className="mb-2">Chuyên khoa</Label>
             <div className="flex flex-wrap gap-2">
-              {allSpecializations.map((spec) => {
+              {selectableSpecializations.map((spec) => {
                 const isSelected = specializationIds.includes(spec.specId);
                 return (
                   <button
@@ -148,7 +156,7 @@ export function ExpertEditModal({
                   </button>
                 );
               })}
-              {allSpecializations.length === 0 && (
+              {selectableSpecializations.length === 0 && (
                 <p className="text-xs text-muted-foreground">Chưa có chuyên khoa nào.</p>
               )}
             </div>

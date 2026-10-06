@@ -6,6 +6,8 @@ import (
 
 	"profile-service/internal/domain/expert"
 	"profile-service/internal/domain/specialization"
+
+	"github.com/google/uuid"
 )
 
 // ReplaceExpertProfile là use case PUT hồ sơ chuyên gia.
@@ -40,15 +42,39 @@ func (uc *ReplaceExpertProfile) Execute(ctx context.Context, cmd ReplaceCommand)
 }
 
 // assignSpecializations nạp chuyên khoa theo ids và gán cho expert; ids nil = không thay đổi.
+// id không tồn tại -> ErrSpecializationNotFound. Chuyên khoa ngừng hoạt động chỉ được giữ lại nếu
+// chuyên gia đã đăng ký từ trước, không được đăng ký mới.
 func assignSpecializations(ctx context.Context, repo specialization.Repository, e *expert.Expert, ids []string) error {
 	if ids == nil {
 		return nil
 	}
+
+	unique := make([]string, 0, len(ids))
+	seen := make(map[uuid.UUID]bool, len(ids))
+	for _, raw := range ids {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return specialization.ErrSpecializationNotFound
+		}
+		if !seen[id] {
+			seen[id] = true
+			unique = append(unique, id.String())
+		}
+	}
+
 	var specs []specialization.Specialization
-	if len(ids) > 0 {
+	if len(unique) > 0 {
 		var err error
-		if specs, err = repo.FindByIDs(ctx, ids); err != nil {
+		if specs, err = repo.FindByIDs(ctx, unique); err != nil {
 			return err
+		}
+		if len(specs) != len(unique) {
+			return specialization.ErrSpecializationNotFound
+		}
+		for _, spec := range specs {
+			if !spec.IsActive && !e.HasSpecialization(spec.ID) {
+				return specialization.ErrSpecializationInactive
+			}
 		}
 	}
 	e.AssignSpecializations(specs)

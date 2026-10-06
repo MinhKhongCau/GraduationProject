@@ -9,19 +9,58 @@ import (
 	"github.com/google/uuid"
 )
 
-func (u *appointmentUsecase) CreateAppointment(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error) {
-	appointment := &appointmentdomain.Appointment{
-		AppointmentID: uuid.New().String(),
-		SlotID:        slotID,
-		PatientID:     patientID,
-		ExpertID:      expertID,
-		Status:        appointmentdomain.AppointmentStatusPendingPayment,
+// CreateAppointmentCommand - bệnh nhân xác nhận đặt lịch cho hồ sơ người khám đã chọn.
+type CreateAppointmentCommand struct {
+	PatientID        string // tài khoản đặt lịch (người giữ slot)
+	ExpertID         string
+	SlotID           string
+	PatientRecordID  string
+	SpecializationID string // tuỳ chọn
+}
+
+func (u *appointmentUsecase) CreateAppointment(ctx context.Context, command CreateAppointmentCommand) (*appointmentdomain.Appointment, error) {
+	// Gọi profile-service TRƯỚC transaction: không giữ khoá DB trong lúc chờ mạng.
+	info, err := u.getBookingInfo(ctx, BookingInfoQuery{
+		ExpertID:         command.ExpertID,
+		PatientRecordID:  command.PatientRecordID,
+		OwnerID:          command.PatientID,
+		SpecializationID: command.SpecializationID,
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	if err := u.createAppointmentWithUOW(context.Background(), appointment); err != nil {
+	appointment := &appointmentdomain.Appointment{
+		AppointmentID: uuid.New().String(),
+		SlotID:        command.SlotID,
+		PatientID:     command.PatientID,
+		ExpertID:      command.ExpertID,
+		Status:        appointmentdomain.AppointmentStatusPendingPayment,
+		Patient:       newPatientSnapshot(info.PatientRecord),
+	}
+	if info.Specialization != nil {
+		specID := info.Specialization.SpecID
+		appointment.SpecializationID = &specID
+		appointment.SpecializationName = info.Specialization.Name
+	}
+
+	if err := u.createAppointmentWithUOW(ctx, appointment); err != nil {
 		return nil, err
 	}
 	return appointment, nil
+}
+
+func newPatientSnapshot(record PatientRecordInfo) appointmentdomain.PatientSnapshot {
+	recordID := record.RecordID
+	return appointmentdomain.PatientSnapshot{
+		RecordID:     &recordID,
+		FullName:     record.FullName,
+		DateOfBirth:  record.DateOfBirth,
+		Gender:       record.Gender,
+		PhoneNumber:  record.PhoneNumber,
+		Email:        record.Email,
+		Relationship: record.Relationship,
+	}
 }
 
 func (u *appointmentUsecase) createAppointmentWithUOW(ctx context.Context, appointment *appointmentdomain.Appointment) error {
@@ -51,6 +90,14 @@ func CreateAppointmentWithUnitOfWork(ctx context.Context, repo Repository, uow U
 		}
 		if covered {
 			return errors.New("slot is covered by expert time-off")
+		}
+		// Slot đã bị khoá FOR UPDATE nên kiểm tra này an toàn trước double-submit.
+		booked, err := tx.HasActiveAppointmentForSlot(ctx, appointment.SlotID)
+		if err != nil {
+			return err
+		}
+		if booked {
+			return ErrSlotAlreadyBooked
 		}
 
 		appointment.CreatedAt = nowMs

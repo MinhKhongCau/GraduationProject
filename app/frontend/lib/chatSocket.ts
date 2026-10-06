@@ -5,7 +5,7 @@ const getWsUrl = (): string => {
   if (process.env.NEXT_PUBLIC_CHATROOM_WS_URL) {
     return process.env.NEXT_PUBLIC_CHATROOM_WS_URL;
   }
-  const apiUrl = process.env.REACT_APP_API_URL ?? "https://api.qmcloud.io.vn/api/v1";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "https://api.qmcloud.io.vn/api/v1";
   try {
     const url = new URL(apiUrl);
     return url.origin;

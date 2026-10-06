@@ -33,9 +33,24 @@ type Appointment struct {
 	StartTime          int64             `json:"start_time"          gorm:"-"`
 	EndTime            int64             `json:"end_time"            gorm:"-"`
 	MeetingLink        string            `json:"meeting_link"        gorm:"column:meeting_link"`
+	SpecializationID   *string           `json:"specialization_id"   gorm:"column:specialization_id;type:uuid"`
+	SpecializationName string            `json:"specialization_name" gorm:"column:specialization_name;type:varchar(255)"`
+	Patient            PatientSnapshot   `json:"patient"             gorm:"embedded;embeddedPrefix:patient_"`
 	CreatedAt          int64             `json:"created_at"          gorm:"column:created_at"`   // Unix ms
 	UpdatedAt          int64             `json:"updated_at"          gorm:"column:updated_at"`   // Unix ms
 	ConfirmedAt        *int64            `json:"confirmed_at"        gorm:"column:confirmed_at"` // Unix ms, nullable
+}
+
+// PatientSnapshot - Hồ sơ người khám tại thời điểm đặt lịch, lấy từ profile-service qua gRPC.
+// Lưu bản sao để cuộc hẹn không đổi khi hồ sơ gốc bị sửa sau này. Cuộc hẹn cũ để trống.
+type PatientSnapshot struct {
+	RecordID     *string `json:"record_id"     gorm:"column:record_id;type:uuid"`
+	FullName     string  `json:"full_name"     gorm:"column:full_name;type:varchar(255)"`
+	DateOfBirth  string  `json:"date_of_birth" gorm:"column:date_of_birth;type:varchar(10)"` // YYYY-MM-DD
+	Gender       string  `json:"gender"        gorm:"column:gender;type:varchar(20)"`
+	PhoneNumber  string  `json:"phone_number"  gorm:"column:phone_number;type:varchar(20)"`
+	Email        string  `json:"email"         gorm:"column:email;type:varchar(255)"`
+	Relationship string  `json:"relationship"  gorm:"column:relationship;type:varchar(20)"`
 }
 
 func (Appointment) TableName() string { return "Booking_Appointments" }

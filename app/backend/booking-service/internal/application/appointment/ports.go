@@ -37,6 +37,8 @@ type Tx interface {
 	LoadAppointmentForUpdate(ctx context.Context, appointmentID string) (*appointmentdomain.Appointment, error)
 	LoadSlotForUpdate(ctx context.Context, slotID string) (*slotdomain.ExpertSlot, error)
 	IsSlotCoveredByTimeOff(ctx context.Context, slot slotdomain.ExpertSlot) (bool, error)
+	// HasActiveAppointmentForSlot: slot đã có cuộc hẹn PENDING_PAYMENT/CONFIRMED.
+	HasActiveAppointmentForSlot(ctx context.Context, slotID string) (bool, error)
 	CreateAppointment(ctx context.Context, appointment *appointmentdomain.Appointment) error
 	UpdateAppointment(ctx context.Context, appointment *appointmentdomain.Appointment, updates map[string]interface{}) error
 	UpdateSlot(ctx context.Context, slotID string, expectedStatus *slotdomain.SlotStatus, updates map[string]interface{}) (int64, error)

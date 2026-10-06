@@ -3,6 +3,7 @@ package handler
 import (
 	appointmentdomain "booking-service/internal/domain/appointment"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -16,13 +17,13 @@ import (
 )
 
 type mockBookingUsecase struct {
-	createFunc func(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error)
+	createFunc func(cmd appappointment.CreateAppointmentCommand) (*appointmentdomain.Appointment, error)
 	cancelFunc func(appointmentID, userID, userRole, reason string) error
 }
 
-func (m *mockBookingUsecase) CreateAppointment(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error) {
+func (m *mockBookingUsecase) CreateAppointment(_ context.Context, cmd appappointment.CreateAppointmentCommand) (*appointmentdomain.Appointment, error) {
 	if m.createFunc != nil {
-		return m.createFunc(patientID, expertID, slotID)
+		return m.createFunc(cmd)
 	}
 	return nil, nil
 }
@@ -83,12 +84,12 @@ func TestCreateAppointment(t *testing.T) {
 
 	t.Run("TC-BOOK-APT-01 - Tạo cuộc hẹn thành công (Happy Case)", func(t *testing.T) {
 		mockUsecase := &mockBookingUsecase{
-			createFunc: func(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error) {
+			createFunc: func(cmd appappointment.CreateAppointmentCommand) (*appointmentdomain.Appointment, error) {
 				return &appointmentdomain.Appointment{
 					AppointmentID: "appt-uuid-1",
-					SlotID:        slotID,
-					PatientID:     patientID,
-					ExpertID:      expertID,
+					SlotID:        cmd.SlotID,
+					PatientID:     cmd.PatientID,
+					ExpertID:      cmd.ExpertID,
 					Status:        appointmentdomain.AppointmentStatusPendingPayment,
 				}, nil
 			},
@@ -98,6 +99,7 @@ func TestCreateAppointment(t *testing.T) {
 		body := map[string]string{
 			"expert_id": "expert-uuid-1",
 			"slot_id":   "slot-uuid-1",
+			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
 
@@ -128,7 +130,7 @@ func TestCreateAppointment(t *testing.T) {
 
 	t.Run("TC-BOOK-APT-02 - Tạo cuộc hẹn thất bại do slot chưa được giữ chỗ", func(t *testing.T) {
 		mockUsecase := &mockBookingUsecase{
-			createFunc: func(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error) {
+			createFunc: func(cmd appappointment.CreateAppointmentCommand) (*appointmentdomain.Appointment, error) {
 				return nil, errors.New("slot không được giữ bởi bạn, vui lòng thực hiện lại từ đầu")
 			},
 		}
@@ -137,6 +139,7 @@ func TestCreateAppointment(t *testing.T) {
 		body := map[string]string{
 			"expert_id": "expert-uuid-1",
 			"slot_id":   "slot-uuid-unlocked",
+			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
 
@@ -156,7 +159,7 @@ func TestCreateAppointment(t *testing.T) {
 
 	t.Run("TC-BOOK-APT-03 - Tạo cuộc hẹn thất bại do phiên giữ chỗ hết hạn (15 phút)", func(t *testing.T) {
 		mockUsecase := &mockBookingUsecase{
-			createFunc: func(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error) {
+			createFunc: func(cmd appappointment.CreateAppointmentCommand) (*appointmentdomain.Appointment, error) {
 				return nil, errors.New("phiên giữ chỗ đã hết hạn 15 phút, vui lòng chọn lại")
 			},
 		}
@@ -165,6 +168,7 @@ func TestCreateAppointment(t *testing.T) {
 		body := map[string]string{
 			"expert_id": "expert-uuid-1",
 			"slot_id":   "slot-uuid-expired",
+			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
 
@@ -184,7 +188,7 @@ func TestCreateAppointment(t *testing.T) {
 
 	t.Run("TC-BOOK-APT-04 - Tạo cuộc hẹn thất bại do chuyên gia nghỉ phép", func(t *testing.T) {
 		mockUsecase := &mockBookingUsecase{
-			createFunc: func(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error) {
+			createFunc: func(cmd appappointment.CreateAppointmentCommand) (*appointmentdomain.Appointment, error) {
 				return nil, errors.New("slot is covered by expert time-off")
 			},
 		}
@@ -193,6 +197,7 @@ func TestCreateAppointment(t *testing.T) {
 		body := map[string]string{
 			"expert_id": "expert-uuid-1",
 			"slot_id":   "slot-uuid-timeoff",
+			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
 
@@ -217,6 +222,7 @@ func TestCreateAppointment(t *testing.T) {
 		body := map[string]string{
 			"expert_id": "expert-uuid-1",
 			"slot_id":   "slot-uuid-1",
+			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
 

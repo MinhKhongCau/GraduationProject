@@ -3,8 +3,14 @@ package specialization
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
+)
+
+var (
+	ErrSpecializationNotFound = errors.New("specialization not found")
+	ErrSpecializationInactive = errors.New("specialization is inactive")
 )
 
 // Specialization là chuyên khoa mà chuyên gia có thể đăng ký (aggregate riêng, do Admin quản lý).

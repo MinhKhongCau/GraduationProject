@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	appointmentdomain "booking-service/internal/domain/appointment"
 	"bytes"
 	"errors"
@@ -159,7 +160,7 @@ type fakeAppointmentUsecase struct {
 	eligibilityErr      error
 }
 
-func (u *fakeAppointmentUsecase) CreateAppointment(patientID, expertID, slotID string) (*appointmentdomain.Appointment, error) {
+func (u *fakeAppointmentUsecase) CreateAppointment(context.Context, appappointment.CreateAppointmentCommand) (*appointmentdomain.Appointment, error) {
 	return nil, nil
 }
 

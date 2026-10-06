@@ -45,6 +45,7 @@ func newTestExpertHandler(snapshot *expert.Snapshot) *ExpertHandler {
 	return NewExpertHandler(
 		expertprofile.NewReplaceExpertProfile(repo, stubSpecRepo{}, stubPublisher{}),
 		expertprofile.NewPatchExpertProfile(repo, stubSpecRepo{}, stubPublisher{}),
+		expertprofile.NewManageExpertSpecializations(repo, stubSpecRepo{}, stubPublisher{}),
 	)
 }
 

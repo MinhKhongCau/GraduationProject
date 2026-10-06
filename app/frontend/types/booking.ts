@@ -40,6 +40,10 @@ export interface Appointment {
   statusLabel: AppointmentStatus;
   meetingLink: string;
   price?: number;
+  specializationId?: string | null;
+  specializationName?: string;
+  /** Snapshot of the patient record chosen at booking time (empty on legacy appointments). */
+  patient?: AppointmentPatient;
   createdAt: number;
   updatedAt: number;
   confirmedAt: number | null;
@@ -61,15 +65,73 @@ export interface LockSlotResponse {
   expires: number;
 }
 
+export interface AppointmentPatient {
+  recordId: string | null;
+  fullName: string;
+  dateOfBirth: string;
+  gender: string;
+  phoneNumber: string;
+  email: string;
+  relationship: string;
+}
+
 export interface CreateAppointmentRequest {
   slotId: string;
   expertId: string;
+  patientRecordId: string;
+  specializationId?: string;
 }
 
 export interface CreateAppointmentResponse {
   appointmentId: string;
   status: AppointmentStatusCode;
   slotId: string;
+  patient?: AppointmentPatient;
+}
+
+export interface BookingConfirmationParams {
+  slotId: string;
+  /** Expert account id. */
+  expertId: string;
+  patientRecordId: string;
+  specializationId?: string;
+}
+
+export interface BookingSpecializationInfo {
+  specId: string;
+  code: string;
+  name: string;
+}
+
+/** GET /booking/appointments/confirmation — booking-service assembles this via profile-service gRPC. */
+export interface BookingConfirmation {
+  slot: {
+    slotId: string;
+    startTime: number;
+    endTime: number;
+    price: number;
+    /** Unix ms when the patient's hold on the slot expires. */
+    lockedExpiresAt: number;
+  };
+  expert: {
+    expertId: string;
+    fullName: string;
+    avatarUrl: string;
+    email: string;
+    verificationStatus: string;
+    specializations: BookingSpecializationInfo[];
+  };
+  patientRecord: {
+    recordId: string;
+    fullName: string;
+    dateOfBirth: string;
+    gender: string;
+    phoneNumber: string;
+    email: string;
+    address: string;
+    relationship: string;
+  };
+  specialization: BookingSpecializationInfo | null;
 }
 
 export interface BookingListResponse {
