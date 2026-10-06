@@ -321,7 +321,7 @@ services:
       - NODE_ENV=${NODE_ENV}
       - PORT=${PORT_CHATROOM_SERVICE}
       - CORS_ORIGINS=${CORS_ORIGINS}
-      - REDIS_URL=redis://redis:${REDIS_PORT}
+      - REDIS_URL=redis://mindcare_redis:${REDIS_PORT}
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY:-}
       - DB_HOST=${DB_HOST}
       - DB_PORT=${DB_PORT}
