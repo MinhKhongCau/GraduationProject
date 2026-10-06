@@ -55,7 +55,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -83,7 +95,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.CreateProfileRequest"
+                            "$ref": "#/definitions/CreateProfileRequest"
                         }
                     }
                 ],
@@ -91,19 +103,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -144,7 +156,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -172,13 +196,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -213,7 +237,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.UpsertExpertRequest"
+                            "$ref": "#/definitions/UpsertExpertRequest"
                         }
                     }
                 ],
@@ -221,19 +245,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -268,7 +292,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.PatchExpertRequest"
+                            "$ref": "#/definitions/PatchExpertRequest"
                         }
                     }
                 ],
@@ -276,25 +300,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -318,19 +342,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -355,19 +379,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -392,19 +416,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -428,19 +452,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -468,7 +492,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.CreateMedicalHistoryRequest"
+                            "$ref": "#/definitions/CreateMedicalHistoryRequest"
                         }
                     }
                 ],
@@ -476,19 +500,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -534,7 +558,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -567,13 +603,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -608,7 +644,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.UpsertPatientRequest"
+                            "$ref": "#/definitions/UpsertPatientRequest"
                         }
                     }
                 ],
@@ -616,19 +652,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -663,7 +699,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.PatchPatientRequest"
+                            "$ref": "#/definitions/PatchPatientRequest"
                         }
                     }
                 ],
@@ -671,19 +707,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -716,13 +752,47 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/profiles/public/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Xem chi tiết 1 profile công khai",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/BaseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -741,7 +811,22 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/Specialization"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -752,6 +837,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "code và slug là duy nhất; slug bỏ trống sẽ được sinh tự động từ name.",
                 "consumes": [
                     "application/json"
                 ],
@@ -769,7 +855,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.CreateSpecializationRequest"
+                            "$ref": "#/definitions/CreateSpecializationRequest"
                         }
                     }
                 ],
@@ -777,13 +863,55 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/Specialization"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/ErrorResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/ErrorResult"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -816,13 +944,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -842,7 +970,7 @@ const docTemplate = `{
                 "tags": [
                     "profiles"
                 ],
-                "summary": "[Admin] Cập nhật tên profile",
+                "summary": "[Admin] Cập nhật thông tin người dùng của profile",
                 "parameters": [
                     {
                         "type": "string",
@@ -852,12 +980,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Tên mới",
+                        "description": "Thông tin người dùng mới",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.UpdateProfileRequest"
+                            "$ref": "#/definitions/UpdateProfileRequest"
                         }
                     }
                 ],
@@ -865,19 +993,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -908,13 +1036,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -949,7 +1077,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.PatchProfileRequest"
+                            "$ref": "#/definitions/PatchProfileRequest"
                         }
                     }
                 ],
@@ -957,19 +1085,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -995,7 +1123,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/schemas.CreateProfileRequest"
+                            "$ref": "#/definitions/CreateProfileRequest"
                         }
                     }
                 ],
@@ -1003,19 +1131,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -1035,13 +1163,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.Response"
+                            "$ref": "#/definitions/BaseResponse"
                         }
                     }
                 }
@@ -1049,22 +1177,36 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "response.Response": {
+        "AdminProfile": {
             "type": "object",
             "properties": {
-                "data": {},
-                "error": {
+                "email": {
                     "type": "string"
                 },
-                "message": {
+                "note": {
                     "type": "string"
                 },
-                "success": {
-                    "type": "boolean"
+                "profile_id": {
+                    "type": "string"
                 }
             }
         },
-        "schemas.CreateMedicalHistoryRequest": {
+        "BaseResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "result": {},
+                "statusCode": {
+                    "type": "integer"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "CreateMedicalHistoryRequest": {
             "type": "object",
             "required": [
                 "condition_name",
@@ -1086,21 +1228,25 @@ const docTemplate = `{
                 }
             }
         },
-        "schemas.CreateProfileRequest": {
+        "CreateProfileRequest": {
             "type": "object",
             "required": [
                 "auth_id",
-                "name",
+                "full_name",
                 "role"
             ],
             "properties": {
                 "auth_id": {
                     "type": "string"
                 },
+                "date_of_birth": {
+                    "description": "Định dạng: YYYY-MM-DD (tuỳ chọn)",
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
-                "name": {
+                "full_name": {
                     "type": "string"
                 },
                 "role": {
@@ -1113,24 +1259,53 @@ const docTemplate = `{
                 }
             }
         },
-        "schemas.CreateSpecializationRequest": {
+        "CreateSpecializationRequest": {
             "type": "object",
             "required": [
-                "name"
+                "code",
+                "name",
+                "symptoms"
             ],
             "properties": {
+                "code": {
+                    "type": "string",
+                    "maxLength": 50
+                },
                 "description": {
                     "type": "string"
                 },
                 "image_url": {
                     "type": "string"
                 },
+                "location": {
+                    "type": "string",
+                    "maxLength": 255
+                },
                 "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "symptoms": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "ErrorResult": {
+            "type": "object",
+            "properties": {
+                "error": {
                     "type": "string"
                 }
             }
         },
-        "schemas.PatchExpertRequest": {
+        "ExpertProfile": {
             "type": "object",
             "properties": {
                 "avatar_url": {
@@ -1145,10 +1320,89 @@ const docTemplate = `{
                 "introduction_video_url": {
                     "type": "string"
                 },
-                "name": {
+                "profile_id": {
                     "type": "string"
                 },
-                "phone_number": {
+                "specializations": {
+                    "description": "Quan hệ N-N: Chuyên gia và Chuyên khoa (GORM tự tạo bảng trung gian)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Specialization"
+                    }
+                },
+                "verification_status": {
+                    "type": "string"
+                }
+            }
+        },
+        "MedicalHistory": {
+            "type": "object",
+            "properties": {
+                "condition_name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "diagnosed_at": {
+                    "type": "string"
+                },
+                "history_id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_chronic": {
+                    "type": "boolean"
+                },
+                "patient_profile_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "PageResult-profile-service_internal_infrastructure_persistence_models_Profile": {
+            "type": "object",
+            "properties": {
+                "hasNext": {
+                    "type": "boolean"
+                },
+                "hasPrevious": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Profile"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "PatchExpertRequest": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "introduction_video_url": {
                     "type": "string"
                 },
                 "specialization_ids": {
@@ -1156,6 +1410,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "user_information": {
+                    "$ref": "#/definitions/PatchUserInformationRequest"
                 },
                 "verification_status": {
                     "type": "string",
@@ -1168,7 +1425,7 @@ const docTemplate = `{
                 }
             }
         },
-        "schemas.PatchPatientRequest": {
+        "PatchPatientRequest": {
             "type": "object",
             "properties": {
                 "address": {
@@ -1177,47 +1434,169 @@ const docTemplate = `{
                 "avatar_url": {
                     "type": "string"
                 },
+                "email": {
+                    "type": "string"
+                },
+                "user_information": {
+                    "$ref": "#/definitions/PatchUserInformationRequest"
+                }
+            }
+        },
+        "PatchProfileRequest": {
+            "type": "object",
+            "properties": {
+                "user_information": {
+                    "$ref": "#/definitions/PatchUserInformationRequest"
+                }
+            }
+        },
+        "PatchUserInformationRequest": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "maxLength": 100
+                },
                 "date_of_birth": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "MALE",
+                        "FEMALE",
+                        "OTHER"
+                    ]
+                },
+                "phone_number": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "PatientProfile": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "avatar_url": {
                     "type": "string"
                 },
                 "email": {
                     "type": "string"
                 },
-                "gender": {
+                "medical_histories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/MedicalHistory"
+                    }
+                },
+                "profile_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "Profile": {
+            "type": "object",
+            "properties": {
+                "admin_profile": {
+                    "$ref": "#/definitions/AdminProfile"
+                },
+                "auth_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "expert_profile": {
+                    "$ref": "#/definitions/ExpertProfile"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "patient_profile": {
+                    "$ref": "#/definitions/PatientProfile"
+                },
+                "role": {
+                    "$ref": "#/definitions/Role"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_information": {
+                    "$ref": "#/definitions/UserInformation"
+                }
+            }
+        },
+        "Role": {
+            "type": "string",
+            "enum": [
+                "ADMIN",
+                "EXPERT",
+                "PATIENT"
+            ],
+            "x-enum-varnames": [
+                "RoleAdmin",
+                "RoleExpert",
+                "RolePatient"
+            ]
+        },
+        "Specialization": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "location": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
-                "phone_number": {
+                "slug": {
                     "type": "string"
+                },
+                "spec_id": {
+                    "type": "string"
+                },
+                "symptoms": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
-        "schemas.PatchProfileRequest": {
+        "UpdateProfileRequest": {
             "type": "object",
             "properties": {
-                "name": {
-                    "type": "string"
+                "user_information": {
+                    "$ref": "#/definitions/UserInformationRequest"
                 }
             }
         },
-        "schemas.UpdateProfileRequest": {
+        "UpsertExpertRequest": {
             "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
-        "schemas.UpsertExpertRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
             "properties": {
                 "avatar_url": {
                     "type": "string"
@@ -1231,25 +1610,19 @@ const docTemplate = `{
                 "introduction_video_url": {
                     "type": "string"
                 },
-                "name": {
-                    "type": "string"
-                },
-                "phone_number": {
-                    "type": "string"
-                },
                 "specialization_ids": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
+                },
+                "user_information": {
+                    "$ref": "#/definitions/UserInformationRequest"
                 }
             }
         },
-        "schemas.UpsertPatientRequest": {
+        "UpsertPatientRequest": {
             "type": "object",
-            "required": [
-                "name"
-            ],
             "properties": {
                 "address": {
                     "type": "string"
@@ -1257,21 +1630,62 @@ const docTemplate = `{
                 "avatar_url": {
                     "type": "string"
                 },
-                "date_of_birth": {
-                    "description": "Định dạng: YYYY-MM-DD",
+                "email": {
                     "type": "string"
                 },
-                "email": {
+                "user_information": {
+                    "$ref": "#/definitions/UserInformationRequest"
+                }
+            }
+        },
+        "UserInformation": {
+            "type": "object",
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "full_name": {
                     "type": "string"
                 },
                 "gender": {
                     "type": "string"
                 },
-                "name": {
-                    "type": "string"
-                },
                 "phone_number": {
                     "type": "string"
+                }
+            }
+        },
+        "UserInformationRequest": {
+            "type": "object",
+            "required": [
+                "full_name"
+            ],
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "date_of_birth": {
+                    "description": "Định dạng: YYYY-MM-DD, rỗng = không khai báo",
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "MALE",
+                        "FEMALE",
+                        "OTHER"
+                    ]
+                },
+                "phone_number": {
+                    "type": "string",
+                    "maxLength": 20
                 }
             }
         }

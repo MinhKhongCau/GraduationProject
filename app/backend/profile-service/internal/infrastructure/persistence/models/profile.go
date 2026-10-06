@@ -23,32 +23,40 @@ const (
 // Profile là thực thể chung cho mọi tài khoản đã đăng ký bên auth-service.
 // auth_id trỏ về Account.accountId bên auth-service (KHÔNG có FK vật lý vì khác DB/service).
 type Profile struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Slug      string         `gorm:"type:varchar(255);not null;uniqueIndex" json:"slug"`
-	Name      string         `gorm:"type:varchar(255);not null" json:"name"`
-	AuthID    uuid.UUID      `gorm:"type:uuid;not null;uniqueIndex" json:"auth_id"`
-	Role      Role           `gorm:"type:varchar(20);not null;index" json:"role"`
-	CreatedAt time.Time      `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updated_at"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at,omitempty" swaggertype:"string"`
+	ID              uuid.UUID       `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	Slug            string          `gorm:"type:varchar(255);not null;uniqueIndex" json:"slug"`
+	UserInformation UserInformation `gorm:"embedded" json:"user_information"`
+	AuthID          uuid.UUID       `gorm:"type:uuid;not null;uniqueIndex" json:"auth_id"`
+	Role            Role            `gorm:"type:varchar(20);not null;index" json:"role"`
+	CreatedAt       time.Time       `gorm:"autoCreateTime" json:"created_at"`
+	UpdatedAt       time.Time       `gorm:"autoUpdateTime" json:"updated_at"`
+	DeletedAt       gorm.DeletedAt  `gorm:"index" json:"deleted_at,omitempty" swaggertype:"string"`
 
 	PatientProfile *PatientProfile `gorm:"foreignKey:ProfileID;references:ID" json:"patient_profile,omitempty"`
 	ExpertProfile  *ExpertProfile  `gorm:"foreignKey:ProfileID;references:ID" json:"expert_profile,omitempty"`
 	AdminProfile   *AdminProfile   `gorm:"foreignKey:ProfileID;references:ID" json:"admin_profile,omitempty"`
 }
 
+// UserInformation là thông tin cá nhân dùng chung mọi vai trò, nhúng (embedded) thẳng vào bảng
+// profiles nhưng trả về JSON dạng object lồng "user_information".
+type UserInformation struct {
+	FullName    string     `gorm:"column:full_name;type:varchar(255);not null" json:"full_name"`
+	DateOfBirth *time.Time `gorm:"column:date_of_birth;type:date" json:"date_of_birth"`
+	Gender      string     `gorm:"column:gender;type:varchar(20)" json:"gender"`
+	PhoneNumber string     `gorm:"column:phone_number;type:varchar(20)" json:"phone_number"`
+	Country     string     `gorm:"column:country;type:varchar(100)" json:"country"`
+}
+
 // ==========================================
 // 1. HỒ SƠ BỆNH NHÂN (PATIENT PROFILE)
 // ==========================================
 // Dùng chung khóa chính với Profile (quan hệ 1-1 kiểu joined-table).
+// Họ tên, ngày sinh, giới tính, SĐT nằm ở Profile.UserInformation.
 type PatientProfile struct {
-	ProfileID   uuid.UUID  `gorm:"type:uuid;primary_key" json:"profile_id"`
-	PhoneNumber string     `gorm:"type:varchar(20)" json:"phone_number"`
-	Email       string     `gorm:"type:varchar(255)" json:"email"`
-	AvatarURL   string     `gorm:"type:text" json:"avatar_url"`
-	DateOfBirth *time.Time `gorm:"type:date" json:"date_of_birth"`
-	Gender      string     `gorm:"type:varchar(20)" json:"gender"`
-	Address     string     `gorm:"type:text" json:"address"`
+	ProfileID uuid.UUID `gorm:"type:uuid;primary_key" json:"profile_id"`
+	Email     string    `gorm:"type:varchar(255)" json:"email"`
+	AvatarURL string    `gorm:"type:text" json:"avatar_url"`
+	Address   string    `gorm:"type:text" json:"address"`
 
 	MedicalHistories []MedicalHistory `gorm:"foreignKey:PatientProfileID" json:"medical_histories,omitempty"`
 }
@@ -71,7 +79,6 @@ type MedicalHistory struct {
 // ==========================================
 type ExpertProfile struct {
 	ProfileID            uuid.UUID `gorm:"type:uuid;primary_key" json:"profile_id"`
-	PhoneNumber          string    `gorm:"type:varchar(20)" json:"phone_number"`
 	Email                string    `gorm:"type:varchar(255)" json:"email"`
 	AvatarURL            string    `gorm:"type:text" json:"avatar_url"`
 	IntroductionVideoURL string    `gorm:"type:text" json:"introduction_video_url"`
@@ -87,8 +94,12 @@ type ExpertProfile struct {
 // ==========================================
 type Specialization struct {
 	SpecID      uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"spec_id"`
+	Code        string    `gorm:"type:varchar(50);not null;uniqueIndex" json:"code"`
 	Name        string    `gorm:"type:varchar(255);not null" json:"name"`
+	Slug        string    `gorm:"type:varchar(255);not null;uniqueIndex" json:"slug"`
 	Description string    `gorm:"type:text" json:"description"`
+	Symptoms    []string  `gorm:"type:jsonb;not null;default:'[]';serializer:json" json:"symptoms"`
+	Location    string    `gorm:"type:varchar(255)" json:"location"`
 	ImageURL    string    `gorm:"type:text" json:"image_url"`
 	IsActive    bool      `gorm:"default:true" json:"is_active"`
 }

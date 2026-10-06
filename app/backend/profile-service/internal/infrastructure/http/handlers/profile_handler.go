@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -30,13 +31,6 @@ func parsePagination(c *gin.Context) schemas.PaginationQuery {
 		pageSize = 20
 	}
 	return schemas.PaginationQuery{Page: page, PageSize: pageSize}
-}
-
-func totalPages(total int64, pageSize int) int64 {
-	if pageSize <= 0 {
-		return 0
-	}
-	return (total + int64(pageSize) - 1) / int64(pageSize)
 }
 
 func findProfileByAuthID(authIDStr string) (*models.Profile, error) {
@@ -85,16 +79,21 @@ func CreateProfileCore(req schemas.CreateProfileRequest) (*models.Profile, error
 		return nil, err
 	}
 
+	dob, err := parseOptionalDate(req.DateOfBirth)
+	if err != nil {
+		return nil, errInvalidDateOfBirth
+	}
+
 	var existing models.Profile
 	if err := config.DB.Where("auth_id = ?", authID).First(&existing).Error; err == nil {
 		return nil, ErrProfileConflict
 	}
 
 	profile := models.Profile{
-		Slug:   utils.GenerateUniqueSlug(req.Name),
-		Name:   req.Name,
-		AuthID: authID,
-		Role:   models.Role(req.Role),
+		Slug:            utils.GenerateUniqueSlug(req.FullName),
+		UserInformation: models.UserInformation{FullName: req.FullName, DateOfBirth: dob},
+		AuthID:          authID,
+		Role:            models.Role(req.Role),
 	}
 
 	switch profile.Role {
@@ -130,9 +129,9 @@ func (e *conflictError) Error() string { return e.msg }
 // @Accept       json
 // @Produce      json
 // @Param        request body schemas.CreateProfileRequest true "Thông tin tài khoản mới"
-// @Success      201 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      409 {object} response.Response
+// @Success      201 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      409 {object} response.BaseResponse
 // @Router       /internal/api/v1/profiles/create [post]
 func CreateProfileInternal(c *gin.Context) {
 	var req schemas.CreateProfileRequest
@@ -147,6 +146,10 @@ func CreateProfileInternal(c *gin.Context) {
 			response.Error(c, http.StatusConflict, "Profile cho tài khoản này đã tồn tại", err.Error())
 			return
 		}
+		if errors.Is(err, errInvalidDateOfBirth) {
+			writeInvalidDateOfBirth(c, err)
+			return
+		}
 		response.Error(c, http.StatusBadRequest, "Không thể tạo profile", err.Error())
 		return
 	}
@@ -159,8 +162,8 @@ func CreateProfileInternal(c *gin.Context) {
 // @Description  Lấy ID của expert hiện tại và publish qua RabbitMQ để forum-service cập nhật lại toàn bộ authorId của những id mặc định ban đầu.
 // @Tags         internal
 // @Produce      json
-// @Success      200 {object} response.Response
-// @Failure      500 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      500 {object} response.BaseResponse
 // @Router       /internal/api/v1/profiles/sync-seed-authors [post]
 func SyncSeedAuthorsInternal(c *gin.Context) {
 	var expertAuthID string
@@ -191,9 +194,9 @@ func SyncSeedAuthorsInternal(c *gin.Context) {
 // @Tags         profiles
 // @Security     BearerAuth
 // @Produce      json
-// @Success      200 {object} response.Response
-// @Failure      401 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      401 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/me [get]
 func GetMe(c *gin.Context) {
 	profile, err := findProfileByAuthID(c.GetString(middleware.CtxAuthID))
@@ -210,9 +213,9 @@ func GetMe(c *gin.Context) {
 // @Security     BearerAuth
 // @Accept       json
 // @Produce      json
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/me [put]
 func UpdateMe(experts *ExpertHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -239,9 +242,9 @@ func UpdateMe(experts *ExpertHandler) gin.HandlerFunc {
 // @Security     BearerAuth
 // @Accept       json
 // @Produce      json
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/me [patch]
 func PatchMe(experts *ExpertHandler) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -269,13 +272,20 @@ func applyAdminUpsert(c *gin.Context, profile *models.Profile) {
 		return
 	}
 
+	info, err := parseUserInformation(req.UserInformation)
+	if err != nil {
+		writeInvalidDateOfBirth(c, err)
+		return
+	}
+
 	admin := models.AdminProfile{ProfileID: profile.ID, Email: req.Email, Note: req.Note}
-	if err := saveProfileAndSub(profile.ID, req.Name, &admin); err != nil {
+	userInfo := models.NewUserInformation(info)
+	if err := saveProfileAndSub(profile.ID, userInfo, &admin); err != nil {
 		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật hồ sơ", err.Error())
 		return
 	}
 
-	profile.Name = req.Name
+	profile.UserInformation = userInfo
 	profile.AdminProfile = &admin
 	response.Success(c, "Cập nhật hồ sơ thành công", profile)
 }
@@ -287,15 +297,18 @@ func applyAdminPatch(c *gin.Context, profile *models.Profile) {
 		return
 	}
 
+	patch, err := parseUserInformationPatch(req.UserInformation)
+	if err != nil {
+		writeInvalidDateOfBirth(c, err)
+		return
+	}
+
 	admin := profile.AdminProfile
 	if admin == nil {
 		admin = &models.AdminProfile{ProfileID: profile.ID}
 	}
 
-	newName := profile.Name
-	if req.Name != nil {
-		newName = *req.Name
-	}
+	userInfo := models.NewUserInformation(profile.UserInformation.ToDomain().Apply(patch))
 	if req.Email != nil {
 		admin.Email = *req.Email
 	}
@@ -303,12 +316,12 @@ func applyAdminPatch(c *gin.Context, profile *models.Profile) {
 		admin.Note = *req.Note
 	}
 
-	if err := saveProfileAndSub(profile.ID, newName, admin); err != nil {
+	if err := saveProfileAndSub(profile.ID, userInfo, admin); err != nil {
 		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật hồ sơ", err.Error())
 		return
 	}
 
-	profile.Name = newName
+	profile.UserInformation = userInfo
 	profile.AdminProfile = admin
 	response.Success(c, "Cập nhật hồ sơ thành công", profile)
 }
@@ -323,7 +336,7 @@ func applyAdminPatch(c *gin.Context, profile *models.Profile) {
 // @Param        page      query int    false "Trang" default(1)
 // @Param        page_size query int    false "Số dòng/trang" default(20)
 // @Param        role      query string false "Lọc theo vai trò (ADMIN, EXPERT, PATIENT)"
-// @Success      200 {object} response.Response
+// @Success      200 {object} response.BaseResponse{result=response.PageResult[models.Profile]}
 // @Router       /api/v1/profiles [get]
 func ListProfiles(c *gin.Context) {
 	pagination := parsePagination(c)
@@ -346,13 +359,8 @@ func ListProfiles(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, "Lấy danh sách profile thành công", schemas.PaginatedResponse{
-		Items:      profiles,
-		Page:       pagination.Page,
-		PageSize:   pagination.PageSize,
-		TotalItems: total,
-		TotalPages: totalPages(total, pagination.PageSize),
-	})
+	response.Success(c, "Lấy danh sách profile thành công",
+		response.NewPageResult(profiles, total, pagination.Page, pagination.PageSize))
 }
 
 // CreateProfile cho phép Admin tạo thủ công một profile mới (VD: tạo thêm tài khoản Admin khác).
@@ -362,9 +370,9 @@ func ListProfiles(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body schemas.CreateProfileRequest true "Thông tin profile"
-// @Success      201 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      409 {object} response.Response
+// @Success      201 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      409 {object} response.BaseResponse
 // @Router       /api/v1/profiles [post]
 func CreateProfile(c *gin.Context) {
 	var req schemas.CreateProfileRequest
@@ -377,6 +385,10 @@ func CreateProfile(c *gin.Context) {
 	if err != nil {
 		if err == ErrProfileConflict {
 			response.Error(c, http.StatusConflict, "Profile cho tài khoản này đã tồn tại", err.Error())
+			return
+		}
+		if errors.Is(err, errInvalidDateOfBirth) {
+			writeInvalidDateOfBirth(c, err)
 			return
 		}
 		response.Error(c, http.StatusBadRequest, "Không thể tạo profile", err.Error())
@@ -392,8 +404,8 @@ func CreateProfile(c *gin.Context) {
 // @Security     BearerAuth
 // @Produce      json
 // @Param        id path string true "Auth Account ID"
-// @Success      200 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/{id} [get]
 func GetProfile(c *gin.Context) {
 	authID, err := uuid.Parse(c.Param("id"))
@@ -419,9 +431,9 @@ func GetProfile(c *gin.Context) {
 // @Tags         profiles
 // @Produce      json
 // @Param        id path string true "Auth Account ID"
-// @Success      200 {object} response.Response
-// @Failure      404 {object} response.Response
-// @Router       /api/v1/profiles/{id} [get]
+// @Success      200 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
+// @Router       /api/v1/profiles/public/{id} [get]
 func GetPublicProfile(c *gin.Context) {
 	profile, err := findProfileByAuthID(c.Param("id"))
 	if err != nil {
@@ -430,31 +442,22 @@ func GetPublicProfile(c *gin.Context) {
 	}
 
 	// Tránh lộ lọt thông tin nhạy cảm của Patient/Admin nếu truy cập qua endpoint này
-	if profile.Role == models.RolePatient && profile.PatientProfile != nil {
-		profile.PatientProfile.PhoneNumber = ""
-		profile.PatientProfile.Email = ""
-		profile.PatientProfile.Address = ""
-		profile.PatientProfile.DateOfBirth = nil
-		profile.PatientProfile.Gender = ""
-		profile.PatientProfile.MedicalHistories = nil
-	} else if profile.Role == models.RoleAdmin && profile.AdminProfile != nil {
-		profile.AdminProfile.Email = ""
-	}
+	sanitizePublicProfile(profile)
 
 	response.Success(c, "Lấy thông tin thành công", profile)
 }
 
-// UpdateProfile thay thế (PUT) trường chung (name) của 1 profile bất kỳ (dành cho Admin).
-// @Summary      [Admin] Cập nhật tên profile
+// UpdateProfile thay thế (PUT) thông tin người dùng của 1 profile bất kỳ (dành cho Admin).
+// @Summary      [Admin] Cập nhật thông tin người dùng của profile
 // @Tags         profiles
 // @Security     BearerAuth
 // @Accept       json
 // @Produce      json
 // @Param        id      path string                      true "Auth Account ID"
-// @Param        request body schemas.UpdateProfileRequest true "Tên mới"
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Param        request body schemas.UpdateProfileRequest true "Thông tin người dùng mới"
+// @Success      200 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/{id} [put]
 func UpdateProfile(c *gin.Context) {
 	authID, err := uuid.Parse(c.Param("id"))
@@ -469,20 +472,15 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
-	result := config.DB.Model(&models.Profile{}).Where("auth_id = ?", authID).Update("name", req.Name)
-	if result.Error != nil {
-		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật profile", result.Error.Error())
+	info, err := parseUserInformation(req.UserInformation)
+	if err != nil {
+		writeInvalidDateOfBirth(c, err)
 		return
 	}
-	if result.RowsAffected == 0 {
-		response.Error(c, http.StatusNotFound, "Không tìm thấy profile", "profile not found")
-		return
-	}
-
-	response.Success(c, "Cập nhật profile thành công", gin.H{"auth_id": authID, "name": req.Name})
+	updateUserInformation(c, authID, models.NewUserInformation(info))
 }
 
-// PatchProfile cập nhật một phần (PATCH) trường chung (name) của 1 profile bất kỳ (dành cho Admin).
+// PatchProfile cập nhật một phần (PATCH) thông tin người dùng của 1 profile bất kỳ (dành cho Admin).
 // @Summary      [Admin] Cập nhật một phần thông tin profile
 // @Tags         profiles
 // @Security     BearerAuth
@@ -490,9 +488,9 @@ func UpdateProfile(c *gin.Context) {
 // @Produce      json
 // @Param        id      path string                     true "Auth Account ID"
 // @Param        request body schemas.PatchProfileRequest true "Trường cần cập nhật"
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/{id} [patch]
 func PatchProfile(c *gin.Context) {
 	authID, err := uuid.Parse(c.Param("id"))
@@ -506,12 +504,24 @@ func PatchProfile(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "Dữ liệu không hợp lệ", err.Error())
 		return
 	}
-	if req.Name == nil {
-		response.Success(c, "Không có gì để cập nhật", nil)
+
+	patch, err := parseUserInformationPatch(req.UserInformation)
+	if err != nil {
+		writeInvalidDateOfBirth(c, err)
 		return
 	}
 
-	result := config.DB.Model(&models.Profile{}).Where("auth_id = ?", authID).Update("name", *req.Name)
+	var profile models.Profile
+	if err := config.DB.First(&profile, "auth_id = ?", authID).Error; err != nil {
+		response.Error(c, http.StatusNotFound, "Không tìm thấy profile", err.Error())
+		return
+	}
+	updateUserInformation(c, authID, models.NewUserInformation(profile.UserInformation.ToDomain().Apply(patch)))
+}
+
+// updateUserInformation ghi đè thông tin người dùng của profile theo auth_id và trả về kết quả.
+func updateUserInformation(c *gin.Context, authID uuid.UUID, info models.UserInformation) {
+	result := config.DB.Model(&models.Profile{}).Where("auth_id = ?", authID).Updates(info.Columns())
 	if result.Error != nil {
 		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật profile", result.Error.Error())
 		return
@@ -521,7 +531,7 @@ func PatchProfile(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, "Cập nhật profile thành công", gin.H{"auth_id": authID, "name": *req.Name})
+	response.Success(c, "Cập nhật profile thành công", gin.H{"auth_id": authID, "user_information": info})
 }
 
 // DeleteProfile xoá mềm (soft delete) 1 profile (dành cho Admin).
@@ -530,8 +540,8 @@ func PatchProfile(c *gin.Context) {
 // @Security     BearerAuth
 // @Produce      json
 // @Param        id path string true "Auth Account ID"
-// @Success      200 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/{id} [delete]
 func DeleteProfile(c *gin.Context) {
 	authID, err := uuid.Parse(c.Param("id"))

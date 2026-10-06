@@ -11,8 +11,7 @@ import (
 // PUT luôn giữ nguyên trạng thái xác minh hiện tại.
 type ReplaceCommand struct {
 	AuthID               uuid.UUID
-	Name                 string
-	PhoneNumber          string
+	UserInformation      profile.UserInformation
 	Email                string
 	AvatarURL            string
 	IntroductionVideoURL string
@@ -25,8 +24,7 @@ type ReplaceCommand struct {
 type PatchCommand struct {
 	AuthID               uuid.UUID
 	ActorRole            profile.Role
-	Name                 *string
-	PhoneNumber          *string
+	UserInformation      profile.UserInformationPatch
 	Email                *string
 	AvatarURL            *string
 	IntroductionVideoURL *string

@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"net/http/httptest"
 	"profile-service/config"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/stretchr/testify/assert"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -27,4 +29,16 @@ func SetupTestDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 	config.DB = gormDB
 
 	return gormDB, mock
+}
+
+// assertBaseResponse kiểm tra response theo đúng envelope chung
+// { message, statusCode, timestamp, result } và statusCode khớp HTTP status.
+func assertBaseResponse(t *testing.T, w *httptest.ResponseRecorder, resp map[string]interface{}) {
+	t.Helper()
+	assert.Equal(t, float64(w.Code), resp["statusCode"])
+	assert.NotEmpty(t, resp["message"])
+	assert.Regexp(t, `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$`, resp["timestamp"])
+	assert.Contains(t, resp, "result")
+	assert.NotContains(t, resp, "success")
+	assert.NotContains(t, resp, "data")
 }

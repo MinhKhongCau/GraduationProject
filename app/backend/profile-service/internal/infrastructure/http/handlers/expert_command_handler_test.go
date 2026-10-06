@@ -10,6 +10,7 @@ import (
 
 	"profile-service/internal/application/expertprofile"
 	"profile-service/internal/domain/expert"
+	"profile-service/internal/domain/profile"
 	"profile-service/internal/domain/specialization"
 	"profile-service/internal/infrastructure/http/middleware"
 
@@ -64,28 +65,34 @@ func serveExpert(h *ExpertHandler, method, id, role string, body any) (*httptest
 
 func TestExpertHandler(t *testing.T) {
 	authID := uuid.New()
-	snapshot := &expert.Snapshot{ProfileID: uuid.New(), AuthID: authID, Name: "Dr. A", VerificationStatus: "PENDING"}
+	snapshot := &expert.Snapshot{ProfileID: uuid.New(), AuthID: authID, UserInformation: profile.UserInformation{FullName: "Dr. A"}, VerificationStatus: "PENDING"}
 
 	t.Run("PUT thành công trả về hồ sơ, giữ trạng thái xác minh", func(t *testing.T) {
 		w, resp := serveExpert(newTestExpertHandler(snapshot), http.MethodPut, authID.String(), "ADMIN",
-			map[string]any{"name": "Dr. B", "verification_status": "VERIFIED"})
+			map[string]any{
+				"user_information":    map[string]any{"full_name": "Dr. B", "country": "Vietnam"},
+				"verification_status": "VERIFIED",
+			})
 
 		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Equal(t, "Cập nhật hồ sơ thành công", resp["message"])
-		data := resp["data"].(map[string]any)
-		assert.Equal(t, "Dr. B", data["name"])
+		data := resp["result"].(map[string]any)
+		info := data["user_information"].(map[string]any)
+		assert.Equal(t, "Dr. B", info["full_name"])
+		assert.Equal(t, "Vietnam", info["country"])
 		assert.Equal(t, "EXPERT", data["role"])
 		assert.Equal(t, "PENDING", data["expert_profile"].(map[string]any)["verification_status"])
 	})
 
-	t.Run("PUT thiếu name -> 400", func(t *testing.T) {
+	t.Run("PUT thiếu full_name -> 400", func(t *testing.T) {
 		w, resp := serveExpert(newTestExpertHandler(snapshot), http.MethodPut, authID.String(), "ADMIN", map[string]any{})
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		assert.Equal(t, "Dữ liệu không hợp lệ", resp["message"])
 	})
 
 	t.Run("id không phải UUID -> 404", func(t *testing.T) {
-		w, resp := serveExpert(newTestExpertHandler(snapshot), http.MethodPut, "abc", "ADMIN", map[string]any{"name": "X"})
+		w, resp := serveExpert(newTestExpertHandler(snapshot), http.MethodPut, "abc", "ADMIN",
+			map[string]any{"user_information": map[string]any{"full_name": "X"}})
 		assert.Equal(t, http.StatusNotFound, w.Code)
 		assert.Equal(t, "Không tìm thấy hồ sơ chuyên gia", resp["message"])
 	})
@@ -93,7 +100,7 @@ func TestExpertHandler(t *testing.T) {
 	t.Run("không tìm thấy chuyên gia -> 404 kèm chi tiết record not found", func(t *testing.T) {
 		w, resp := serveExpert(newTestExpertHandler(nil), http.MethodPatch, uuid.NewString(), "ADMIN", map[string]any{})
 		assert.Equal(t, http.StatusNotFound, w.Code)
-		assert.Equal(t, "record not found", resp["error"])
+		assert.Equal(t, "record not found", resp["result"].(map[string]any)["error"])
 	})
 
 	t.Run("PATCH verification_status bởi không phải Admin -> 403", func(t *testing.T) {
@@ -113,7 +120,7 @@ func TestExpertHandler(t *testing.T) {
 		w, resp := serveExpert(newTestExpertHandler(snapshot), http.MethodPatch, authID.String(), "ADMIN",
 			map[string]any{"verification_status": "VERIFIED"})
 		assert.Equal(t, http.StatusOK, w.Code)
-		data := resp["data"].(map[string]any)
+		data := resp["result"].(map[string]any)
 		assert.Equal(t, "VERIFIED", data["expert_profile"].(map[string]any)["verification_status"])
 	})
 }

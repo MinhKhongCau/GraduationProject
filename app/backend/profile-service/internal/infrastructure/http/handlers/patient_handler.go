@@ -16,10 +16,11 @@ import (
 	"gorm.io/gorm"
 )
 
-// saveProfileAndSub cập nhật tên (Profile.Name) và lưu hồ sơ con (Patient/Expert/Admin) trong 1 transaction.
-func saveProfileAndSub(profileID uuid.UUID, name string, sub interface{}) error {
+// saveProfileAndSub cập nhật thông tin người dùng (Profile.UserInformation) và lưu hồ sơ con
+// (Patient/Admin) trong 1 transaction.
+func saveProfileAndSub(profileID uuid.UUID, info models.UserInformation, sub interface{}) error {
 	return config.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&models.Profile{}).Where("id = ?", profileID).Update("name", name).Error; err != nil {
+		if err := tx.Model(&models.Profile{}).Where("id = ?", profileID).Updates(info.Columns()).Error; err != nil {
 			return err
 		}
 		return tx.Save(sub).Error
@@ -45,14 +46,14 @@ func parseOptionalDate(value string) (*time.Time, error) {
 // @Param        page      query int    false "Trang" default(1)
 // @Param        page_size query int    false "Số dòng/trang" default(20)
 // @Param        search    query string false "Tìm theo tên"
-// @Success      200 {object} response.Response
+// @Success      200 {object} response.BaseResponse{result=response.PageResult[models.Profile]}
 // @Router       /api/v1/profiles/patients [get]
 func ListPatients(c *gin.Context) {
 	pagination := parsePagination(c)
 
 	query := config.DB.Model(&models.Profile{}).Where("role = ?", models.RolePatient)
 	if search := strings.TrimSpace(c.Query("search")); search != "" {
-		query = query.Where("name ILIKE ?", "%"+search+"%")
+		query = query.Where("full_name ILIKE ?", "%"+search+"%")
 	}
 
 	var total int64
@@ -68,13 +69,8 @@ func ListPatients(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, "Lấy danh sách bệnh nhân thành công", schemas.PaginatedResponse{
-		Items:      patients,
-		Page:       pagination.Page,
-		PageSize:   pagination.PageSize,
-		TotalItems: total,
-		TotalPages: totalPages(total, pagination.PageSize),
-	})
+	response.Success(c, "Lấy danh sách bệnh nhân thành công",
+		response.NewPageResult(patients, total, pagination.Page, pagination.PageSize))
 }
 
 // GetPatient trả về chi tiết một hồ sơ bệnh nhân theo profile id (dành cho Admin).
@@ -83,8 +79,8 @@ func ListPatients(c *gin.Context) {
 // @Security     BearerAuth
 // @Produce      json
 // @Param        id path string true "Auth Account ID"
-// @Success      200 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/patients/{id} [get]
 func GetPatient(c *gin.Context) {
 	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RolePatient, "PatientProfile.MedicalHistories")
@@ -103,14 +99,7 @@ func GetPatientPublic(c *gin.Context) {
 		return
 	}
 
-	if profile.PatientProfile != nil {
-		profile.PatientProfile.PhoneNumber = ""
-		profile.PatientProfile.Email = ""
-		profile.PatientProfile.Address = ""
-		profile.PatientProfile.DateOfBirth = nil
-		profile.PatientProfile.Gender = ""
-		profile.PatientProfile.MedicalHistories = nil
-	}
+	sanitizePublicProfile(profile)
 
 	response.Success(c, "Lấy hồ sơ công khai thành công", profile)
 }
@@ -123,9 +112,9 @@ func GetPatientPublic(c *gin.Context) {
 // @Produce      json
 // @Param        id      path string                       true "Auth Account ID"
 // @Param        request body schemas.UpsertPatientRequest true "Hồ sơ bệnh nhân"
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/patients/{id} [put]
 func UpdatePatient(c *gin.Context) {
 	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RolePatient, "")
@@ -144,9 +133,9 @@ func UpdatePatient(c *gin.Context) {
 // @Produce      json
 // @Param        id      path string                     true "Auth Account ID"
 // @Param        request body schemas.PatchPatientRequest true "Các trường cần cập nhật"
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/patients/{id} [patch]
 func PatchPatient(c *gin.Context) {
 	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RolePatient, "PatientProfile")
@@ -164,28 +153,26 @@ func applyPatientUpsert(c *gin.Context, profile *models.Profile) {
 		return
 	}
 
-	dob, err := parseOptionalDate(req.DateOfBirth)
+	info, err := parseUserInformation(req.UserInformation)
 	if err != nil {
-		response.Error(c, http.StatusBadRequest, "Định dạng ngày sinh không hợp lệ (YYYY-MM-DD)", err.Error())
+		writeInvalidDateOfBirth(c, err)
 		return
 	}
 
 	patient := models.PatientProfile{
-		ProfileID:   profile.ID,
-		PhoneNumber: req.PhoneNumber,
-		Email:       req.Email,
-		AvatarURL:   req.AvatarURL,
-		DateOfBirth: dob,
-		Gender:      req.Gender,
-		Address:     req.Address,
+		ProfileID: profile.ID,
+		Email:     req.Email,
+		AvatarURL: req.AvatarURL,
+		Address:   req.Address,
 	}
 
-	if err := saveProfileAndSub(profile.ID, req.Name, &patient); err != nil {
+	userInfo := models.NewUserInformation(info)
+	if err := saveProfileAndSub(profile.ID, userInfo, &patient); err != nil {
 		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật hồ sơ", err.Error())
 		return
 	}
 
-	profile.Name = req.Name
+	profile.UserInformation = userInfo
 	profile.PatientProfile = &patient
 	response.Success(c, "Cập nhật hồ sơ thành công", profile)
 }
@@ -197,45 +184,34 @@ func applyPatientPatch(c *gin.Context, profile *models.Profile) {
 		return
 	}
 
+	patch, err := parseUserInformationPatch(req.UserInformation)
+	if err != nil {
+		writeInvalidDateOfBirth(c, err)
+		return
+	}
+
 	patient := profile.PatientProfile
 	if patient == nil {
 		patient = &models.PatientProfile{ProfileID: profile.ID}
 	}
 
-	newName := profile.Name
-	if req.Name != nil {
-		newName = *req.Name
-	}
-	if req.PhoneNumber != nil {
-		patient.PhoneNumber = *req.PhoneNumber
-	}
+	userInfo := models.NewUserInformation(profile.UserInformation.ToDomain().Apply(patch))
 	if req.Email != nil {
 		patient.Email = *req.Email
 	}
 	if req.AvatarURL != nil {
 		patient.AvatarURL = *req.AvatarURL
 	}
-	if req.DateOfBirth != nil {
-		dob, err := parseOptionalDate(*req.DateOfBirth)
-		if err != nil {
-			response.Error(c, http.StatusBadRequest, "Định dạng ngày sinh không hợp lệ (YYYY-MM-DD)", err.Error())
-			return
-		}
-		patient.DateOfBirth = dob
-	}
-	if req.Gender != nil {
-		patient.Gender = *req.Gender
-	}
 	if req.Address != nil {
 		patient.Address = *req.Address
 	}
 
-	if err := saveProfileAndSub(profile.ID, newName, patient); err != nil {
+	if err := saveProfileAndSub(profile.ID, userInfo, patient); err != nil {
 		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật hồ sơ", err.Error())
 		return
 	}
 
-	profile.Name = newName
+	profile.UserInformation = userInfo
 	profile.PatientProfile = patient
 	response.Success(c, "Cập nhật hồ sơ thành công", profile)
 }

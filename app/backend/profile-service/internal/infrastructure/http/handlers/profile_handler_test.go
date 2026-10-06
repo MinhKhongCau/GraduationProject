@@ -22,10 +22,10 @@ func TestCreateProfileInternal(t *testing.T) {
 
 		authUUID := uuid.New()
 		reqBody := map[string]string{
-			"auth_id": authUUID.String(),
-			"name":    "Patient A",
-			"role":    "PATIENT",
-			"email":   "patient@example.com",
+			"auth_id":   authUUID.String(),
+			"full_name": "Patient A",
+			"role":      "PATIENT",
+			"email":     "patient@example.com",
 		}
 		bodyBytes, _ := json.Marshal(reqBody)
 
@@ -54,7 +54,7 @@ func TestCreateProfileInternal(t *testing.T) {
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.Equal(t, "Tạo profile thành công", resp["message"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -65,10 +65,10 @@ func TestCreateProfileInternal(t *testing.T) {
 
 		authUUID := uuid.New()
 		reqBody := map[string]string{
-			"auth_id": authUUID.String(),
-			"name":    "Patient A",
-			"role":    "PATIENT",
-			"email":   "patient@example.com",
+			"auth_id":   authUUID.String(),
+			"full_name": "Patient A",
+			"role":      "PATIENT",
+			"email":     "patient@example.com",
 		}
 		bodyBytes, _ := json.Marshal(reqBody)
 
@@ -87,7 +87,7 @@ func TestCreateProfileInternal(t *testing.T) {
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.False(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.Equal(t, "Profile cho tài khoản này đã tồn tại", resp["message"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -104,7 +104,7 @@ func TestGetMe(t *testing.T) {
 		// Mock query find profile (First)
 		mock.ExpectQuery(`SELECT \* FROM "profiles" WHERE auth_id = \$1`).
 			WithArgs(authUUID, 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role", "auth_id"}).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "full_name", "role", "auth_id"}).
 				AddRow(profileUUID, "patient-a", "Patient A", string(models.RolePatient), authUUID))
 
 		// Mock preload AdminProfile
@@ -136,10 +136,10 @@ func TestGetMe(t *testing.T) {
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 
-		data := resp["data"].(map[string]interface{})
-		assert.Equal(t, "Patient A", data["name"])
+		data := resp["result"].(map[string]interface{})
+		assert.Equal(t, "Patient A", data["user_information"].(map[string]interface{})["full_name"])
 		assert.Equal(t, string(models.RolePatient), data["role"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -153,20 +153,23 @@ func TestUpdateMe(t *testing.T) {
 		authUUID := uuid.New()
 		profileUUID := uuid.New()
 
-		reqBody := map[string]string{
-			"name":          "New Patient Name",
-			"email":         "patient-new@example.com",
-			"phone_number":  "0911222333",
-			"date_of_birth": "1995-05-15",
-			"gender":        "MALE",
-			"address":       "123 Street",
+		reqBody := map[string]interface{}{
+			"user_information": map[string]string{
+				"full_name":     "New Patient Name",
+				"phone_number":  "0911222333",
+				"date_of_birth": "1995-05-15",
+				"gender":        "MALE",
+				"country":       "Vietnam",
+			},
+			"email":   "patient-new@example.com",
+			"address": "123 Street",
 		}
 		bodyBytes, _ := json.Marshal(reqBody)
 
 		// 1. Mock query tìm profile cũ để update
 		mock.ExpectQuery(`SELECT \* FROM "profiles" WHERE auth_id = \$1`).
 			WithArgs(authUUID, 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role", "auth_id"}).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "full_name", "role", "auth_id"}).
 				AddRow(profileUUID, "patient-a", "Old Patient Name", string(models.RolePatient), authUUID))
 
 		// 2. Mock preload các sub-profiles
@@ -205,7 +208,7 @@ func TestUpdateMe(t *testing.T) {
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.Equal(t, "Cập nhật hồ sơ thành công", resp["message"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -218,16 +221,16 @@ func TestUpdateMe(t *testing.T) {
 		profileUUID := uuid.New()
 
 		// Email sai định dạng
-		reqBody := map[string]string{
-			"name":  "New Patient Name",
-			"email": "wrong-email-format",
+		reqBody := map[string]interface{}{
+			"user_information": map[string]string{"full_name": "New Patient Name"},
+			"email":            "wrong-email-format",
 		}
 		bodyBytes, _ := json.Marshal(reqBody)
 
 		// 1. Mock query tìm profile cũ
 		mock.ExpectQuery(`SELECT \* FROM "profiles" WHERE auth_id = \$1`).
 			WithArgs(authUUID, 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role", "auth_id"}).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "full_name", "role", "auth_id"}).
 				AddRow(profileUUID, "patient-a", "Old Patient Name", string(models.RolePatient), authUUID))
 
 		// 2. Mock preload các sub-profiles
@@ -254,7 +257,7 @@ func TestUpdateMe(t *testing.T) {
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.False(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.Equal(t, "Dữ liệu không hợp lệ", resp["message"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())

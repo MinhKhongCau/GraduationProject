@@ -6,26 +6,34 @@ import (
 
 	"profile-service/internal/domain/expert"
 	"profile-service/internal/domain/profile"
+	"profile-service/internal/domain/specialization"
 
 	"github.com/google/uuid"
 )
 
-// ExpertProfileView giữ nguyên hình dạng JSON mà API cũ trả về (models.Profile kèm expert_profile).
+// ExpertProfileView giữ nguyên hình dạng JSON mà các API đọc profile trả về (models.Profile kèm expert_profile).
 type ExpertProfileView struct {
-	ID            uuid.UUID          `json:"id"`
-	Slug          string             `json:"slug"`
-	Name          string             `json:"name"`
-	AuthID        uuid.UUID          `json:"auth_id"`
-	Role          profile.Role       `json:"role"`
-	CreatedAt     time.Time          `json:"created_at"`
-	UpdatedAt     time.Time          `json:"updated_at"`
-	DeletedAt     *time.Time         `json:"deleted_at"`
-	ExpertProfile *ExpertDetailsView `json:"expert_profile,omitempty"`
+	ID              uuid.UUID           `json:"id"`
+	Slug            string              `json:"slug"`
+	UserInformation UserInformationView `json:"user_information"`
+	AuthID          uuid.UUID           `json:"auth_id"`
+	Role            profile.Role        `json:"role"`
+	CreatedAt       time.Time           `json:"created_at"`
+	UpdatedAt       time.Time           `json:"updated_at"`
+	DeletedAt       *time.Time          `json:"deleted_at"`
+	ExpertProfile   *ExpertDetailsView  `json:"expert_profile,omitempty"`
+}
+
+type UserInformationView struct {
+	FullName    string     `json:"full_name"`
+	DateOfBirth *time.Time `json:"date_of_birth"`
+	Gender      string     `json:"gender"`
+	PhoneNumber string     `json:"phone_number"`
+	Country     string     `json:"country"`
 }
 
 type ExpertDetailsView struct {
 	ProfileID            uuid.UUID            `json:"profile_id"`
-	PhoneNumber          string               `json:"phone_number"`
 	Email                string               `json:"email"`
 	AvatarURL            string               `json:"avatar_url"`
 	IntroductionVideoURL string               `json:"introduction_video_url"`
@@ -36,8 +44,12 @@ type ExpertDetailsView struct {
 
 type SpecializationView struct {
 	SpecID      uuid.UUID `json:"spec_id"`
+	Code        string    `json:"code"`
 	Name        string    `json:"name"`
+	Slug        string    `json:"slug"`
 	Description string    `json:"description"`
+	Symptoms    []string  `json:"symptoms"`
+	Location    string    `json:"location"`
 	ImageURL    string    `json:"image_url"`
 	IsActive    bool      `json:"is_active"`
 }
@@ -48,26 +60,19 @@ func NewExpertProfileView(e *expert.Expert) ExpertProfileView {
 
 	specs := make([]SpecializationView, 0, len(s.Specializations))
 	for _, spec := range s.Specializations {
-		specs = append(specs, SpecializationView{
-			SpecID:      spec.ID,
-			Name:        spec.Name,
-			Description: spec.Description,
-			ImageURL:    spec.ImageURL,
-			IsActive:    spec.IsActive,
-		})
+		specs = append(specs, NewSpecializationView(spec))
 	}
 
 	return ExpertProfileView{
-		ID:        s.ProfileID,
-		Slug:      s.Slug,
-		Name:      s.Name,
-		AuthID:    s.AuthID,
-		Role:      profile.RoleExpert,
-		CreatedAt: s.CreatedAt,
-		UpdatedAt: s.UpdatedAt,
+		ID:              s.ProfileID,
+		Slug:            s.Slug,
+		UserInformation: NewUserInformationView(s.UserInformation),
+		AuthID:          s.AuthID,
+		Role:            profile.RoleExpert,
+		CreatedAt:       s.CreatedAt,
+		UpdatedAt:       s.UpdatedAt,
 		ExpertProfile: &ExpertDetailsView{
 			ProfileID:            s.ProfileID,
-			PhoneNumber:          s.Details.PhoneNumber,
 			Email:                s.Details.Email,
 			AvatarURL:            s.Details.AvatarURL,
 			IntroductionVideoURL: s.Details.IntroductionVideoURL,
@@ -75,5 +80,29 @@ func NewExpertProfileView(e *expert.Expert) ExpertProfileView {
 			VerificationStatus:   s.VerificationStatus,
 			Specializations:      specs,
 		},
+	}
+}
+
+func NewUserInformationView(u profile.UserInformation) UserInformationView {
+	return UserInformationView{
+		FullName:    u.FullName,
+		DateOfBirth: u.DateOfBirth,
+		Gender:      string(u.Gender),
+		PhoneNumber: u.PhoneNumber,
+		Country:     u.Country,
+	}
+}
+
+func NewSpecializationView(spec specialization.Specialization) SpecializationView {
+	return SpecializationView{
+		SpecID:      spec.ID,
+		Code:        spec.Code,
+		Name:        spec.Name,
+		Slug:        spec.Slug,
+		Description: spec.Description,
+		Symptoms:    spec.Symptoms,
+		Location:    spec.Location,
+		ImageURL:    spec.ImageURL,
+		IsActive:    spec.IsActive,
 	}
 }

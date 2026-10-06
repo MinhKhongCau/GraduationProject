@@ -29,7 +29,7 @@ func TestPatientHandler(t *testing.T) {
 		// 2. Mock profiles select query
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
 			WithArgs(string(models.RolePatient), 20).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "name", "role"}).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "full_name", "role"}).
 				AddRow(profileID, "Patient One", string(models.RolePatient)))
 
 		// 3. Mock preloaded PatientProfile query
@@ -47,7 +47,7 @@ func TestPatientHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -60,7 +60,7 @@ func TestPatientHandler(t *testing.T) {
 		// 1. Mock select profile (findRoleProfileByAuthID)
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
 			WithArgs(authUUID, string(models.RolePatient), 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "auth_id", "role", "name"}).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "auth_id", "role", "full_name"}).
 				AddRow(profileID, authUUID, string(models.RolePatient), "Patient One"))
 
 		// 2. Mock preload PatientProfile
@@ -84,7 +84,7 @@ func TestPatientHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -97,15 +97,15 @@ func TestPatientHandler(t *testing.T) {
 		// 1. Mock find profile (findRoleProfileByAuthID)
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
 			WithArgs(authUUID, string(models.RolePatient), 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "auth_id", "role", "name"}).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "auth_id", "role", "full_name"}).
 				AddRow(profileID, authUUID, string(models.RolePatient), "Old Name"))
 
 		// 2. Mock transaction begin
 		mock.ExpectBegin()
 
-		// 3. Mock update Profile name
-		mock.ExpectExec(`UPDATE "profiles" SET "name"=\$1`).
-			WithArgs("New Patient Name", sqlmock.AnyArg(), profileID).
+		// 3. Mock update user information trên bảng profiles (cột theo thứ tự alphabet)
+		mock.ExpectExec(`UPDATE "profiles" SET "country"=\$1,"date_of_birth"=\$2,"full_name"=\$3,"gender"=\$4,"phone_number"=\$5,"updated_at"=\$6 WHERE id = \$7`).
+			WithArgs("Vietnam", sqlmock.AnyArg(), "New Patient Name", "FEMALE", "0987654321", sqlmock.AnyArg(), profileID).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
 		// 4. Mock save PatientProfile (insert or update)
@@ -115,12 +115,15 @@ func TestPatientHandler(t *testing.T) {
 		mock.ExpectCommit()
 
 		reqBody := map[string]interface{}{
-			"name":          "New Patient Name",
-			"phone_number":  "0987654321",
-			"email":         "patient@new.com",
-			"date_of_birth": "1995-10-10",
-			"gender":        "FEMALE",
-			"address":       "123 Street",
+			"user_information": map[string]interface{}{
+				"full_name":     "New Patient Name",
+				"phone_number":  "0987654321",
+				"date_of_birth": "1995-10-10",
+				"gender":        "FEMALE",
+				"country":       "Vietnam",
+			},
+			"email":   "patient@new.com",
+			"address": "123 Street",
 		}
 		bodyBytes, _ := json.Marshal(reqBody)
 
@@ -134,7 +137,39 @@ func TestPatientHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
+		info := resp["result"].(map[string]interface{})["user_information"].(map[string]interface{})
+		assert.Equal(t, "New Patient Name", info["full_name"])
+		assert.Equal(t, "Vietnam", info["country"])
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("UpdatePatient - Gender không hợp lệ -> 400", func(t *testing.T) {
+		_, mock := SetupTestDB(t)
+
+		profileID := uuid.New()
+		authUUID := uuid.New()
+
+		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
+			WithArgs(authUUID, string(models.RolePatient), 1).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "auth_id", "role", "full_name"}).
+				AddRow(profileID, authUUID, string(models.RolePatient), "Old Name"))
+
+		bodyBytes, _ := json.Marshal(map[string]interface{}{
+			"user_information": map[string]interface{}{"full_name": "X", "gender": "UNKNOWN"},
+		})
+
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Params = gin.Params{gin.Param{Key: "id", Value: authUUID.String()}}
+		c.Request = httptest.NewRequest("PUT", "/api/v1/profiles/patients/"+authUUID.String(), bytes.NewBuffer(bodyBytes))
+
+		UpdatePatient(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		var resp map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &resp)
+		assertBaseResponse(t, w, resp)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }

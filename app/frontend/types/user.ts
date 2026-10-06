@@ -20,6 +20,7 @@ export interface PatientProfile {
   avatarUrl?: string;
   dateOfBirth?: string;
   gender?: string;
+  country?: string;
   address?: string;
   medicalHistories?: MedicalHistory[];
 }
@@ -31,6 +32,7 @@ export interface UpdatePatientProfileRequest {
   avatarUrl?: string;
   dateOfBirth?: string;
   gender?: string;
+  country?: string;
   address?: string;
 }
 
@@ -41,6 +43,9 @@ export interface ExpertProfile {
   accountId: string;
   fullName: string;
   phoneNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  country?: string;
   email: string;
   avatarUrl?: string;
   introductionVideoUrl?: string;
@@ -52,6 +57,9 @@ export interface ExpertProfile {
 export interface UpdateExpertProfileRequest {
   fullName: string;
   phoneNumber?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  country?: string;
   email?: string;
   avatarUrl?: string;
   introductionVideoUrl?: string;

@@ -21,8 +21,7 @@ var (
 )
 
 // SeedInitialData chèn dữ liệu khởi tạo (idempotent) cho 3 loại hồ sơ: Admin, Expert, Patient.
-// Đây là bước "pour data" thay cho migration SQL thủ công - đồng bộ với cách các service Go
-// khác trong dự án dùng GORM AutoMigrate thay vì thư mục migrations/ riêng.
+// Chạy sau migration (schema đã có); dữ liệu mẫu ở đây phụ thuộc slug sinh bằng Go nên không đặt trong SQL.
 func SeedInitialData(db *gorm.DB) {
 	seedAdmin(db)
 	seedExpert(db)
@@ -37,10 +36,10 @@ func seedAdmin(db *gorm.DB) {
 	}
 
 	profile := models.Profile{
-		Slug:   utils.GenerateUniqueSlug("System Admin"),
-		Name:   "System Admin",
-		AuthID: SeedAdminAuthID,
-		Role:   models.RoleAdmin,
+		Slug:            utils.GenerateUniqueSlug("System Admin"),
+		UserInformation: models.UserInformation{FullName: "System Admin", Country: "Vietnam"},
+		AuthID:          SeedAdminAuthID,
+		Role:            models.RoleAdmin,
 		AdminProfile: &models.AdminProfile{
 			Email: "admin@mindcare.local",
 			Note:  "Tài khoản quản trị mặc định được seed khi khởi tạo hệ thống",
@@ -62,17 +61,21 @@ func seedExpert(db *gorm.DB) {
 	}
 
 	spec := models.Specialization{
+		Code:        "SPEC-001",
 		Name:        "Tâm lý học lâm sàng",
+		Slug:        utils.Slugify("Tâm lý học lâm sàng"),
 		Description: "Chuyên khoa mẫu được seed cùng dữ liệu khởi tạo",
+		Symptoms:    []string{"Lo âu kéo dài", "Mất ngủ", "Trầm cảm"},
+		Location:    "Phòng khám MindCare - Tầng 2",
 		IsActive:    true,
 	}
 	db.Where(models.Specialization{Name: spec.Name}).FirstOrCreate(&spec)
 
 	profile := models.Profile{
-		Slug:   utils.GenerateUniqueSlug("Expert Demo"),
-		Name:   "Expert Demo",
-		AuthID: SeedExpertAuthID,
-		Role:   models.RoleExpert,
+		Slug:            utils.GenerateUniqueSlug("Expert Demo"),
+		UserInformation: models.UserInformation{FullName: "Expert Demo", Gender: "FEMALE", Country: "Vietnam"},
+		AuthID:          SeedExpertAuthID,
+		Role:            models.RoleExpert,
 		ExpertProfile: &models.ExpertProfile{
 			Email:              "expert.demo@mindcare.local",
 			Bio:                "Hồ sơ chuyên gia mẫu",
@@ -97,14 +100,17 @@ func seedPatient(db *gorm.DB) {
 
 	dob := time.Date(1999, time.January, 1, 0, 0, 0, 0, time.UTC)
 	profile := models.Profile{
-		Slug:   utils.GenerateUniqueSlug("Patient Demo"),
-		Name:   "Patient Demo",
+		Slug: utils.GenerateUniqueSlug("Patient Demo"),
+		UserInformation: models.UserInformation{
+			FullName:    "Patient Demo",
+			DateOfBirth: &dob,
+			Gender:      "OTHER",
+			Country:     "Vietnam",
+		},
 		AuthID: SeedPatientAuthID,
 		Role:   models.RolePatient,
 		PatientProfile: &models.PatientProfile{
-			Email:       "patient.demo@mindcare.local",
-			DateOfBirth: &dob,
-			Gender:      "OTHER",
+			Email: "patient.demo@mindcare.local",
 		},
 	}
 
