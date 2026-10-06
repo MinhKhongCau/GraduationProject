@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"profile-service/internal/infrastructure/http/handlers"
 	"profile-service/internal/infrastructure/http/schemas"
@@ -20,10 +21,11 @@ import (
 func HandleUserCreated(event messaging.UserCreatedEvent) error {
 	data := event.Data
 	req := schemas.CreateProfileRequest{
-		AuthID: data.AccountID,
-		Name:   data.FullName,
-		Role:   strings.ToUpper(data.Role),
-		Email:  data.Email,
+		AuthID:      data.AccountID,
+		FullName:    data.FullName,
+		Role:        strings.ToUpper(data.Role),
+		Email:       data.Email,
+		DateOfBirth: normalizeDate(data.DateOfBirth),
 	}
 
 	if _, err := handlers.CreateProfileCore(req); err != nil {
@@ -36,4 +38,17 @@ func HandleUserCreated(event messaging.UserCreatedEvent) error {
 
 	log.Printf("profile-service: created profile for auth_id=%s from user.created event %s", data.AccountID, event.EventID)
 	return nil
+}
+
+// normalizeDate giữ phần YYYY-MM-DD của dateOfBirth từ auth-service (có thể kèm giờ) và
+// bỏ qua giá trị không hợp lệ để không làm hỏng việc tạo profile.
+func normalizeDate(value string) string {
+	if len(value) < len("2006-01-02") {
+		return ""
+	}
+	date := value[:len("2006-01-02")]
+	if _, err := time.Parse("2006-01-02", date); err != nil {
+		return ""
+	}
+	return date
 }

@@ -26,12 +26,9 @@ func (uc *PatchExpertProfile) Execute(ctx context.Context, cmd PatchCommand) (Ex
 		return ExpertProfileView{}, err
 	}
 
-	if cmd.Name != nil {
-		e.Rename(*cmd.Name)
-	}
+	e.ReviseUserInformation(e.UserInformation().Apply(cmd.UserInformation))
 
 	details := e.Details()
-	overwrite(&details.PhoneNumber, cmd.PhoneNumber)
 	overwrite(&details.Email, cmd.Email)
 	overwrite(&details.AvatarURL, cmd.AvatarURL)
 	overwrite(&details.IntroductionVideoURL, cmd.IntroductionVideoURL)

@@ -1,27 +1,25 @@
 import { profileClient } from "./http/instances";
 import { PROFILE_ENDPOINTS } from "@/constants/api";
+import { splitUserInformation, toPaginated, type RawUserInformation } from "./profile-shared";
 import type {
   PatientProfile,
   UpdatePatientProfileRequest,
   MedicalHistory,
   CreateMedicalHistoryRequest,
-  ServiceEnvelope,
   PaginatedResponse,
+  PageResult,
 } from "@/types";
 
 /**
- * profile-service now returns a base Profile { id, slug, name, authId, role, ... }
+ * profile-service returns a base Profile { id, slug, userInformation, authId, role, ... }
  * with role-specific data nested under `patientProfile`. These helpers flatten
  * that shape back into the app's existing flat PatientProfile type so callers
  * (settings, medical-history, admin/patients) don't need to change.
  */
 interface RawPatientDetail {
   profileId: string;
-  phoneNumber?: string;
   email?: string;
   avatarUrl?: string;
-  dateOfBirth?: string | null;
-  gender?: string;
   address?: string;
   medicalHistories?: MedicalHistory[];
 }
@@ -29,62 +27,63 @@ interface RawPatientDetail {
 interface RawPatientProfile {
   id: string;
   authId: string;
-  name: string;
+  userInformation: RawUserInformation;
   patientProfile?: RawPatientDetail;
 }
 
 function toPatientProfile(raw: RawPatientProfile): PatientProfile {
   const detail = raw.patientProfile;
+  const info = raw.userInformation;
   return {
     patientId: detail?.profileId ?? raw.id,
     accountId: raw.authId,
-    fullName: raw.name,
-    phoneNumber: detail?.phoneNumber,
+    fullName: info?.fullName ?? "",
+    phoneNumber: info?.phoneNumber || undefined,
     email: detail?.email ?? "",
     avatarUrl: detail?.avatarUrl || undefined,
-    dateOfBirth: detail?.dateOfBirth ?? undefined,
-    gender: detail?.gender,
+    dateOfBirth: info?.dateOfBirth ?? undefined,
+    gender: info?.gender || undefined,
+    country: info?.country || undefined,
     address: detail?.address,
     medicalHistories: detail?.medicalHistories,
   };
 }
 
-/** profile-service's UpsertPatientRequest expects `name`, not `fullName`. */
+/** profile-service's UpsertPatientRequest nests personal info under `userInformation`. */
 function toUpsertPayload(payload: UpdatePatientProfileRequest) {
-  const { fullName, ...rest } = payload;
-  return { name: fullName, ...rest };
+  return splitUserInformation(payload);
 }
 
 // ---------- Self-service (GET/PUT /profiles/me) ----------
 
 export async function getMyProfile(): Promise<PatientProfile> {
-  const response = await profileClient.get<ServiceEnvelope<RawPatientProfile>>(PROFILE_ENDPOINTS.ME);
-  return toPatientProfile(response.data.data);
+  const response = await profileClient.get<RawPatientProfile>(PROFILE_ENDPOINTS.ME);
+  return toPatientProfile(response.data);
 }
 
 export async function updateMyProfile(payload: UpdatePatientProfileRequest): Promise<PatientProfile> {
-  const response = await profileClient.put<ServiceEnvelope<RawPatientProfile>>(
+  const response = await profileClient.put<RawPatientProfile>(
     PROFILE_ENDPOINTS.ME,
     toUpsertPayload(payload)
   );
-  return toPatientProfile(response.data.data);
+  return toPatientProfile(response.data);
 }
 
 export async function getMedicalHistories(): Promise<MedicalHistory[]> {
-  const response = await profileClient.get<ServiceEnvelope<MedicalHistory[]>>(
+  const response = await profileClient.get<MedicalHistory[]>(
     PROFILE_ENDPOINTS.ME_MEDICAL_HISTORIES
   );
-  return response.data.data ?? [];
+  return response.data ?? [];
 }
 
 export async function addMedicalHistory(
   payload: CreateMedicalHistoryRequest
 ): Promise<MedicalHistory> {
-  const response = await profileClient.post<ServiceEnvelope<MedicalHistory>>(
+  const response = await profileClient.post<MedicalHistory>(
     PROFILE_ENDPOINTS.ME_MEDICAL_HISTORIES,
     payload
   );
-  return response.data.data;
+  return response.data;
 }
 
 // ---------- Admin (GET/PUT /profiles/patients) ----------
@@ -98,35 +97,34 @@ export interface ListPatientsParams {
 export async function listPatients(
   params: ListPatientsParams = {}
 ): Promise<PaginatedResponse<PatientProfile>> {
-  const response = await profileClient.get<ServiceEnvelope<PaginatedResponse<RawPatientProfile>>>(
+  const response = await profileClient.get<PageResult<RawPatientProfile>>(
     PROFILE_ENDPOINTS.PATIENTS,
     { params }
   );
-  const page = response.data.data;
-  return { ...page, items: page.items.map(toPatientProfile) };
+  return toPaginated(response.data, toPatientProfile);
 }
 
 export async function getPatientProfile(accountId: string): Promise<PatientProfile> {
-  const response = await profileClient.get<ServiceEnvelope<RawPatientProfile>>(
+  const response = await profileClient.get<RawPatientProfile>(
     PROFILE_ENDPOINTS.PATIENT(accountId)
   );
-  return toPatientProfile(response.data.data);
+  return toPatientProfile(response.data);
 }
 
 export async function getPatientProfilePublic(accountId: string): Promise<PatientProfile> {
-  const response = await profileClient.get<ServiceEnvelope<RawPatientProfile>>(
+  const response = await profileClient.get<RawPatientProfile>(
     PROFILE_ENDPOINTS.PATIENT_PUBLIC(accountId)
   );
-  return toPatientProfile(response.data.data);
+  return toPatientProfile(response.data);
 }
 
 export async function updatePatientProfile(
   accountId: string,
   payload: UpdatePatientProfileRequest
 ): Promise<PatientProfile> {
-  const response = await profileClient.put<ServiceEnvelope<RawPatientProfile>>(
+  const response = await profileClient.put<RawPatientProfile>(
     PROFILE_ENDPOINTS.PATIENT(accountId),
     toUpsertPayload(payload)
   );
-  return toPatientProfile(response.data.data);
+  return toPatientProfile(response.data);
 }

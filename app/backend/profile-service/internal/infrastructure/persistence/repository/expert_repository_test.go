@@ -8,6 +8,7 @@ import (
 
 	"profile-service/internal/application/expertprofile"
 	"profile-service/internal/domain/expert"
+	"profile-service/internal/domain/profile"
 	"profile-service/internal/infrastructure/persistence/models"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -26,29 +27,38 @@ func setupDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
 	return gormDB, mock
 }
 
-// Response của PUT/PATCH chuyên gia trước đây là models.Profile được serialize trực tiếp.
-// Test này khoá hợp đồng JSON: DTO mới phải serialize giống hệt model GORM cũ.
+// Các API đọc profile serialize trực tiếp models.Profile, còn PUT/PATCH chuyên gia trả DTO.
+// Test này khoá hợp đồng JSON: DTO phải serialize giống hệt model GORM.
 func TestExpertProfileView_MatchesLegacyJSONContract(t *testing.T) {
 	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	dob := time.Date(1990, 5, 6, 0, 0, 0, 0, time.UTC)
 	profileID := uuid.New()
 	legacy := models.Profile{
-		ID:        profileID,
-		Slug:      "dr-a-1234",
-		Name:      "Dr. A",
+		ID:   profileID,
+		Slug: "dr-a-1234",
+		UserInformation: models.UserInformation{
+			FullName:    "Dr. A",
+			DateOfBirth: &dob,
+			Gender:      "FEMALE",
+			PhoneNumber: "0900",
+			Country:     "Vietnam",
+		},
 		AuthID:    uuid.New(),
 		Role:      models.RoleExpert,
 		CreatedAt: now,
 		UpdatedAt: now,
 		ExpertProfile: &models.ExpertProfile{
 			ProfileID:            profileID,
-			PhoneNumber:          "0900",
 			Email:                "a@example.com",
 			AvatarURL:            "https://cdn/a.png",
 			IntroductionVideoURL: "https://cdn/a.mp4",
 			Bio:                  "bio",
 			VerificationStatus:   "VERIFIED",
 			Specializations: []models.Specialization{
-				{SpecID: uuid.New(), Name: "Lo âu", Description: "desc", ImageURL: "img", IsActive: true},
+				{
+					SpecID: uuid.New(), Code: "SPEC-001", Name: "Lo âu", Slug: "lo-au", Description: "desc",
+					Symptoms: []string{"mất ngủ", "hồi hộp"}, Location: "Phòng 101", ImageURL: "img", IsActive: true,
+				},
 			},
 		},
 	}
@@ -88,13 +98,13 @@ func TestExpertRepository_FindByAuthID_NotFound(t *testing.T) {
 
 func TestExpertRepository_Save(t *testing.T) {
 	newExpert := func() *expert.Expert {
-		return expert.Reconstitute(expert.Snapshot{ProfileID: uuid.New(), AuthID: uuid.New(), Name: "Dr. A"})
+		return expert.Reconstitute(expert.Snapshot{ProfileID: uuid.New(), AuthID: uuid.New(), UserInformation: profile.UserInformation{FullName: "Dr. A"}})
 	}
 
 	t.Run("không đổi chuyên khoa thì không đụng bảng trung gian", func(t *testing.T) {
 		db, mock := setupDB(t)
 		mock.ExpectBegin()
-		mock.ExpectExec(`UPDATE "profiles" SET "name"`).WillReturnResult(sqlmock.NewResult(0, 1))
+		mock.ExpectExec(`UPDATE "profiles" SET "country"=\$1,"date_of_birth"=\$2,"full_name"=\$3,"gender"=\$4,"phone_number"=\$5`).WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectExec(`UPDATE "expert_profiles"`).WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectCommit()
 
@@ -105,7 +115,7 @@ func TestExpertRepository_Save(t *testing.T) {
 	t.Run("xoá hết chuyên khoa", func(t *testing.T) {
 		db, mock := setupDB(t)
 		mock.ExpectBegin()
-		mock.ExpectExec(`UPDATE "profiles" SET "name"`).WillReturnResult(sqlmock.NewResult(0, 1))
+		mock.ExpectExec(`UPDATE "profiles" SET "country"=\$1,"date_of_birth"=\$2,"full_name"=\$3,"gender"=\$4,"phone_number"=\$5`).WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectExec(`UPDATE "expert_profiles"`).WillReturnResult(sqlmock.NewResult(0, 1))
 		mock.ExpectExec(`DELETE FROM "expert_specializations"`).WillReturnResult(sqlmock.NewResult(0, 2))
 		mock.ExpectCommit()

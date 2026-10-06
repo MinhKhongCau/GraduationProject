@@ -43,7 +43,6 @@ func (r *ExpertRepository) Save(ctx context.Context, e *expert.Expert) error {
 	s := e.Snapshot()
 	row := models.ExpertProfile{
 		ProfileID:            s.ProfileID,
-		PhoneNumber:          s.Details.PhoneNumber,
 		Email:                s.Details.Email,
 		AvatarURL:            s.Details.AvatarURL,
 		IntroductionVideoURL: s.Details.IntroductionVideoURL,
@@ -52,7 +51,8 @@ func (r *ExpertRepository) Save(ctx context.Context, e *expert.Expert) error {
 	}
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&models.Profile{}).Where("id = ?", s.ProfileID).Update("name", s.Name).Error; err != nil {
+		if err := tx.Model(&models.Profile{}).Where("id = ?", s.ProfileID).
+			Updates(models.NewUserInformation(s.UserInformation).Columns()).Error; err != nil {
 			return err
 		}
 		if err := tx.Save(&row).Error; err != nil {
@@ -67,16 +67,15 @@ func (r *ExpertRepository) Save(ctx context.Context, e *expert.Expert) error {
 
 func toExpert(row *models.Profile) *expert.Expert {
 	s := expert.Snapshot{
-		ProfileID: row.ID,
-		AuthID:    row.AuthID,
-		Slug:      row.Slug,
-		Name:      row.Name,
-		CreatedAt: row.CreatedAt,
-		UpdatedAt: row.UpdatedAt,
+		ProfileID:       row.ID,
+		AuthID:          row.AuthID,
+		Slug:            row.Slug,
+		UserInformation: row.UserInformation.ToDomain(),
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
 	}
 	if ep := row.ExpertProfile; ep != nil {
 		s.Details = expert.Details{
-			PhoneNumber:          ep.PhoneNumber,
 			Email:                ep.Email,
 			AvatarURL:            ep.AvatarURL,
 			IntroductionVideoURL: ep.IntroductionVideoURL,
@@ -96,8 +95,12 @@ func toSpecializations(rows []models.Specialization) []specialization.Specializa
 	for _, row := range rows {
 		specs = append(specs, specialization.Specialization{
 			ID:          row.SpecID,
+			Code:        row.Code,
 			Name:        row.Name,
+			Slug:        row.Slug,
 			Description: row.Description,
+			Symptoms:    row.Symptoms,
+			Location:    row.Location,
 			ImageURL:    row.ImageURL,
 			IsActive:    row.IsActive,
 		})
@@ -110,8 +113,12 @@ func toSpecializationRows(specs []specialization.Specialization) []models.Specia
 	for _, spec := range specs {
 		rows = append(rows, models.Specialization{
 			SpecID:      spec.ID,
+			Code:        spec.Code,
 			Name:        spec.Name,
+			Slug:        spec.Slug,
 			Description: spec.Description,
+			Symptoms:    spec.Symptoms,
+			Location:    spec.Location,
 			ImageURL:    spec.ImageURL,
 			IsActive:    spec.IsActive,
 		})

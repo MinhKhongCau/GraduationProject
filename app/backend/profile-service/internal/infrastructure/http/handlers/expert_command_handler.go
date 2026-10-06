@@ -35,9 +35,9 @@ func NewExpertHandler(replace *expertprofile.ReplaceExpertProfile, patch *expert
 // @Produce      json
 // @Param        id      path string                      true "Auth Account ID"
 // @Param        request body schemas.UpsertExpertRequest true "Hồ sơ chuyên gia"
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/experts/{id} [put]
 func (h *ExpertHandler) Update(c *gin.Context) {
 	authID, err := uuid.Parse(c.Param("id"))
@@ -57,10 +57,10 @@ func (h *ExpertHandler) Update(c *gin.Context) {
 // @Produce      json
 // @Param        id      path string                     true "Auth Account ID"
 // @Param        request body schemas.PatchExpertRequest true "Các trường cần cập nhật"
-// @Success      200 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      403 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      403 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/experts/{id} [patch]
 func (h *ExpertHandler) Patch(c *gin.Context) {
 	authID, err := uuid.Parse(c.Param("id"))
@@ -78,10 +78,15 @@ func (h *ExpertHandler) replaceFor(c *gin.Context, authID uuid.UUID) {
 		return
 	}
 
+	info, err := parseUserInformation(req.UserInformation)
+	if err != nil {
+		writeInvalidDateOfBirth(c, err)
+		return
+	}
+
 	view, err := h.replace.Execute(c.Request.Context(), expertprofile.ReplaceCommand{
 		AuthID:               authID,
-		Name:                 req.Name,
-		PhoneNumber:          req.PhoneNumber,
+		UserInformation:      info,
 		Email:                req.Email,
 		AvatarURL:            req.AvatarURL,
 		IntroductionVideoURL: req.IntroductionVideoURL,
@@ -102,11 +107,16 @@ func (h *ExpertHandler) patchFor(c *gin.Context, authID uuid.UUID) {
 		return
 	}
 
+	patch, err := parseUserInformationPatch(req.UserInformation)
+	if err != nil {
+		writeInvalidDateOfBirth(c, err)
+		return
+	}
+
 	view, err := h.patch.Execute(c.Request.Context(), expertprofile.PatchCommand{
 		AuthID:               authID,
 		ActorRole:            profile.Role(c.GetString(middleware.CtxRole)),
-		Name:                 req.Name,
-		PhoneNumber:          req.PhoneNumber,
+		UserInformation:      patch,
 		Email:                req.Email,
 		AvatarURL:            req.AvatarURL,
 		IntroductionVideoURL: req.IntroductionVideoURL,

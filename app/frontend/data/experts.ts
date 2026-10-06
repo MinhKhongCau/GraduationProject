@@ -15,8 +15,22 @@ export const FEATURED_EXPERTS_MOCK: ExpertProfile[] = [
     bio: "10 years of experience in behavioral therapy and stress management.",
     verificationStatus: "VERIFIED",
     specializations: [
-      { specId: "s1", name: "Clinical Psychology", isActive: true },
-      { specId: "s2", name: "CBT", isActive: true },
+      {
+        specId: "s1",
+        code: "SPEC-001",
+        name: "Clinical Psychology",
+        slug: "clinical-psychology",
+        symptoms: [],
+        isActive: true,
+      },
+      {
+        specId: "s2",
+        code: "SPEC-002",
+        name: "CBT",
+        slug: "cbt",
+        symptoms: [],
+        isActive: true,
+      },
     ],
   },
   {
@@ -27,7 +41,16 @@ export const FEATURED_EXPERTS_MOCK: ExpertProfile[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=tam",
     bio: "Specialist in anxiety and panic disorders, family therapy.",
     verificationStatus: "VERIFIED",
-    specializations: [{ specId: "s3", name: "Family Therapy", isActive: true }],
+    specializations: [
+      {
+        specId: "s3",
+        code: "SPEC-003",
+        name: "Family Therapy",
+        slug: "family-therapy",
+        symptoms: [],
+        isActive: true,
+      },
+    ],
   },
   {
     expertId: "featured-3",
@@ -37,6 +60,15 @@ export const FEATURED_EXPERTS_MOCK: ExpertProfile[] = [
     avatarUrl: "https://i.pravatar.cc/150?u=hanh",
     bio: "Grief counseling and trauma-informed care.",
     verificationStatus: "VERIFIED",
-    specializations: [{ specId: "s4", name: "Trauma & PTSD", isActive: true }],
+    specializations: [
+      {
+        specId: "s4",
+        code: "SPEC-004",
+        name: "Trauma & PTSD",
+        slug: "trauma-ptsd",
+        symptoms: [],
+        isActive: true,
+      },
+    ],
   },
 ];

@@ -1,23 +1,23 @@
 import { profileClient } from "./http/instances";
 import { PROFILE_ENDPOINTS } from "@/constants/api";
+import { splitUserInformation, toPaginated, type RawUserInformation } from "./profile-shared";
 import type {
   ExpertProfile,
   ExpertVerificationStatus,
   UpdateExpertProfileRequest,
-  ServiceEnvelope,
   PaginatedResponse,
+  PageResult,
   Specialization,
 } from "@/types";
 
 /**
- * profile-service now returns a base Profile { id, slug, name, authId, role, ... }
+ * profile-service returns a base Profile { id, slug, userInformation, authId, role, ... }
  * with role-specific data nested under `expertProfile`. These helpers flatten
  * that shape back into the app's existing flat ExpertProfile type so callers
  * (find-experts, booking flow, admin/experts) don't need to change.
  */
 interface RawExpertDetail {
   profileId: string;
-  phoneNumber?: string;
   email?: string;
   avatarUrl?: string;
   introductionVideoUrl?: string;
@@ -29,17 +29,21 @@ interface RawExpertDetail {
 interface RawExpertProfile {
   id: string;
   authId: string;
-  name: string;
+  userInformation: RawUserInformation;
   expertProfile?: RawExpertDetail;
 }
 
 function toExpertProfile(raw: RawExpertProfile): ExpertProfile {
   const detail = raw.expertProfile;
+  const info = raw.userInformation;
   return {
     expertId: detail?.profileId ?? raw.id,
     accountId: raw.authId,
-    fullName: raw.name,
-    phoneNumber: detail?.phoneNumber,
+    fullName: info?.fullName ?? "",
+    phoneNumber: info?.phoneNumber || undefined,
+    dateOfBirth: info?.dateOfBirth ?? undefined,
+    gender: info?.gender || undefined,
+    country: info?.country || undefined,
     email: detail?.email ?? "",
     avatarUrl: detail?.avatarUrl || undefined,
     introductionVideoUrl: detail?.introductionVideoUrl,
@@ -49,23 +53,22 @@ function toExpertProfile(raw: RawExpertProfile): ExpertProfile {
   };
 }
 
-/** profile-service's UpsertExpertRequest expects `name`, not `fullName`. */
+/** profile-service's UpsertExpertRequest nests personal info under `userInformation`. */
 function toUpsertPayload(payload: UpdateExpertProfileRequest) {
-  const { fullName, ...rest } = payload;
-  return { name: fullName, ...rest };
+  return splitUserInformation(payload);
 }
 
 export async function getMyProfile(): Promise<ExpertProfile> {
-  const response = await profileClient.get<ServiceEnvelope<RawExpertProfile>>(PROFILE_ENDPOINTS.ME);
-  return toExpertProfile(response.data.data);
+  const response = await profileClient.get<RawExpertProfile>(PROFILE_ENDPOINTS.ME);
+  return toExpertProfile(response.data);
 }
 
 export async function updateMyProfile(payload: UpdateExpertProfileRequest): Promise<ExpertProfile> {
-  const response = await profileClient.put<ServiceEnvelope<RawExpertProfile>>(
+  const response = await profileClient.put<RawExpertProfile>(
     PROFILE_ENDPOINTS.ME,
     toUpsertPayload(payload)
   );
-  return toExpertProfile(response.data.data);
+  return toExpertProfile(response.data);
 }
 
 export interface ListExpertsParams {
@@ -78,12 +81,11 @@ export interface ListExpertsParams {
 export async function listExperts(
   params: ListExpertsParams = {}
 ): Promise<PaginatedResponse<ExpertProfile>> {
-  const response = await profileClient.get<ServiceEnvelope<PaginatedResponse<RawExpertProfile>>>(
+  const response = await profileClient.get<PageResult<RawExpertProfile>>(
     PROFILE_ENDPOINTS.EXPERTS,
     { params }
   );
-  const page = response.data.data;
-  return { ...page, items: page.items.map(toExpertProfile) };
+  return toPaginated(response.data, toExpertProfile);
 }
 
 /**
@@ -115,17 +117,17 @@ export async function searchExperts(filters: ExpertSearchFilters): Promise<Exper
 }
 
 export async function getExpertProfile(accountId: string): Promise<ExpertProfile> {
-  const response = await profileClient.get<ServiceEnvelope<RawExpertProfile>>(
+  const response = await profileClient.get<RawExpertProfile>(
     PROFILE_ENDPOINTS.EXPERT(accountId)
   );
-  return toExpertProfile(response.data.data);
+  return toExpertProfile(response.data);
 }
 
 export async function getPublicProfile(accountId: string): Promise<ExpertProfile> {
-  const response = await profileClient.get<ServiceEnvelope<RawExpertProfile>>(
+  const response = await profileClient.get<RawExpertProfile>(
     PROFILE_ENDPOINTS.PROFILE(accountId)
   );
-  return toExpertProfile(response.data.data);
+  return toExpertProfile(response.data);
 }
 
 // ---------- Admin (PUT/PATCH /profiles/experts/{accountId}) ----------
@@ -134,20 +136,20 @@ export async function updateExpertProfile(
   accountId: string,
   payload: UpdateExpertProfileRequest
 ): Promise<ExpertProfile> {
-  const response = await profileClient.put<ServiceEnvelope<RawExpertProfile>>(
+  const response = await profileClient.put<RawExpertProfile>(
     PROFILE_ENDPOINTS.EXPERT(accountId),
     toUpsertPayload(payload)
   );
-  return toExpertProfile(response.data.data);
+  return toExpertProfile(response.data);
 }
 
 export async function updateExpertVerification(
   accountId: string,
   verificationStatus: ExpertVerificationStatus
 ): Promise<ExpertProfile> {
-  const response = await profileClient.patch<ServiceEnvelope<RawExpertProfile>>(
+  const response = await profileClient.patch<RawExpertProfile>(
     PROFILE_ENDPOINTS.EXPERT(accountId),
     { verificationStatus }
   );
-  return toExpertProfile(response.data.data);
+  return toExpertProfile(response.data);
 }

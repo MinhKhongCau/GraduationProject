@@ -7,7 +7,6 @@ import (
 
 	"profile-service/config"
 	"profile-service/internal/infrastructure/http/response"
-	"profile-service/internal/infrastructure/http/schemas"
 	"profile-service/internal/infrastructure/persistence/models"
 
 	"github.com/gin-gonic/gin"
@@ -20,14 +19,14 @@ import (
 // @Param        page      query int    false "Trang" default(1)
 // @Param        page_size query int    false "Số dòng/trang" default(20)
 // @Param        search    query string false "Tìm theo tên"
-// @Success      200 {object} response.Response
+// @Success      200 {object} response.BaseResponse{result=response.PageResult[models.Profile]}
 // @Router       /api/v1/profiles/experts [get]
 func ListExperts(c *gin.Context) {
 	pagination := parsePagination(c)
 
 	query := config.DB.Model(&models.Profile{}).Where("role = ?", models.RoleExpert)
 	if search := strings.TrimSpace(c.Query("search")); search != "" {
-		query = query.Where("name ILIKE ?", "%"+search+"%")
+		query = query.Where("full_name ILIKE ?", "%"+search+"%")
 	}
 
 	var total int64
@@ -43,13 +42,8 @@ func ListExperts(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, "Lấy danh sách chuyên gia thành công", schemas.PaginatedResponse{
-		Items:      experts,
-		Page:       pagination.Page,
-		PageSize:   pagination.PageSize,
-		TotalItems: total,
-		TotalPages: totalPages(total, pagination.PageSize),
-	})
+	response.Success(c, "Lấy danh sách chuyên gia thành công",
+		response.NewPageResult(experts, total, pagination.Page, pagination.PageSize))
 }
 
 // GetExpert trả về chi tiết một chuyên gia theo profile id (public).
@@ -57,8 +51,8 @@ func ListExperts(c *gin.Context) {
 // @Tags         experts
 // @Produce      json
 // @Param        id path string true "Auth Account ID"
-// @Success      200 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/experts/{id} [get]
 func GetExpert(c *gin.Context) {
 	profile, err := findProfileByAuthID(c.Param("id"))
@@ -68,16 +62,7 @@ func GetExpert(c *gin.Context) {
 	}
 
 	// Sanitize sensitive patient/admin info if accessed through this public endpoint
-	if profile.Role == models.RolePatient && profile.PatientProfile != nil {
-		profile.PatientProfile.PhoneNumber = ""
-		profile.PatientProfile.Email = ""
-		profile.PatientProfile.Address = ""
-		profile.PatientProfile.DateOfBirth = nil
-		profile.PatientProfile.Gender = ""
-		profile.PatientProfile.MedicalHistories = nil
-	} else if profile.Role == models.RoleAdmin && profile.AdminProfile != nil {
-		profile.AdminProfile.Email = ""
-	}
+	sanitizePublicProfile(profile)
 
 	response.Success(c, "Lấy thông tin thành công", profile)
 }

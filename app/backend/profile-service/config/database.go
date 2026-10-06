@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"profile-service/internal/infrastructure/persistence/models" // Đổi 'profile-service' thành tên module của bạn nếu khác
+	"profile-service/internal/infrastructure/persistence"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -15,14 +15,25 @@ import (
 var DB *gorm.DB
 
 func ConnectDB() {
+	dbCfg := persistence.DBConfig{
+		Host:     os.Getenv("DB_URL"),
+		Port:     os.Getenv("DB_PORT"),
+		User:     os.Getenv("DB_USER"),
+		Password: os.Getenv("DB_PASSWORD"),
+		Name:     os.Getenv("DB_NAME"),
+		SSLMode:  os.Getenv("DB_SSLMODE"),
+	}
+
+	// Schema được quản lý bằng migration có version (internal/infrastructure/persistence/migrations),
+	// không dùng GORM AutoMigrate nữa để các thay đổi như đổi tên/xoá cột có backfill dữ liệu.
+	if err := persistence.RunMigrations(dbCfg); err != nil {
+		log.Fatal("❌ Lỗi chạy migration:", err)
+	}
+	log.Println("✅ Migration hoàn tất: schema đã được cập nhật!")
+
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		os.Getenv("DB_URL"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_SSLMODE"),
+		dbCfg.Host, dbCfg.User, dbCfg.Password, dbCfg.Name, dbCfg.Port, dbCfg.SSLMode,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -31,22 +42,6 @@ func ConnectDB() {
 	}
 
 	log.Println("✅ Kết nối Database thành công!")
-
-	// Chạy AutoMigrate để tự động tạo bảng
-	err = db.AutoMigrate(
-		&models.Profile{},
-		&models.PatientProfile{},
-		&models.MedicalHistory{},
-		&models.ExpertProfile{},
-		&models.Specialization{},
-		&models.AdminProfile{},
-	)
-
-	if err != nil {
-		log.Fatal("❌ Lỗi AutoMigrate:", err)
-	}
-
-	log.Println("✅ AutoMigrate hoàn tất: Các bảng đã được tạo!")
 	DB = db
 
 	// Chèn dữ liệu khởi tạo (Admin mặc định + dữ liệu mẫu) nếu chưa tồn tại

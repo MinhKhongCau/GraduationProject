@@ -57,7 +57,7 @@ func TestMedicalHistoryHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -109,7 +109,7 @@ func TestMedicalHistoryHandler(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code)
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -141,7 +141,7 @@ func TestMedicalHistoryHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
