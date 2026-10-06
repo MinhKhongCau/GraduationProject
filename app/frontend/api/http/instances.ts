@@ -10,6 +10,7 @@ export const authClient = createHttpClient({
 export const profileClient = createHttpClient({
   baseURL,
   transformCase: true, // Go/Gin returns snake_case.
+  unwrapEnvelope: "result", // profile-service wraps responses in {message, statusCode, timestamp, result}.
 });
 
 export const paymentClient = createHttpClient({
