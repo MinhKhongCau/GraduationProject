@@ -181,7 +181,7 @@ func startProfileRequestConsumer() {
 				}
 				authorProfiles = append(authorProfiles, AuthorProfile{
 					ID:        p.AuthID.String(),
-					Name:      p.Name,
+					Name:      p.UserInformation.FullName,
 					AvatarURL: avatar,
 					Role:      string(p.Role),
 				})

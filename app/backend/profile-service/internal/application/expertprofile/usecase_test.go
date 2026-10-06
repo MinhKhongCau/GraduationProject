@@ -78,8 +78,8 @@ func newFixture() *fixture {
 				ProfileID:          uuid.New(),
 				AuthID:             authID,
 				Slug:               "dr-a",
-				Name:               "Dr. A",
-				Details:            expert.Details{PhoneNumber: "0900", Email: "a@example.com", Bio: "old bio"},
+				UserInformation:    profile.UserInformation{FullName: "Dr. A", PhoneNumber: "0900", Country: "Vietnam"},
+				Details:            expert.Details{Email: "a@example.com", Bio: "old bio"},
 				VerificationStatus: "VERIFIED",
 				Specializations:    []specialization.Specialization{existingSpec},
 			},
@@ -96,13 +96,14 @@ func TestReplaceExpertProfile(t *testing.T) {
 		f := newFixture()
 		uc := NewReplaceExpertProfile(f.experts, f.specs, f.publisher)
 
-		view, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: f.authID, Name: "Dr. B", Bio: "new bio"})
+		view, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: f.authID, UserInformation: profile.UserInformation{FullName: "Dr. B"}, Bio: "new bio"})
 		require.NoError(t, err)
 
-		assert.Equal(t, "Dr. B", view.Name)
+		assert.Equal(t, "Dr. B", view.UserInformation.FullName)
 		assert.Equal(t, profile.RoleExpert, view.Role)
 		assert.Equal(t, "new bio", view.ExpertProfile.Bio)
-		assert.Empty(t, view.ExpertProfile.PhoneNumber, "PUT xoá các field không gửi lên")
+		assert.Empty(t, view.UserInformation.PhoneNumber, "PUT xoá các field không gửi lên")
+		assert.Empty(t, view.UserInformation.Country)
 		assert.Equal(t, "VERIFIED", view.ExpertProfile.VerificationStatus)
 		assert.Len(t, view.ExpertProfile.Specializations, 1, "specialization_ids nil = giữ nguyên")
 		assert.Zero(t, f.specs.calls)
@@ -113,14 +114,14 @@ func TestReplaceExpertProfile(t *testing.T) {
 		f := newFixture()
 		uc := NewReplaceExpertProfile(f.experts, f.specs, f.publisher)
 
-		view, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: f.authID, Name: "Dr. A", SpecializationIDs: []string{}})
+		view, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: f.authID, UserInformation: profile.UserInformation{FullName: "Dr. A"}, SpecializationIDs: []string{}})
 		require.NoError(t, err)
 		assert.Empty(t, view.ExpertProfile.Specializations)
 		assert.True(t, f.experts.saved.SpecializationsChanged())
 
 		view, err = uc.Execute(context.Background(), ReplaceCommand{
 			AuthID:            f.authID,
-			Name:              "Dr. A",
+			UserInformation:   profile.UserInformation{FullName: "Dr. A"},
 			SpecializationIDs: []string{f.spec.ID.String(), uuid.NewString()},
 		})
 		require.NoError(t, err)
@@ -132,7 +133,7 @@ func TestReplaceExpertProfile(t *testing.T) {
 		f := newFixture()
 		uc := NewReplaceExpertProfile(f.experts, f.specs, f.publisher)
 
-		_, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: uuid.New(), Name: "X"})
+		_, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: uuid.New(), UserInformation: profile.UserInformation{FullName: "X"}})
 		assert.ErrorIs(t, err, expert.ErrExpertNotFound)
 	})
 
@@ -141,7 +142,7 @@ func TestReplaceExpertProfile(t *testing.T) {
 		f.experts.saveErr = errors.New("db down")
 		uc := NewReplaceExpertProfile(f.experts, f.specs, f.publisher)
 
-		_, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: f.authID, Name: "X"})
+		_, err := uc.Execute(context.Background(), ReplaceCommand{AuthID: f.authID, UserInformation: profile.UserInformation{FullName: "X"}})
 		assert.EqualError(t, err, "db down")
 	})
 }
@@ -154,11 +155,27 @@ func TestPatchExpertProfile(t *testing.T) {
 		view, err := uc.Execute(context.Background(), PatchCommand{AuthID: f.authID, ActorRole: profile.RoleAdmin, Bio: strPtr("new bio")})
 		require.NoError(t, err)
 
-		assert.Equal(t, "Dr. A", view.Name)
-		assert.Equal(t, "0900", view.ExpertProfile.PhoneNumber)
+		assert.Equal(t, "Dr. A", view.UserInformation.FullName)
+		assert.Equal(t, "0900", view.UserInformation.PhoneNumber)
 		assert.Equal(t, "a@example.com", view.ExpertProfile.Email)
 		assert.Equal(t, "new bio", view.ExpertProfile.Bio)
 		assert.Empty(t, f.publisher.events)
+	})
+
+	t.Run("PATCH thông tin người dùng chỉ đổi field được gửi lên", func(t *testing.T) {
+		f := newFixture()
+		uc := NewPatchExpertProfile(f.experts, f.specs, f.publisher)
+
+		view, err := uc.Execute(context.Background(), PatchCommand{
+			AuthID:          f.authID,
+			ActorRole:       profile.RoleExpert,
+			UserInformation: profile.UserInformationPatch{FullName: strPtr("Dr. C"), Country: strPtr("Japan")},
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, "Dr. C", view.UserInformation.FullName)
+		assert.Equal(t, "Japan", view.UserInformation.Country)
+		assert.Equal(t, "0900", view.UserInformation.PhoneNumber)
 	})
 
 	t.Run("Admin đổi trạng thái xác minh và event được phát", func(t *testing.T) {

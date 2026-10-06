@@ -18,9 +18,9 @@ import (
 // @Tags         patients
 // @Security     BearerAuth
 // @Produce      json
-// @Success      200 {object} response.Response
-// @Failure      401 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      401 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/me/medical-histories [get]
 func ListMyMedicalHistories(c *gin.Context) {
 	profile, err := findProfileByAuthID(c.GetString(middleware.CtxAuthID))
@@ -44,9 +44,9 @@ func ListMyMedicalHistories(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        request body schemas.CreateMedicalHistoryRequest true "Tiền sử bệnh"
-// @Success      201 {object} response.Response
-// @Failure      400 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      201 {object} response.BaseResponse
+// @Failure      400 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/me/medical-histories [post]
 func AddMyMedicalHistory(c *gin.Context) {
 	profile, err := findProfileByAuthID(c.GetString(middleware.CtxAuthID))
@@ -92,8 +92,8 @@ func AddMyMedicalHistory(c *gin.Context) {
 // @Security     BearerAuth
 // @Produce      json
 // @Param        id path string true "Auth Account ID"
-// @Success      200 {object} response.Response
-// @Failure      404 {object} response.Response
+// @Success      200 {object} response.BaseResponse
+// @Failure      404 {object} response.BaseResponse
 // @Router       /api/v1/profiles/patients/{id}/medical-histories [get]
 func ListPatientMedicalHistories(c *gin.Context) {
 	profile, err := findRoleProfileByAuthID(c.Param("id"), models.RolePatient, "")

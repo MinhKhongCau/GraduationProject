@@ -12,7 +12,7 @@ import (
 )
 
 func newExpert(status string) *Expert {
-	return Reconstitute(Snapshot{ProfileID: uuid.New(), AuthID: uuid.New(), Name: "Dr. A", VerificationStatus: status})
+	return Reconstitute(Snapshot{ProfileID: uuid.New(), AuthID: uuid.New(), UserInformation: profile.UserInformation{FullName: "Dr. A"}, VerificationStatus: status})
 }
 
 func TestReconstitute_DefaultsMissingStatusToUnverified(t *testing.T) {

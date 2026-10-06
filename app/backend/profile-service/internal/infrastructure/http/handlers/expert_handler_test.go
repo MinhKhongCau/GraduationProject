@@ -35,7 +35,7 @@ func TestListExperts(t *testing.T) {
 		// 2. Mock query SELECT profiles
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
 			WithArgs(string(models.RoleExpert), "%Dr. A%", 10).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role", "created_at", "updated_at", "deleted_at"}).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "full_name", "role", "created_at", "updated_at", "deleted_at"}).
 				AddRow(profileID, "dr-a", "Dr. A", string(models.RoleExpert), now, now, nil))
 
 		// 3. Mock query SELECT preloaded ExpertProfile
@@ -68,12 +68,12 @@ func TestListExperts(t *testing.T) {
 		var resp map[string]interface{}
 		err := json.Unmarshal(w.Body.Bytes(), &resp)
 		assert.NoError(t, err)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.Equal(t, "Lấy danh sách chuyên gia thành công", resp["message"])
 
-		data := resp["data"].(map[string]interface{})
-		assert.Equal(t, float64(1), data["total_items"])
-		assert.Equal(t, float64(1), data["total_pages"])
+		data := resp["result"].(map[string]interface{})
+		assert.Equal(t, float64(1), data["total"])
+		assert.Equal(t, float64(1), data["totalPages"])
 		items := data["items"].([]interface{})
 		assert.Len(t, items, 1)
 
@@ -91,7 +91,7 @@ func TestListExperts(t *testing.T) {
 		// Mock query SELECT profiles (Find)
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
 			WithArgs(string(models.RoleExpert), "%Unknown%", 20).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role"}))
+			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "full_name", "role"}))
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -103,10 +103,10 @@ func TestListExperts(t *testing.T) {
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 
-		data := resp["data"].(map[string]interface{})
-		assert.Equal(t, float64(0), data["total_items"])
+		data := resp["result"].(map[string]interface{})
+		assert.Equal(t, float64(0), data["total"])
 		items := data["items"].([]interface{})
 		assert.Len(t, items, 0)
 
@@ -130,7 +130,7 @@ func TestListExperts(t *testing.T) {
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.False(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.Equal(t, "Lỗi truy vấn danh sách chuyên gia", resp["message"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -147,7 +147,7 @@ func TestGetExpert(t *testing.T) {
 		// Mock query Find profile by ID (First)
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
 			WithArgs(expertUUID, 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role", "auth_id"}).
+			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "full_name", "role", "auth_id"}).
 				AddRow(profileID, "dr-b", "Dr. B", string(models.RoleExpert), expertUUID))
 
 		// Mock preload AdminProfile
@@ -182,10 +182,10 @@ func TestGetExpert(t *testing.T) {
 		var resp map[string]interface{}
 		err := json.Unmarshal(w.Body.Bytes(), &resp)
 		assert.NoError(t, err)
-		assert.True(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 
-		data := resp["data"].(map[string]interface{})
-		assert.Equal(t, "Dr. B", data["name"])
+		data := resp["result"].(map[string]interface{})
+		assert.Equal(t, "Dr. B", data["user_information"].(map[string]interface{})["full_name"])
 		assert.Equal(t, string(models.RoleExpert), data["role"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())
@@ -199,7 +199,7 @@ func TestGetExpert(t *testing.T) {
 		// Mock query First trả về record not found
 		mock.ExpectQuery(`SELECT \* FROM "profiles"`).
 			WithArgs(expertUUID, 1).
-			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "name", "role"})) // Row rỗng tức là Not Found trong sqlmock
+			WillReturnRows(sqlmock.NewRows([]string{"id", "slug", "full_name", "role"})) // Row rỗng tức là Not Found trong sqlmock
 
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
@@ -211,7 +211,7 @@ func TestGetExpert(t *testing.T) {
 
 		var resp map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &resp)
-		assert.False(t, resp["success"].(bool))
+		assertBaseResponse(t, w, resp)
 		assert.Equal(t, "Không tìm thấy hồ sơ", resp["message"])
 
 		assert.NoError(t, mock.ExpectationsWereMet())

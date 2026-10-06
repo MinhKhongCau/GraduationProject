@@ -25,9 +25,8 @@ func (uc *ReplaceExpertProfile) Execute(ctx context.Context, cmd ReplaceCommand)
 		return ExpertProfileView{}, err
 	}
 
-	e.Rename(cmd.Name)
+	e.ReviseUserInformation(cmd.UserInformation)
 	e.ReviseDetails(expert.Details{
-		PhoneNumber:          cmd.PhoneNumber,
 		Email:                cmd.Email,
 		AvatarURL:            cmd.AvatarURL,
 		IntroductionVideoURL: cmd.IntroductionVideoURL,

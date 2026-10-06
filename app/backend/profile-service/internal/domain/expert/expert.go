@@ -12,7 +12,6 @@ import (
 
 // Details là phần thông tin hồ sơ chuyên gia có thể chỉnh sửa tự do (value object).
 type Details struct {
-	PhoneNumber          string
 	Email                string
 	AvatarURL            string
 	IntroductionVideoURL string
@@ -25,7 +24,7 @@ type Expert struct {
 	profileID          uuid.UUID
 	authID             uuid.UUID
 	slug               string
-	name               string
+	userInformation    profile.UserInformation
 	details            Details
 	verificationStatus VerificationStatus
 	specializations    []specialization.Specialization
@@ -41,7 +40,7 @@ type Snapshot struct {
 	ProfileID          uuid.UUID
 	AuthID             uuid.UUID
 	Slug               string
-	Name               string
+	UserInformation    profile.UserInformation
 	Details            Details
 	VerificationStatus string
 	Specializations    []specialization.Specialization
@@ -56,7 +55,7 @@ func Reconstitute(s Snapshot) *Expert {
 		profileID:          s.ProfileID,
 		authID:             s.AuthID,
 		slug:               s.Slug,
-		name:               s.Name,
+		userInformation:    s.UserInformation,
 		details:            s.Details,
 		verificationStatus: verificationStatusFromStorage(s.VerificationStatus),
 		specializations:    s.Specializations,
@@ -70,7 +69,7 @@ func (e *Expert) Snapshot() Snapshot {
 		ProfileID:          e.profileID,
 		AuthID:             e.authID,
 		Slug:               e.slug,
-		Name:               e.name,
+		UserInformation:    e.userInformation,
 		Details:            e.details,
 		VerificationStatus: string(e.verificationStatus),
 		Specializations:    e.specializations,
@@ -79,7 +78,7 @@ func (e *Expert) Snapshot() Snapshot {
 	}
 }
 
-func (e *Expert) Name() string                                     { return e.name }
+func (e *Expert) UserInformation() profile.UserInformation         { return e.userInformation }
 func (e *Expert) Details() Details                                 { return e.details }
 func (e *Expert) VerificationStatus() VerificationStatus           { return e.verificationStatus }
 func (e *Expert) Specializations() []specialization.Specialization { return e.specializations }
@@ -87,8 +86,9 @@ func (e *Expert) Specializations() []specialization.Specialization { return e.sp
 // SpecializationsChanged cho repository biết có cần đồng bộ lại bảng expert_specializations hay không.
 func (e *Expert) SpecializationsChanged() bool { return e.specializationsChanged }
 
-func (e *Expert) Rename(name string) {
-	e.name = name
+// ReviseUserInformation thay thông tin cá nhân (họ tên, ngày sinh, giới tính, SĐT, quốc gia).
+func (e *Expert) ReviseUserInformation(info profile.UserInformation) {
+	e.userInformation = info
 }
 
 // ReviseDetails thay toàn bộ thông tin hồ sơ. Không đụng tới trạng thái xác minh: trạng thái chỉ

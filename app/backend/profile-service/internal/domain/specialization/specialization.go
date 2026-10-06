@@ -10,8 +10,12 @@ import (
 // Specialization là chuyên khoa mà chuyên gia có thể đăng ký (aggregate riêng, do Admin quản lý).
 type Specialization struct {
 	ID          uuid.UUID
+	Code        string
 	Name        string
+	Slug        string
 	Description string
+	Symptoms    []string
+	Location    string
 	ImageURL    string
 	IsActive    bool
 }
