@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, Plus, UserRound } from "lucide-react";
-import { Badge, Button, Card, FieldError, Input, Label, PageHeader, Select, Spinner } from "@/components/ui";
+import { Badge, Button, Card, FieldError, Input, Label, Select, Spinner } from "@/components/ui";
 import { useApiMutation, useApiQuery } from "@/hooks";
 import { patientRecordApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -52,18 +52,16 @@ function formatDateOfBirth(value: string | null): string | null {
     : date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export interface PatientProfileStepProps {
+export interface PatientProfileSectionProps {
   selectedRecord: PatientRecord | null;
   onSelectRecord: (record: PatientRecord) => void;
-  onBack: () => void;
-  onNext: () => void;
-  /** True while the slot is being locked before moving to the confirm page. */
-  isSubmitting: boolean;
+  /** Lets the parent block moving on while a new profile is half filled in. */
+  onCreatingChange: (isCreating: boolean) => void;
 }
 
-export function PatientProfileStep({ selectedRecord, onSelectRecord, onBack, onNext, isSubmitting }: PatientProfileStepProps) {
+export function PatientProfileSection({ selectedRecord, onSelectRecord, onCreatingChange }: PatientProfileSectionProps) {
   const queryClient = useQueryClient();
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCreating, setIsCreatingState] = useState(false);
   const [form, setForm] = useState<CreatePatientRecordRequest>(EMPTY_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -81,6 +79,11 @@ export function PatientProfileStep({ selectedRecord, onSelectRecord, onBack, onN
       setForm(EMPTY_FORM);
     },
   });
+
+  function setIsCreating(value: boolean) {
+    setIsCreatingState(value);
+    onCreatingChange(value);
+  }
 
   function updateField<K extends keyof CreatePatientRecordRequest>(key: K, value: CreatePatientRecordRequest[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -102,13 +105,13 @@ export function PatientProfileStep({ selectedRecord, onSelectRecord, onBack, onN
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <PageHeader title="Who is this appointment for?" description="Choose a saved profile or add a new one for a family member." />
+    <div>
+      <p className="mb-3 text-sm text-muted-foreground">Choose a saved profile or add a new one for a family member.</p>
 
       {isLoading ? (
         <Spinner className="h-6 w-6" />
       ) : (
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {records.map((record) => {
             const isSelected = selectedRecord?.recordId === record.recordId;
             const dateOfBirth = formatDateOfBirth(record.dateOfBirth);
@@ -153,7 +156,7 @@ export function PatientProfileStep({ selectedRecord, onSelectRecord, onBack, onN
       )}
 
       {isCreating && (
-        <Card className="mb-6 max-w-2xl p-6">
+        <Card className="mt-4 max-w-2xl p-6">
           <form onSubmit={submitNewRecord} noValidate className="space-y-4">
             <p className="text-sm font-semibold text-foreground">New patient profile</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -235,16 +238,6 @@ export function PatientProfileStep({ selectedRecord, onSelectRecord, onBack, onN
           </form>
         </Card>
       )}
-
-      <div className="mt-auto flex justify-between border-t border-border pt-6">
-        <Button variant="outline" onClick={onBack} disabled={isSubmitting}>
-          Back
-        </Button>
-        <Button onClick={onNext} disabled={!selectedRecord || isSubmitting || isCreating}>
-          {isSubmitting ? "Holding your slot..." : "Next"}
-          {!isSubmitting && <Check className="h-4 w-4" />}
-        </Button>
-      </div>
     </div>
   );
 }
