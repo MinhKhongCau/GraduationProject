@@ -10,6 +10,7 @@ import (
 	apppayment "payment-service/internal/application/payment"
 	appwallet "payment-service/internal/application/wallet"
 	appwithdrawal "payment-service/internal/application/withdrawal"
+	"payment-service/internal/infrastructure/client/bookinggrpc"
 	"payment-service/internal/infrastructure/client/bookingrest"
 	"payment-service/internal/infrastructure/client/internalauth"
 	"payment-service/internal/infrastructure/client/vnpay"
@@ -51,18 +52,25 @@ func main() {
 	)
 	log.Printf("🔐 Internal M2M auth initialized for client: %s", config.AppConfig.InternalClientID)
 
-	// 1.3 Khởi tạo BookingServiceClient (REST implementation)
-	// Để chuyển sang gRPC sau này: chỉ đổi dòng này thành bookingClient.NewGrpcBookingClient(...)
-	bookingSvcClient := bookingrest.NewRestBookingClient(
+	// 1.3 Khởi tạo BookingServiceClient: kết quả thanh toán + trạng thái lịch hẹn đi qua gRPC,
+	// kiểm tra điều kiện thanh toán (eligibility) vẫn dùng REST.
+	bookingRestClient := bookingrest.NewRestBookingClient(
 		config.AppConfig.BookingServiceInternalURL,
 		tokenManager,
 	)
+	bookingSvcClient, err := bookinggrpc.New(config.AppConfig.BookingGRPCAddr, tokenManager, bookingRestClient)
+	if err != nil {
+		log.Fatalf("Failed to init booking gRPC client: %v", err)
+	}
+	defer bookingSvcClient.Close()
+	log.Printf("🛰️  Booking gRPC client target: %s", config.AppConfig.BookingGRPCAddr)
 
 	// 2. Kết nối CSDL & Chạy Migration
 	config.ConnectDB()
 
 	// 3. Kết nối hạ tầng RabbitMQ & Redis (hoạt động chế độ fallback nếu lỗi)
-	messaging.InitRabbitMQ()
+	eventPublisher := messaging.NewRabbitPublisher(config.AppConfig)
+	defer eventPublisher.Close()
 	config.InitRedis()
 
 	// 4. Khởi tạo các tầng nghiệp vụ
@@ -114,13 +122,14 @@ func main() {
 	withdrawalWorker := appwithdrawal.NewWorker(config.DB, withdrawalUsecase, 5*time.Minute)
 	go withdrawalWorker.Start(ctx)
 
-	// Worker 3: Quét Outbox events để dispatch (RabbitMQ / Internal REST Call sang Booking)
+	// Worker 3: Quét Outbox events để dispatch (gRPC sang Booking + event payment.* lên RabbitMQ)
 	outboxPublisher := messaging.NewPublisherWithOptions(outboxRepo, bookingSvcClient, messaging.PublisherOptions{
 		PollInterval: config.AppConfig.OutboxPollInterval,
 		MaxAttempts:  config.AppConfig.OutboxMaxAttempts,
 		BaseBackoff:  config.AppConfig.OutboxBaseBackoff,
 		MaxBackoff:   config.AppConfig.OutboxMaxBackoff,
 		BatchSize:    config.AppConfig.OutboxBatchSize,
+		Events:       eventPublisher,
 	})
 	go outboxPublisher.Start(ctx)
 

@@ -551,6 +551,7 @@ type lifecycleRepo struct {
 	walletCredits         int
 	walletDebits          int
 	outboxEvents          []paymentdomain.OutboxEvent
+	paymentEvents         []paymentdomain.OutboxEvent
 	compensationCases     []paymentdomain.PaymentCompensationCase
 	compensationErr       error
 	listForUpdateCount    int
@@ -650,12 +651,14 @@ func (r *lifecycleRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) erro
 	snapshot := cloneOrders(r.orders)
 	createCount, credits, debits := r.createCount, r.walletCredits, r.walletDebits
 	outbox := append([]paymentdomain.OutboxEvent(nil), r.outboxEvents...)
+	paymentEvents := append([]paymentdomain.OutboxEvent(nil), r.paymentEvents...)
 	compensationCases := append([]paymentdomain.PaymentCompensationCase(nil), r.compensationCases...)
 	err := fn(r)
 	if err != nil {
 		r.orders = snapshot
 		r.createCount, r.walletCredits, r.walletDebits = createCount, credits, debits
 		r.outboxEvents = outbox
+		r.paymentEvents = paymentEvents
 		r.compensationCases = compensationCases
 		if r.preserveWinner != nil {
 			r.orders[r.preserveWinner.ID] = *r.preserveWinner
@@ -735,6 +738,10 @@ func (r *lifecycleRepo) ExpireOtherPendingOrders(ctx context.Context, appointmen
 }
 
 func (r *lifecycleRepo) SaveOutboxEvent(ctx context.Context, event *paymentdomain.OutboxEvent) error {
+	if isPaymentStatusEvent(event) {
+		r.paymentEvents = append(r.paymentEvents, *event)
+		return nil
+	}
 	r.outboxEvents = append(r.outboxEvents, *event)
 	return nil
 }

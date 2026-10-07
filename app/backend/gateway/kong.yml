@@ -61,6 +61,9 @@ services:
       - name: payment-public-routes
         paths:
           - /api/v1/payments/vnpay-ipn
+          # FE trang kết quả chuyển tiếp query VNPay; được xác thực bằng vnp_SecureHash, không cần JWT
+          # (trên app native, trình duyệt thanh toán không có phiên đăng nhập).
+          - /api/v1/payments/vnpay-return
         strip_path: false
       - name: payment-private-routes
         paths:

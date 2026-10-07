@@ -11,7 +11,10 @@ import (
 	// Import các package nội bộ của dự án
 	"booking-service/config"
 	"booking-service/internal/infrastructure/client"
+	bookinggrpc "booking-service/internal/infrastructure/grpc"
+	"booking-service/internal/infrastructure/http/middleware"
 	"booking-service/internal/infrastructure/http/routes"
+	"booking-service/internal/infrastructure/messaging"
 
 	appappointment "booking-service/internal/application/appointment"
 	"booking-service/internal/application/schedule"
@@ -103,6 +106,20 @@ func main() {
 	// 5. Khởi chạy Background Workers
 	workerContext := context.Background()
 	appappointment.StartExpiredLockWorker(appointmentRepo)
+
+	// 5.1 Nhận kết quả thanh toán từ payment-service: gRPC (đồng bộ) + RabbitMQ (event payment.*)
+	grpcServer, err := bookinggrpc.Start(":"+config.AppConfig.GRPCPort,
+		bookinggrpc.NewBookingPaymentServer(appointmentUsecase), middleware.VerifyInternalBearer)
+	if err != nil {
+		log.Fatalf("Failed to start booking gRPC server: %v", err)
+	}
+	defer grpcServer.GracefulStop()
+	messaging.NewPaymentEventConsumer(messaging.RabbitMQConfig{
+		Host: config.AppConfig.RabbitMQHost,
+		Port: config.AppConfig.RabbitMQPort,
+		User: config.AppConfig.RabbitMQUser,
+		Pass: config.AppConfig.RabbitMQPass,
+	}, appointmentUsecase).Start(workerContext)
 	timeoff.StartWorkerWithContext(workerContext, timeoffUsecase, timeoff.WorkerInterval)
 	go slot.RunStartupGeneration(workerContext, generationService, config.AppConfig.RollingSlotDays)
 	slot.StartRollingGenerationWorker(workerContext, generationService, config.AppConfig.RollingSlotDays)

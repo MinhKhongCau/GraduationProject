@@ -8,16 +8,20 @@ import (
 	"log"
 	apppayment "payment-service/internal/application/payment"
 	paymentdomain "payment-service/internal/domain/payment"
+	"payment-service/internal/infrastructure/grpc/paymentpb"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
 	bookingConfirmEvent = paymentdomain.BookingConfirmEvent
 	bookingFailEvent    = paymentdomain.BookingFailEvent
+	paymentSucceeded    = paymentdomain.PaymentSucceededEvent
+	paymentFailed       = paymentdomain.PaymentFailedEvent
 	maximumErrorLength  = 500
 )
 
@@ -28,6 +32,8 @@ type PublisherOptions struct {
 	MaxBackoff   time.Duration
 	BatchSize    int
 	Clock        func() time.Time
+	// Events publish event payment.succeeded / payment.failed lên RabbitMQ.
+	Events EventPublisher
 }
 
 type Publisher struct {
@@ -176,6 +182,8 @@ func (p *Publisher) dispatch(ctx context.Context, event *paymentdomain.OutboxEve
 	switch event.EventType {
 	case bookingConfirmEvent:
 	case bookingFailEvent:
+	case paymentSucceeded, paymentFailed:
+		return p.publishPaymentStatus(ctx, event)
 	default:
 		return &permanentEventError{category: "unsupported_event_type", message: fmt.Sprintf("unsupported outbox event type %q", event.EventType)}
 	}
@@ -188,6 +196,53 @@ func (p *Publisher) dispatch(ctx context.Context, event *paymentdomain.OutboxEve
 		return p.bookingClient.ConfirmAppointment(ctx, payload.AppointmentID)
 	}
 	return p.bookingClient.FailAppointment(ctx, payload.AppointmentID)
+}
+
+// publishPaymentStatus chuyển payload outbox sang paymentpb.PaymentStatusChangedEvent và publish
+// lên RabbitMQ. event_id = id outbox event nên ổn định qua các lần retry.
+func (p *Publisher) publishPaymentStatus(ctx context.Context, event *paymentdomain.OutboxEvent) error {
+	if p.options.Events == nil {
+		return errors.New("rabbitmq event publisher is not configured")
+	}
+	body, err := paymentStatusMessage(event)
+	if err != nil {
+		return err
+	}
+	return p.options.Events.Publish(ctx, event.EventType, event.ID.String(), body)
+}
+
+func paymentStatusMessage(event *paymentdomain.OutboxEvent) ([]byte, error) {
+	var payload paymentdomain.PaymentStatusPayload
+	if err := json.Unmarshal([]byte(event.Payload), &payload); err != nil {
+		return nil, &permanentEventError{category: "malformed_payload", message: "malformed payment status outbox payload"}
+	}
+	status := paymentpb.PaymentStatus_PAYMENT_STATUS_FAILED
+	if payload.Status == paymentdomain.OrderStatusSuccess.String() {
+		status = paymentpb.PaymentStatus_PAYMENT_STATUS_SUCCESS
+	}
+	message := &paymentpb.PaymentStatusChangedEvent{
+		EventId:    event.ID.String(),
+		EventType:  event.EventType,
+		OccurredAt: time.UnixMilli(event.CreatedAt).UTC().Format(time.RFC3339),
+		Source:     "payment-service",
+		Data: &paymentpb.PaymentStatusChanged{
+			OrderId:             payload.OrderID,
+			AppointmentId:       payload.AppointmentID,
+			PayerId:             payload.PayerID,
+			ExpertId:            payload.ExpertID,
+			AmountVnd:           payload.AmountVND,
+			Status:              status,
+			Gateway:             payload.Gateway,
+			GatewayTxnRef:       payload.GatewayTxnRef,
+			GatewayResponseCode: payload.GatewayResponseCode,
+			PaidAt:              payload.PaidAt,
+		},
+	}
+	body, err := protojson.Marshal(message)
+	if err != nil {
+		return nil, &permanentEventError{category: "malformed_payload", message: "payment status event could not be encoded"}
+	}
+	return body, nil
 }
 
 func parseBookingEventPayload(raw string) (*bookingEventPayload, error) {
