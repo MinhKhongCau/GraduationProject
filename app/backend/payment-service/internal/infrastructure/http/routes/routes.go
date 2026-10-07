@@ -29,6 +29,7 @@ func SetupRoutes(
 		api.GET("/orders", pHandler.ListPaymentOrders)
 		api.GET("/orders/:id", pHandler.GetPaymentOrder)
 		api.GET("/vnpay-ipn", pHandler.HandleVNPayIPN)
+		api.GET("/vnpay-return", pHandler.HandleVNPayReturn)
 		api.GET("/compensation-cases", pHandler.ListCompensationCases)
 		api.GET("/compensation-cases/:id", pHandler.GetCompensationCase)
 
