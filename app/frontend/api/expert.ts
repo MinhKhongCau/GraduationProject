@@ -75,9 +75,11 @@ export interface ListExpertsParams {
   page?: number;
   pageSize?: number;
   search?: string;
+  /** Sent as `specialization_id`; profile-service filters experts by spec_id. */
+  specializationId?: string;
 }
 
-/** Real: GET /profiles/experts (public browsing, no server-side specialization filter). */
+/** Real: GET /profiles/experts (public browsing). */
 export async function listExperts(
   params: ListExpertsParams = {}
 ): Promise<PaginatedResponse<ExpertProfile>> {
@@ -93,8 +95,8 @@ export async function listExperts(
  * route, so this fetches the largest single page — fine at current scale, see
  * listExperts for real pagination on the admin screen.
  */
-export async function getAllExperts(): Promise<ExpertProfile[]> {
-  const page = await listExperts({ pageSize: 100 });
+export async function getAllExperts(specializationId?: string): Promise<ExpertProfile[]> {
+  const page = await listExperts({ pageSize: 100, specializationId });
   return page.items;
 }
 
@@ -103,17 +105,14 @@ export interface ExpertSearchFilters {
   specializationId?: string;
 }
 
-/**
- * profile-service has no server-side specialization filter yet, so this
- * fetches by name (server-side) and filters specialization client-side.
- */
+/** Name search and specialization filter are both applied server-side. */
 export async function searchExperts(filters: ExpertSearchFilters): Promise<ExpertProfile[]> {
-  const page = await listExperts({ pageSize: 100, search: filters.query });
-  if (!filters.specializationId) return page.items;
-
-  return page.items.filter((expert) =>
-    expert.specializations.some((spec) => spec.specId === filters.specializationId)
-  );
+  const page = await listExperts({
+    pageSize: 100,
+    search: filters.query || undefined,
+    specializationId: filters.specializationId || undefined,
+  });
+  return page.items;
 }
 
 export async function getExpertProfile(accountId: string): Promise<ExpertProfile> {
@@ -127,6 +126,18 @@ export async function getPublicProfile(accountId: string): Promise<ExpertProfile
   const response = await profileClient.get<RawExpertProfile>(
     PROFILE_ENDPOINTS.PROFILE(accountId)
   );
+  return toExpertProfile(response.data);
+}
+
+/** [EXPERT] Adds one specialization to the logged-in expert (no-op if already listed; 422 if inactive). */
+export async function addMySpecialization(specId: string): Promise<ExpertProfile> {
+  const response = await profileClient.post<RawExpertProfile>(PROFILE_ENDPOINTS.ME_SPECIALIZATION(specId));
+  return toExpertProfile(response.data);
+}
+
+/** [EXPERT] Removes one specialization from the logged-in expert (404 if not listed). */
+export async function removeMySpecialization(specId: string): Promise<ExpertProfile> {
+  const response = await profileClient.delete<RawExpertProfile>(PROFILE_ENDPOINTS.ME_SPECIALIZATION(specId));
   return toExpertProfile(response.data);
 }
 

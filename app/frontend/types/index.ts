@@ -2,6 +2,7 @@ export * from "./common";
 export * from "./auth";
 export * from "./specialization";
 export * from "./medical-history";
+export * from "./patient-record";
 export * from "./user";
 export * from "./booking";
 export * from "./payment";

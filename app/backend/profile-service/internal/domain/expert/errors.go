@@ -8,4 +8,5 @@ var (
 	ErrExpertNotFound            = errors.New("record not found")
 	ErrInvalidVerificationStatus = errors.New("invalid verification status")
 	ErrVerificationRequiresAdmin = errors.New("only admin can change verification status")
+	ErrSpecializationNotAssigned = errors.New("specialization is not assigned to expert")
 )

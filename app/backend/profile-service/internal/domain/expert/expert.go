@@ -126,6 +126,44 @@ func (e *Expert) AssignSpecializations(specs []specialization.Specialization) {
 	e.specializationsChanged = true
 }
 
+// HasSpecialization cho biết chuyên gia đã đăng ký chuyên khoa id hay chưa.
+func (e *Expert) HasSpecialization(id uuid.UUID) bool {
+	for _, spec := range e.specializations {
+		if spec.ID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// AddSpecialization đăng ký thêm 1 chuyên khoa. Đã có thì bỏ qua (idempotent);
+// chuyên khoa đã ngừng hoạt động thì không được đăng ký mới.
+func (e *Expert) AddSpecialization(spec specialization.Specialization) error {
+	if e.HasSpecialization(spec.ID) {
+		return nil
+	}
+	if !spec.IsActive {
+		return specialization.ErrSpecializationInactive
+	}
+	e.AssignSpecializations(append(append([]specialization.Specialization{}, e.specializations...), spec))
+	return nil
+}
+
+// RemoveSpecialization huỷ đăng ký 1 chuyên khoa.
+func (e *Expert) RemoveSpecialization(id uuid.UUID) error {
+	if !e.HasSpecialization(id) {
+		return ErrSpecializationNotAssigned
+	}
+	remaining := make([]specialization.Specialization, 0, len(e.specializations)-1)
+	for _, spec := range e.specializations {
+		if spec.ID != id {
+			remaining = append(remaining, spec)
+		}
+	}
+	e.AssignSpecializations(remaining)
+	return nil
+}
+
 // PullEvents trả về và xoá các domain event đang chờ phát.
 func (e *Expert) PullEvents() []Event {
 	events := e.events

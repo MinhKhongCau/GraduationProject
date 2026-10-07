@@ -133,7 +133,7 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", labelKey: "nav.dashboard", label: "Dashboard", href: ROUTES.ADMIN.DASHBOARD, icon: LayoutDashboard },
   { id: "experts", labelKey: "nav.experts", label: "Experts", href: ROUTES.ADMIN.EXPERTS, icon: GraduationCap },
   {
-    id: "specializations", labelKey: "nav.specializations", label: "Specializations", href: ROUTES.ADMIN.SPECIALIZATIONS, icon: ClipboardList, comingSoon: true,
+    id: "specializations", labelKey: "nav.specializations", label: "Specializations", href: ROUTES.ADMIN.SPECIALIZATIONS, icon: ClipboardList,
     descriptionKey: "nav.desc.specializations", description: "Areas of expertise experts can list.",
   },
   { id: "patients", labelKey: "nav.patients", label: "Patients", href: ROUTES.ADMIN.PATIENTS, icon: Users },

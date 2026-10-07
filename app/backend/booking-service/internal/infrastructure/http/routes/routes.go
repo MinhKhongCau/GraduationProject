@@ -45,6 +45,7 @@ func RegisterAppointmentRoutes(publicGroup, privateGroup *gin.RouterGroup, inter
 	privateGroup.POST("/appointments", h.Create)
 	privateGroup.GET("/appointments", h.GetPatient)
 	privateGroup.GET("/appointments/expert", h.GetExpert)
+	privateGroup.GET("/appointments/confirmation", h.GetConfirmation)
 	privateGroup.GET("/appointments/:id", h.GetDetail)
 	privateGroup.PATCH("/appointments/:id/cancel", h.Cancel)
 

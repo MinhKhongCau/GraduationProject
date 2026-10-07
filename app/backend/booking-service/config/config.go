@@ -24,6 +24,9 @@ type Config struct {
 	AuthServiceInternalURL string // http://auth-service:8080
 	InternalClientID       string // "booking-service"
 	InternalClientSecret   string // plain text secret (chỉ trong ENV, không commit)
+
+	// gRPC tới profile-service (truy vấn chuyên gia + hồ sơ người khám khi đặt lịch)
+	ProfileGRPCAddr string // profile-service:9002
 }
 
 var AppConfig *Config
@@ -51,6 +54,8 @@ func LoadConfig() {
 		AuthServiceInternalURL: getEnvOrDefault("AUTH_SERVICE_INTERNAL_URL", "http://auth-service:8080"),
 		InternalClientID:       getEnvOrDefault("INTERNAL_CLIENT_ID", "booking-service"),
 		InternalClientSecret:   getEnvOrDefault("INTERNAL_CLIENT_SECRET", ""),
+
+		ProfileGRPCAddr: getEnvOrDefault("PROFILE_GRPC_ADDR", "profile-service:9002"),
 	}
 }
 

@@ -68,7 +68,13 @@ func main() {
 	slotUsecase := slot.NewUsecase(slotRepo, appointmentRepo)
 	scheduleUsecase := schedule.NewUsecaseWithReconciliation(scheduleRepo, timeoffRepo, config.AppConfig.RollingSlotDays)
 	timeoffUsecase := timeoff.NewUsecase(timeoffRepo, slotRepo, appointmentRepo)
-	appointmentUsecase := appappointment.NewUsecase(appointmentRepo)
+	profileClient, err := client.NewProfileGRPCClient(config.AppConfig.ProfileGRPCAddr)
+	if err != nil {
+		log.Fatalf("Failed to init profile gRPC client: %v", err)
+	}
+	defer profileClient.Close()
+	log.Printf("🛰️  Profile gRPC client target: %s", config.AppConfig.ProfileGRPCAddr)
+	appointmentUsecase := appappointment.NewUsecaseWithProfiles(appointmentRepo, profileClient)
 	generationService := slot.NewGenerationService(slotUsecase, scheduleRepo, timeoffRepo)
 
 	// 3. Khai báo API Endpoints

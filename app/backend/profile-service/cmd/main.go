@@ -7,6 +7,7 @@ import (
 
 	"profile-service/config"
 	"profile-service/internal/application/expertprofile"
+	profilegrpc "profile-service/internal/infrastructure/grpc"
 	"profile-service/internal/infrastructure/http/handlers"
 	"profile-service/internal/infrastructure/http/response"
 	"profile-service/internal/infrastructure/http/routes"
@@ -57,9 +58,24 @@ func main() {
 	expertHandler := handlers.NewExpertHandler(
 		expertprofile.NewReplaceExpertProfile(expertRepo, specRepo, eventPublisher),
 		expertprofile.NewPatchExpertProfile(expertRepo, specRepo, eventPublisher),
+		expertprofile.NewManageExpertSpecializations(expertRepo, specRepo, eventPublisher),
 	)
 
-	routes.SetupRoutes(r, routes.Handlers{Expert: expertHandler})
+	patientRecordRepo := repository.NewPatientRecordRepository(config.DB)
+
+	routes.SetupRoutes(r, routes.Handlers{
+		Expert:        expertHandler,
+		PatientRecord: handlers.NewPatientRecordHandler(patientRecordRepo),
+	})
+
+	// 3c. gRPC nội bộ (booking-service truy vấn thông tin đặt lịch)
+	grpcPort := os.Getenv("GRPC_PORT")
+	if grpcPort == "" {
+		grpcPort = "9002"
+	}
+	if _, err := profilegrpc.Start(":"+grpcPort, profilegrpc.NewProfileQueryServer(config.DB, patientRecordRepo)); err != nil {
+		log.Fatalf("❌ Không thể khởi động gRPC server: %v", err)
+	}
 
 	// Swagger endpoint
 	swaggerHandler := ginSwagger.WrapHandler(swaggerFiles.Handler)

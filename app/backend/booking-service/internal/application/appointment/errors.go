@@ -15,4 +15,5 @@ var (
 	ErrReadRepositoryUnavailable            = errors.New("appointment read repository unavailable")
 	ErrMedicalRecordNotFound                = errors.New("medical record not found")
 	ErrMedicalRecordAppointmentNotConfirmed = errors.New("appointment must be confirmed or completed to add medical record")
+	ErrSlotAlreadyBooked                    = errors.New("slot already has an active appointment")
 )

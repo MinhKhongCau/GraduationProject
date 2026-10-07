@@ -1,6 +1,6 @@
 import { createHttpClient } from "./client";
 
-const baseURL = process.env.REACT_APP_API_URL ?? "https://api.qmcloud.io.vn/api/v1";
+const baseURL = process.env.NEXT_PUBLIC_API_URL ?? "https://api.qmcloud.io.vn/api/v1";
 
 export const authClient = createHttpClient({
   baseURL,
