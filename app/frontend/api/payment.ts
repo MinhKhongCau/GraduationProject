@@ -11,6 +11,7 @@ import type {
   ServiceEnvelope,
   CreateOrderRequest,
   CreateOrderResponse,
+  PaymentReturnResult,
 } from "@/types";
 
 // payment-service is another Go/Gin service like profile-service; assuming
@@ -91,6 +92,19 @@ export async function createOrder(payload: CreateOrderRequest): Promise<CreateOr
   const response = await paymentClient.post<ServiceEnvelope<CreateOrderResponse>>(
     PAYMENT_ENDPOINTS.ORDERS,
     payload
+  );
+  return response.data.data;
+}
+
+/**
+ * Forwards the query string VNPay appended to vnp_ReturnUrl so payment-service can verify the
+ * signature, settle the order and report payment + booking status. The query is passed verbatim
+ * in the URL (not via `params`) because the client's snake_case transform would alter the signed keys.
+ */
+export async function verifyVNPayReturn(rawQuery: string): Promise<PaymentReturnResult> {
+  const query = rawQuery.startsWith("?") ? rawQuery.slice(1) : rawQuery;
+  const response = await paymentClient.get<ServiceEnvelope<PaymentReturnResult>>(
+    `${PAYMENT_ENDPOINTS.VNPAY_RETURN}?${query}`
   );
   return response.data.data;
 }

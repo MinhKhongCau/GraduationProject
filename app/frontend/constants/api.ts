@@ -65,6 +65,8 @@ export const PAYMENT_ENDPOINTS = {
     `/payments/withdrawals/${requestId}/approve`,
   /** Creates a VNPay/MoMo order; when appointmentId is set, server recomputes amount from the real slot price. */
   ORDERS: "/payments/orders",
+  /** Public: verifies the VNPay return query (vnp_SecureHash), settles the order and returns payment + booking status. */
+  VNPAY_RETURN: "/payments/vnpay-return",
 };
 
 export const ASSESSMENT_ENDPOINTS = {

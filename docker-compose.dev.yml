@@ -196,6 +196,8 @@ services:
       - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME:-payment-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
       - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
+      # gRPC nội bộ tới booking-service (gửi kết quả thanh toán + đọc trạng thái lịch hẹn)
+      - BOOKING_GRPC_ADDR=booking-service:${BOOKING_GRPC_PORT:-9003}
       - VNP_TMN_CODE=${VNP_TMN_CODE}
       - VNP_HASH_SECRET=${VNP_HASH_SECRET}
       - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
@@ -228,6 +230,8 @@ services:
         condition: service_healthy
       profile-service:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
     networks:
       - app-network
     environment:
@@ -246,6 +250,13 @@ services:
       - ROLLING_SLOT_DAYS=${ROLLING_SLOT_DAYS:-30}
       # gRPC tới profile-service (trang xác nhận + tạo cuộc hẹn)
       - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
+      # gRPC nội bộ cho payment-service (không publish ra host, không qua Kong)
+      - GRPC_PORT=${BOOKING_GRPC_PORT:-9003}
+      # Consume event payment.succeeded / payment.failed (queue booking.queue)
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:

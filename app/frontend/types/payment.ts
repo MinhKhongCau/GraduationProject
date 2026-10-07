@@ -79,6 +79,27 @@ export interface CreateOrderRequest {
   appointmentId?: string;
 }
 
+export type PaymentReturnBookingStatus =
+  | "PENDING_PAYMENT"
+  | "CONFIRMED"
+  | "CANCELLED"
+  | "COMPLETED"
+  | "UNKNOWN";
+
+/** Result of GET /payments/vnpay-return (payment-service). */
+export interface PaymentReturnResult {
+  orderId: string;
+  appointmentId?: string;
+  paymentStatus: OrderStatus;
+  /** Present only when the order belongs to an appointment. */
+  bookingStatus?: PaymentReturnBookingStatus;
+  amountVnd: number;
+  /** Raw vnp_ResponseCode ("00" = success, "24" = cancelled by user, ...). */
+  responseCode: string;
+  gatewayTxnRef?: string;
+  paidAt?: number;
+}
+
 export interface CreateOrderResponse {
   orderId: string;
   grossAmount: number;
