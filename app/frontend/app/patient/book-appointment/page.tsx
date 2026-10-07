@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { SpecializationStep } from "./component/SpecializationStep";
-import { ExpertStep } from "./component/ExpertStep";
-import { SlotStep } from "./component/SlotStep";
-import { PatientProfileStep } from "./component/PatientProfileStep";
+import { ScheduleStep } from "./component/ScheduleStep";
 import { ConfirmStep } from "./component/ConfirmStep";
 import { PaymentStep } from "./component/PaymentStep";
 import { useApiQuery, useApiMutation, usePaymentRedirect } from "@/hooks";
@@ -21,13 +18,13 @@ import type {
   Specialization,
 } from "@/types";
 
-type WizardStep = "specialization" | "expert" | "slot" | "profile" | "confirm" | "payment";
+type WizardStep = "schedule" | "confirm" | "payment";
 
 export default function BookAppointmentPage() {
   const searchParams = useSearchParams();
   const preselectedExpertId = searchParams.get("expertId");
 
-  const [step, setStep] = useState<WizardStep>(preselectedExpertId ? "slot" : "specialization");
+  const [step, setStep] = useState<WizardStep>("schedule");
   const [selectedSpecialization, setSelectedSpecialization] = useState<Specialization | null>(null);
   const [selectedExpert, setSelectedExpert] = useState<ExpertProfile | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -53,7 +50,7 @@ export default function BookAppointmentPage() {
   /** The slot hold was lost (expired or taken): drop the slot and let the patient pick again. */
   function backToSlotSelection() {
     setSelectedSlot(null);
-    setStep("slot");
+    setStep("schedule");
   }
 
   const lockMutation = useApiMutation({
@@ -102,8 +99,10 @@ export default function BookAppointmentPage() {
     },
   });
 
-  function selectSpecialization(specialization: Specialization) {
-    if (specialization.specId !== selectedSpecialization?.specId) {
+  function selectSpecialization(specialization: Specialization | null) {
+    const expertStillMatches =
+      !specialization || selectedExpert?.specializations.some((spec) => spec.specId === specialization.specId);
+    if (!expertStillMatches) {
       // Experts are filtered by specialization, so a previous pick may no longer apply.
       setSelectedExpert(null);
       setSelectedDate(null);
@@ -127,38 +126,19 @@ export default function BookAppointmentPage() {
 
   return (
     <div className="mx-auto flex h-full max-w-5xl flex-col">
-      {step === "specialization" && (
-        <SpecializationStep
+      {step === "schedule" && (
+        <ScheduleStep
+          isExpertPreselected={!!preselectedExpertId}
           selectedSpecialization={selectedSpecialization}
           onSelectSpecialization={selectSpecialization}
-          onNext={() => setStep("expert")}
-        />
-      )}
-      {step === "expert" && (
-        <ExpertStep
-          specializationId={selectedSpecialization?.specId}
           selectedExpert={selectedExpert}
           onSelectExpert={selectExpert}
-          onBack={() => setStep("specialization")}
-          onNext={() => setStep("slot")}
-        />
-      )}
-      {step === "slot" && selectedExpert && (
-        <SlotStep
-          expertId={selectedExpert.accountId}
           selectedDate={selectedDate}
           onSelectDate={selectDate}
           selectedSlot={selectedSlot}
           onSelectSlot={setSelectedSlot}
-          onBack={() => setStep("expert")}
-          onNext={() => setStep("profile")}
-        />
-      )}
-      {step === "profile" && (
-        <PatientProfileStep
           selectedRecord={selectedRecord}
           onSelectRecord={setSelectedRecord}
-          onBack={() => setStep("slot")}
           onNext={() => lockMutation.mutate()}
           isSubmitting={lockMutation.isPending}
         />
@@ -171,7 +151,7 @@ export default function BookAppointmentPage() {
             patientRecordId: selectedRecord.recordId,
             specializationId: selectedSpecialization?.specId,
           }}
-          onBack={() => setStep("profile")}
+          onBack={() => setStep("schedule")}
           onPickAnotherSlot={backToSlotSelection}
           onConfirm={() => bookMutation.mutate()}
           isSubmitting={bookMutation.isPending}

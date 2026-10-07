@@ -9,7 +9,7 @@ import { bookingApi } from "@/api";
 import { normalizeError } from "@/api/http/errorNormalizer";
 import { QUERY_KEYS } from "@/constants";
 import type { BookingConfirmationParams, PatientRecordRelationship } from "@/types";
-import { RELATIONSHIP_LABELS } from "./PatientProfileStep";
+import { RELATIONSHIP_LABELS } from "./PatientProfileSection";
 
 export interface ConfirmStepProps {
   params: BookingConfirmationParams;
