@@ -33,6 +33,7 @@ type Config struct {
 
 	// ─── URLs của các service khác (internal Docker network) ─────────────────
 	BookingServiceInternalURL string // http://booking-service:8083
+	BookingGRPCAddr           string // booking-service:9003
 
 	PaymentOrderTTL        time.Duration
 	PaymentMinUsableWindow time.Duration
@@ -90,6 +91,7 @@ func LoadConfig() {
 
 		// URLs service khác
 		BookingServiceInternalURL: getEnvOrDefault("BOOKING_SERVICE_INTERNAL_URL", "http://booking-service:8083"),
+		BookingGRPCAddr:           getEnvOrDefault("BOOKING_GRPC_ADDR", "booking-service:9003"),
 		PaymentOrderTTL:           paymentOrderTTL,
 		PaymentMinUsableWindow:    paymentMinUsableWindow,
 		OutboxPollInterval:        outboxConfig.PollInterval,

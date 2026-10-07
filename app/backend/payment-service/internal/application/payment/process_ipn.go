@@ -181,6 +181,9 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 					return err
 				}
 			}
+			if err := savePaymentStatusEvent(ctx, tx, order, paymentdomain.PaymentSucceededEvent); err != nil {
+				return err
+			}
 
 		} else {
 			order.Status = paymentdomain.OrderStatusFailed
@@ -203,6 +206,9 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 				if err := tx.SaveOutboxEvent(ctx, bookingOutbox); err != nil {
 					return err
 				}
+			}
+			if err := savePaymentStatusEvent(ctx, tx, order, paymentdomain.PaymentFailedEvent); err != nil {
+				return err
 			}
 		}
 
@@ -312,6 +318,22 @@ func recordDuplicateCapture(ctx context.Context, tx Tx, order *paymentdomain.Pay
 		UpdatedAt:                caseTimestamp,
 	}
 	return tx.SaveCompensationCase(ctx, compensationCase)
+}
+
+// savePaymentStatusEvent lưu event fact payment.succeeded / payment.failed vào outbox
+// (cùng transaction với cập nhật order) để publisher đẩy lên RabbitMQ.
+func savePaymentStatusEvent(ctx context.Context, tx Tx, order *paymentdomain.PaymentOrder, eventType string) error {
+	payload, err := paymentdomain.PaymentStatusOutboxPayload(order)
+	if err != nil {
+		return fmt.Errorf("encode payment status event: %w", err)
+	}
+	return tx.SaveOutboxEvent(ctx, &paymentdomain.OutboxEvent{
+		AggregateType: "PAYMENT_ORDER",
+		AggregateID:   order.ID,
+		EventType:     eventType,
+		Payload:       payload,
+		Published:     false,
+	})
 }
 
 func applyGatewayEvidence(order *paymentdomain.PaymentOrder, evidence gatewayIPNEvidence) {

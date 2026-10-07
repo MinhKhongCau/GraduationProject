@@ -127,3 +127,20 @@ func verifyInternalToken(tokenString string) (*InternalClaims, error) {
 
 	return claims, nil
 }
+
+// VerifyInternalBearer verify header "Bearer <internal JWT>" (dùng chung cho gRPC interceptor)
+// và trả về client_id của service gọi.
+func VerifyInternalBearer(header string) (string, error) {
+	if !strings.HasPrefix(strings.ToLower(header), "bearer ") {
+		return "", fmt.Errorf("authorization must use Bearer scheme")
+	}
+	token := strings.TrimSpace(header[7:])
+	if token == "" {
+		return "", fmt.Errorf("Bearer token is empty")
+	}
+	claims, err := verifyInternalToken(token)
+	if err != nil {
+		return "", err
+	}
+	return claims.ClientID, nil
+}

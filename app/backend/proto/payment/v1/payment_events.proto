@@ -1,0 +1,44 @@
+// Schema event RabbitMQ do payment-service phát lên exchange "payment.events".
+// Routing key: payment.succeeded | payment.failed
+//
+// Body được serialize bằng protojson nên key JSON theo lowerCamelCase, khớp envelope
+// trong RABBITMQ_CONVENTION.md: { eventId, eventType, occurredAt, source, data }.
+//
+// Sinh code: chạy scripts/gen-proto.sh ở thư mục gốc repo.
+syntax = "proto3";
+
+package mindcare.payment.v1;
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_SUCCESS = 1;
+  PAYMENT_STATUS_FAILED = 2;
+}
+
+message PaymentStatusChangedEvent {
+  // Ổn định qua các lần retry (= id outbox event) để consumer xử lý idempotent.
+  string event_id = 1;
+  // payment.succeeded | payment.failed
+  string event_type = 2;
+  // RFC3339 UTC
+  string occurred_at = 3;
+  // payment-service
+  string source = 4;
+  PaymentStatusChanged data = 5;
+}
+
+message PaymentStatusChanged {
+  string order_id = 1;
+  // Rỗng khi order không gắn lịch hẹn (VD: nạp ví).
+  string appointment_id = 2;
+  string payer_id = 3;
+  string expert_id = 4;
+  int64 amount_vnd = 5;
+  PaymentStatus status = 6;
+  // VNPAY | MOMO | MOCK
+  string gateway = 7;
+  string gateway_txn_ref = 8;
+  string gateway_response_code = 9;
+  // Unix millis, 0 khi thanh toán thất bại.
+  int64 paid_at = 10;
+}

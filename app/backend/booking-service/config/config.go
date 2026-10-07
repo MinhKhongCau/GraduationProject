@@ -27,6 +27,15 @@ type Config struct {
 
 	// gRPC tới profile-service (truy vấn chuyên gia + hồ sơ người khám khi đặt lịch)
 	ProfileGRPCAddr string // profile-service:9002
+
+	// gRPC server cho payment-service gửi kết quả thanh toán (BookingPaymentService)
+	GRPCPort string // 9003
+
+	// RabbitMQ: consume event payment.succeeded / payment.failed
+	RabbitMQHost string
+	RabbitMQPort string
+	RabbitMQUser string
+	RabbitMQPass string
 }
 
 var AppConfig *Config
@@ -56,6 +65,12 @@ func LoadConfig() {
 		InternalClientSecret:   getEnvOrDefault("INTERNAL_CLIENT_SECRET", ""),
 
 		ProfileGRPCAddr: getEnvOrDefault("PROFILE_GRPC_ADDR", "profile-service:9002"),
+		GRPCPort:        getEnvOrDefault("GRPC_PORT", "9003"),
+
+		RabbitMQHost: getEnvOrDefault("RABBITMQ_HOST", "localhost"),
+		RabbitMQPort: getEnvOrDefault("RABBITMQ_PORT", "5672"),
+		RabbitMQUser: getEnvOrDefault("RABBITMQ_DEFAULT_USER", "admin"),
+		RabbitMQPass: getEnvOrDefault("RABBITMQ_DEFAULT_PASS", "admin123"),
 	}
 }
 

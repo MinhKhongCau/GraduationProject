@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -687,6 +688,7 @@ type fakePaymentRepo struct {
 	order              paymentdomain.PaymentOrder
 	createCount        int
 	outboxEvents       []paymentdomain.OutboxEvent
+	paymentEvents      []paymentdomain.OutboxEvent
 	compensationCases  []paymentdomain.PaymentCompensationCase
 	successTransitions int
 	gatewayLookupErr   error
@@ -823,8 +825,18 @@ func (r *fakePaymentRepo) updateOrder(order *paymentdomain.PaymentOrder) error {
 func (r *fakePaymentRepo) SaveOutboxEvent(ctx context.Context, event *paymentdomain.OutboxEvent) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if isPaymentStatusEvent(event) {
+		r.paymentEvents = append(r.paymentEvents, *event)
+		return nil
+	}
 	r.outboxEvents = append(r.outboxEvents, *event)
 	return nil
+}
+
+// isPaymentStatusEvent tách event fact payment.* (RabbitMQ) khỏi event booking để các test
+// đếm outboxEvents vẫn chỉ đếm event gửi sang booking-service.
+func isPaymentStatusEvent(event *paymentdomain.OutboxEvent) bool {
+	return event.EventType == paymentdomain.PaymentSucceededEvent || event.EventType == paymentdomain.PaymentFailedEvent
 }
 
 func (r *fakePaymentRepo) SaveCompensationCase(ctx context.Context, compensationCase *paymentdomain.PaymentCompensationCase) error {
@@ -853,6 +865,7 @@ func (r *fakePaymentRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) er
 	orderSnapshot := r.order
 	createCountSnapshot := r.createCount
 	outboxSnapshot := append([]paymentdomain.OutboxEvent(nil), r.outboxEvents...)
+	paymentEventsSnapshot := append([]paymentdomain.OutboxEvent(nil), r.paymentEvents...)
 	compensationSnapshot := append([]paymentdomain.PaymentCompensationCase(nil), r.compensationCases...)
 	successTransitionsSnapshot := r.successTransitions
 	for _, participant := range r.participants {
@@ -867,6 +880,7 @@ func (r *fakePaymentRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) er
 		r.order = orderSnapshot
 		r.createCount = createCountSnapshot
 		r.outboxEvents = outboxSnapshot
+		r.paymentEvents = paymentEventsSnapshot
 		r.compensationCases = compensationSnapshot
 		r.successTransitions = successTransitionsSnapshot
 		for _, participant := range r.participants {
@@ -1067,6 +1081,7 @@ func assertOnlyBookingConfirmOutbox(t *testing.T, repo *fakePaymentRepo) {
 	if repo.outboxEvents[0].EventType != "booking.appointment.confirm" {
 		t.Fatalf("expected booking.appointment.confirm outbox event, got %q", repo.outboxEvents[0].EventType)
 	}
+	assertSinglePaymentStatusEvent(t, repo, paymentdomain.PaymentSucceededEvent, "SUCCESS")
 	for _, event := range repo.outboxEvents {
 		if event.EventType == "wallet.payment.received" {
 			t.Fatal("did not expect wallet.payment.received outbox event")
@@ -1082,6 +1097,26 @@ func assertOnlyBookingFailOutbox(t *testing.T, repo *fakePaymentRepo) {
 	}
 	if repo.outboxEvents[0].EventType != "booking.appointment.fail" {
 		t.Fatalf("expected booking.appointment.fail outbox event, got %q", repo.outboxEvents[0].EventType)
+	}
+	assertSinglePaymentStatusEvent(t, repo, paymentdomain.PaymentFailedEvent, "FAILED")
+}
+
+func assertSinglePaymentStatusEvent(t *testing.T, repo *fakePaymentRepo, eventType, status string) {
+	t.Helper()
+
+	if len(repo.paymentEvents) != 1 {
+		t.Fatalf("expected exactly one payment status event, got %d", len(repo.paymentEvents))
+	}
+	event := repo.paymentEvents[0]
+	if event.EventType != eventType || event.AggregateID != repo.order.ID {
+		t.Fatalf("unexpected payment status event: type=%q aggregate=%s", event.EventType, event.AggregateID)
+	}
+	var payload paymentdomain.PaymentStatusPayload
+	if err := json.Unmarshal([]byte(event.Payload), &payload); err != nil {
+		t.Fatalf("payment status payload is not JSON: %v", err)
+	}
+	if payload.OrderID != repo.order.ID.String() || payload.Status != status || payload.AmountVND != repo.order.GrossAmount.Int64() {
+		t.Fatalf("unexpected payment status payload: %+v", payload)
 	}
 }
 
