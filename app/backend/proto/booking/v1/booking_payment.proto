@@ -1,0 +1,61 @@
+// Hợp đồng gRPC nội bộ giữa payment-service (client) và booking-service (server).
+// Chỉ dùng trong mạng Docker nội bộ, KHÔNG public qua API Gateway.
+// Mọi lời gọi phải gắn metadata "authorization: Bearer <internal JWT>" do auth-service ký,
+// booking-service chỉ chấp nhận client_id = payment-service.
+//
+// Sinh code: chạy scripts/gen-proto.sh ở thư mục gốc repo.
+syntax = "proto3";
+
+package mindcare.booking.v1;
+
+service BookingPaymentService {
+  // ApplyPaymentResult cập nhật lịch hẹn theo kết quả thanh toán (idempotent):
+  //   SUCCESS: PENDING_PAYMENT -> CONFIRMED, slot LOCKED -> OCCUPIED
+  //   FAILED:  PENDING_PAYMENT -> CANCELLED, slot LOCKED -> AVAILABLE
+  // Gọi lại với cùng kết quả khi lịch hẹn đã ở trạng thái đích trả về OK.
+  //
+  // Lỗi:
+  //   INVALID_ARGUMENT    - appointment_id không hợp lệ hoặc result UNSPECIFIED
+  //   NOT_FOUND           - không có lịch hẹn
+  //   FAILED_PRECONDITION - trạng thái lịch hẹn/slot không cho phép chuyển (VD: đã huỷ mà thanh toán thành công)
+  //   UNAUTHENTICATED / PERMISSION_DENIED - thiếu hoặc sai internal JWT
+  rpc ApplyPaymentResult(ApplyPaymentResultRequest) returns (ApplyPaymentResultResponse);
+
+  // GetAppointmentStatus trả về trạng thái hiện tại của lịch hẹn (dùng cho trang kết quả thanh toán).
+  rpc GetAppointmentStatus(GetAppointmentStatusRequest) returns (GetAppointmentStatusResponse);
+}
+
+enum PaymentResult {
+  PAYMENT_RESULT_UNSPECIFIED = 0;
+  PAYMENT_RESULT_SUCCESS = 1;
+  PAYMENT_RESULT_FAILED = 2;
+}
+
+enum AppointmentStatus {
+  APPOINTMENT_STATUS_UNSPECIFIED = 0;
+  APPOINTMENT_STATUS_PENDING_PAYMENT = 1;
+  APPOINTMENT_STATUS_CONFIRMED = 2;
+  APPOINTMENT_STATUS_CANCELLED = 3;
+  APPOINTMENT_STATUS_COMPLETED = 4;
+}
+
+message ApplyPaymentResultRequest {
+  string appointment_id = 1;
+  // Id payment order (payment_orders.id), dùng để log/truy vết.
+  string order_id = 2;
+  PaymentResult result = 3;
+}
+
+message ApplyPaymentResultResponse {
+  string appointment_id = 1;
+  AppointmentStatus status = 2;
+}
+
+message GetAppointmentStatusRequest {
+  string appointment_id = 1;
+}
+
+message GetAppointmentStatusResponse {
+  string appointment_id = 1;
+  AppointmentStatus status = 2;
+}

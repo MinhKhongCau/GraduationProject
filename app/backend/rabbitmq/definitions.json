@@ -2,13 +2,17 @@
   "rabbit_version": "3.13.0",
   "rabbitmq_version": "3.13.0",
   "vhosts": [
-    { "name": "/" }
+    {
+      "name": "/"
+    }
   ],
   "users": [
     {
       "name": "admin",
       "password": "admin123",
-      "tags": ["administrator"]
+      "tags": [
+        "administrator"
+      ]
     }
   ],
   "permissions": [
@@ -63,6 +67,20 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {}
+    },
+    {
+      "name": "booking.queue",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "booking.queue.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
     }
   ],
   "bindings": [
@@ -72,6 +90,22 @@
       "destination": "profile.queue",
       "destination_type": "queue",
       "routing_key": "user.created",
+      "arguments": {}
+    },
+    {
+      "source": "payment.events",
+      "vhost": "/",
+      "destination": "booking.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.succeeded",
+      "arguments": {}
+    },
+    {
+      "source": "payment.events",
+      "vhost": "/",
+      "destination": "booking.queue",
+      "destination_type": "queue",
+      "routing_key": "payment.failed",
       "arguments": {}
     }
   ]
