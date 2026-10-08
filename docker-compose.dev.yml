@@ -198,6 +198,8 @@ services:
       - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
       # gRPC nội bộ tới booking-service (gửi kết quả thanh toán + đọc trạng thái lịch hẹn)
       - BOOKING_GRPC_ADDR=booking-service:${BOOKING_GRPC_PORT:-9003}
+      # gRPC nội bộ tới profile-service (danh sách chuyên gia Admin quản lý)
+      - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
       - VNP_TMN_CODE=${VNP_TMN_CODE}
       - VNP_HASH_SECRET=${VNP_HASH_SECRET}
       - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}

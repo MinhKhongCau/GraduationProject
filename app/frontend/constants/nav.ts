@@ -16,6 +16,7 @@ import {
   PenSquare,
   GraduationCap,
   ListChecks,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 import { ROUTES } from "./route";
@@ -107,8 +108,8 @@ export const EXPERT_NAV_ITEMS: NavItem[] = [
     descriptionKey: "nav.desc.clinicalRecords", description: "Session notes and medical records.",
   },
   {
-    id: "wallet", labelKey: "nav.wallet", label: "Wallet", href: ROUTES.EXPERT.WALLET, icon: Wallet, comingSoon: true,
-    descriptionKey: "nav.desc.expertWallet", description: "Earnings and withdrawal requests.",
+    id: "wallet", labelKey: "nav.wallet", label: "Wallet", href: ROUTES.EXPERT.WALLET, icon: Wallet,
+    descriptionKey: "nav.desc.expertWallet", description: "Earnings, commission and net amount.",
   },
   { id: "messages", labelKey: "nav.messages", label: "Messages", href: ROUTES.EXPERT.MESSAGES, icon: MessageSquare },
   {
@@ -146,6 +147,10 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
     descriptionKey: "nav.desc.schedules", description: "Shift templates and expert availability.",
   },
   {
+    id: "transactions", labelKey: "nav.transactions", label: "Transactions", href: ROUTES.ADMIN.TRANSACTIONS, icon: Receipt,
+    descriptionKey: "nav.desc.transactions", description: "Payments of the experts you approved.",
+  },
+  {
     id: "withdrawals", labelKey: "nav.withdrawals", label: "Withdrawals", href: ROUTES.ADMIN.WITHDRAWALS, icon: Wallet, comingSoon: true,
     descriptionKey: "nav.desc.withdrawals", description: "Review and process payout requests.",
   },
@@ -177,7 +182,7 @@ export const ADMIN_DASHBOARD_FEATURES: FeatureGroup[] = [
   },
   {
     id: "operations", labelKey: "nav.group.operations", label: "Operations",
-    items: pick(ADMIN_NAV_ITEMS, ["appointments", "schedules", "specializations", "withdrawals"]),
+    items: pick(ADMIN_NAV_ITEMS, ["transactions", "appointments", "schedules", "specializations", "withdrawals"]),
   },
 ];
 

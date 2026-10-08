@@ -1,4 +1,4 @@
-// Hợp đồng gRPC nội bộ giữa booking-service (client) và profile-service (server).
+// Hợp đồng gRPC nội bộ giữa booking-service, payment-service (client) và profile-service (server).
 // Chỉ dùng trong mạng Docker nội bộ, KHÔNG public qua API Gateway.
 //
 // Sinh code: chạy scripts/gen-proto.sh ở thư mục gốc repo. Code sinh ra được commit vào
@@ -17,6 +17,23 @@ service ProfileQueryService {
   //   NOT_FOUND           - không có chuyên gia, hoặc hồ sơ không tồn tại/không thuộc owner_id
   //   FAILED_PRECONDITION - chuyên gia không phụ trách chuyên khoa specialization_id
   rpc GetBookingInfo(GetBookingInfoRequest) returns (GetBookingInfoResponse);
+
+  // ListManagedExpertIds trả về auth account id của các chuyên gia do admin_id quản lý
+  // (Admin đã duyệt VERIFIED chuyên gia đó). payment-service dùng để giới hạn phạm vi
+  // giao dịch Admin được xem/xử lý.
+  //
+  // Lỗi:
+  //   INVALID_ARGUMENT - admin_id không phải UUID hợp lệ
+  rpc ListManagedExpertIds(ListManagedExpertIdsRequest) returns (ListManagedExpertIdsResponse);
+}
+
+message ListManagedExpertIdsRequest {
+  // Auth account id của Admin.
+  string admin_id = 1;
+}
+
+message ListManagedExpertIdsResponse {
+  repeated string expert_ids = 1;
 }
 
 message GetBookingInfoRequest {

@@ -114,6 +114,8 @@ services:
       - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
       # gRPC nội bộ tới booking-service (gửi kết quả thanh toán + đọc trạng thái lịch hẹn)
       - BOOKING_GRPC_ADDR=booking-service:${BOOKING_GRPC_PORT:-9003}
+      # gRPC nội bộ tới profile-service (danh sách chuyên gia Admin quản lý)
+      - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
       - PAYMENT_ORDER_TTL_MINUTES=${PAYMENT_ORDER_TTL_MINUTES:-15}
       - PAYMENT_MIN_USABLE_WINDOW_SECONDS=${PAYMENT_MIN_USABLE_WINDOW_SECONDS:-60}
       - OUTBOX_POLL_INTERVAL_SECONDS=${OUTBOX_POLL_INTERVAL_SECONDS:-5}

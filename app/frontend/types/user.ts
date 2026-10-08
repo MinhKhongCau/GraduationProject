@@ -51,6 +51,8 @@ export interface ExpertProfile {
   introductionVideoUrl?: string;
   bio?: string;
   verificationStatus: ExpertVerificationStatus;
+  /** Admin who approved this expert and manages their transactions (admin views only). */
+  managedByAdminId?: string;
   specializations: Specialization[];
 }
 
