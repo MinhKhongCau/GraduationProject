@@ -52,7 +52,7 @@ func appointmentQuery(c *gin.Context, actorID, actorRole string) (appointment.Ap
 }
 
 // GetDetail handles GET /api/v1/booking/appointments/:id.
-// @Summary [PATIENT/EXPERT/ADMIN] Get appointment detail
+// @Summary [PATIENT/EXPERT/ADMIN] Get appointment detail with expert and patient profiles (admin: managed experts only)
 // @Tags Appointments
 // @Produce json
 // @Security BearerAuth
@@ -67,17 +67,69 @@ func (h *Handler) GetDetail(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve appointment", "appointment reader unavailable")
 		return
 	}
-	result, err := h.reader.GetAppointmentDetail(c.GetHeader("X-User-Id"), c.GetHeader("X-User-Role"), c.Param("id"))
+	result, err := h.reader.GetAppointmentDetail(c.Request.Context(), c.GetHeader("X-User-Id"), c.GetHeader("X-User-Role"), c.Param("id"))
 	if err != nil {
-		switch {
-		case errors.Is(err, appointment.ErrUnauthorized):
-			response.Error(c, http.StatusForbidden, "Appointment access denied", err.Error())
-		case errors.Is(err, appointment.ErrNotFound):
-			response.Error(c, http.StatusNotFound, "Appointment not found", err.Error())
-		default:
-			response.Error(c, http.StatusInternalServerError, "Failed to retrieve appointment", err.Error())
-		}
+		writeAppointmentReadError(c, err, "Failed to retrieve appointment")
 		return
 	}
 	response.Success(c, "Get appointment successfully", result)
+}
+
+// GetAdmin handles GET /api/v1/booking/appointments/admin.
+// @Summary [ADMIN] List appointments of experts I manage (approved by me)
+// @Tags Appointments
+// @Produce json
+// @Security BearerAuth
+// @Param from query string false "Start date YYYY-MM-DD (slot start time)"
+// @Param to query string false "End date YYYY-MM-DD"
+// @Param status query string false "PENDING_PAYMENT, CONFIRMED, CANCELLED, COMPLETED"
+// @Param expert_id query string false "Expert auth ID (must be managed by me)"
+// @Param patient_id query string false "Patient auth ID"
+// @Param page query int false "Zero-based page"
+// @Param size query int false "Page size, 1-100"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 503 {object} map[string]interface{}
+// @Router /booking/appointments/admin [get]
+func (h *Handler) GetAdmin(c *gin.Context) {
+	if c.GetHeader("X-User-Role") != "ADMIN" {
+		response.Error(c, http.StatusForbidden, "Only administrators can access this endpoint", "Forbidden")
+		return
+	}
+	adminID := c.GetHeader("X-User-Id")
+	if adminID == "" {
+		response.Error(c, http.StatusUnauthorized, "User identity could not be determined", "Missing X-User-Id header")
+		return
+	}
+	filter, err := appointmentQuery(c, adminID, "ADMIN")
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, "Invalid appointment filter", err.Error())
+		return
+	}
+	filter.ExpertID = c.Query("expert_id")
+	filter.PatientID = c.Query("patient_id")
+	if h.reader == nil {
+		response.Error(c, http.StatusInternalServerError, "Failed to retrieve appointments", "appointment reader unavailable")
+		return
+	}
+	page, err := h.reader.ListAdminAppointments(c.Request.Context(), filter)
+	if err != nil {
+		writeAppointmentReadError(c, err, "Failed to retrieve appointments")
+		return
+	}
+	response.Success(c, "Get appointments successfully", appointmentPageData(page))
+}
+
+func writeAppointmentReadError(c *gin.Context, err error, fallback string) {
+	switch {
+	case errors.Is(err, appointment.ErrUnauthorized):
+		response.Error(c, http.StatusForbidden, "Appointment access denied", err.Error())
+	case errors.Is(err, appointment.ErrNotFound):
+		response.Error(c, http.StatusNotFound, "Appointment not found", err.Error())
+	case errors.Is(err, appointment.ErrProfileServiceUnavailable):
+		response.Error(c, http.StatusServiceUnavailable, "Cannot determine managed experts right now", err.Error())
+	default:
+		response.Error(c, http.StatusInternalServerError, fallback, err.Error())
+	}
 }

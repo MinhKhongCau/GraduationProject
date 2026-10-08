@@ -341,6 +341,205 @@ func (x *GetAppointmentStatusResponse) GetStatus() AppointmentStatus {
 	return AppointmentStatus_APPOINTMENT_STATUS_UNSPECIFIED
 }
 
+type GetAppointmentSummariesRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AppointmentIds []string               `protobuf:"bytes,1,rep,name=appointment_ids,json=appointmentIds,proto3" json:"appointment_ids,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *GetAppointmentSummariesRequest) Reset() {
+	*x = GetAppointmentSummariesRequest{}
+	mi := &file_booking_v1_booking_payment_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAppointmentSummariesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAppointmentSummariesRequest) ProtoMessage() {}
+
+func (x *GetAppointmentSummariesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_booking_v1_booking_payment_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAppointmentSummariesRequest.ProtoReflect.Descriptor instead.
+func (*GetAppointmentSummariesRequest) Descriptor() ([]byte, []int) {
+	return file_booking_v1_booking_payment_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetAppointmentSummariesRequest) GetAppointmentIds() []string {
+	if x != nil {
+		return x.AppointmentIds
+	}
+	return nil
+}
+
+type GetAppointmentSummariesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Appointments  []*AppointmentSummary  `protobuf:"bytes,1,rep,name=appointments,proto3" json:"appointments,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAppointmentSummariesResponse) Reset() {
+	*x = GetAppointmentSummariesResponse{}
+	mi := &file_booking_v1_booking_payment_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAppointmentSummariesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAppointmentSummariesResponse) ProtoMessage() {}
+
+func (x *GetAppointmentSummariesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_booking_v1_booking_payment_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAppointmentSummariesResponse.ProtoReflect.Descriptor instead.
+func (*GetAppointmentSummariesResponse) Descriptor() ([]byte, []int) {
+	return file_booking_v1_booking_payment_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetAppointmentSummariesResponse) GetAppointments() []*AppointmentSummary {
+	if x != nil {
+		return x.Appointments
+	}
+	return nil
+}
+
+type AppointmentSummary struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AppointmentId string                 `protobuf:"bytes,1,opt,name=appointment_id,json=appointmentId,proto3" json:"appointment_id,omitempty"`
+	// Auth account id của bệnh nhân đặt lịch và chuyên gia.
+	PatientId string            `protobuf:"bytes,2,opt,name=patient_id,json=patientId,proto3" json:"patient_id,omitempty"`
+	ExpertId  string            `protobuf:"bytes,3,opt,name=expert_id,json=expertId,proto3" json:"expert_id,omitempty"`
+	Status    AppointmentStatus `protobuf:"varint,4,opt,name=status,proto3,enum=mindcare.booking.v1.AppointmentStatus" json:"status,omitempty"`
+	// Giờ khám (Unix ms) và giá slot (VND).
+	StartTime          int64  `protobuf:"varint,5,opt,name=start_time,json=startTime,proto3" json:"start_time,omitempty"`
+	EndTime            int64  `protobuf:"varint,6,opt,name=end_time,json=endTime,proto3" json:"end_time,omitempty"`
+	PriceVnd           int64  `protobuf:"varint,7,opt,name=price_vnd,json=priceVnd,proto3" json:"price_vnd,omitempty"`
+	SpecializationName string `protobuf:"bytes,8,opt,name=specialization_name,json=specializationName,proto3" json:"specialization_name,omitempty"`
+	// Tên người khám (hồ sơ người khám lúc đặt lịch, có thể khác chủ tài khoản).
+	PatientFullName string `protobuf:"bytes,9,opt,name=patient_full_name,json=patientFullName,proto3" json:"patient_full_name,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AppointmentSummary) Reset() {
+	*x = AppointmentSummary{}
+	mi := &file_booking_v1_booking_payment_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AppointmentSummary) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AppointmentSummary) ProtoMessage() {}
+
+func (x *AppointmentSummary) ProtoReflect() protoreflect.Message {
+	mi := &file_booking_v1_booking_payment_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AppointmentSummary.ProtoReflect.Descriptor instead.
+func (*AppointmentSummary) Descriptor() ([]byte, []int) {
+	return file_booking_v1_booking_payment_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AppointmentSummary) GetAppointmentId() string {
+	if x != nil {
+		return x.AppointmentId
+	}
+	return ""
+}
+
+func (x *AppointmentSummary) GetPatientId() string {
+	if x != nil {
+		return x.PatientId
+	}
+	return ""
+}
+
+func (x *AppointmentSummary) GetExpertId() string {
+	if x != nil {
+		return x.ExpertId
+	}
+	return ""
+}
+
+func (x *AppointmentSummary) GetStatus() AppointmentStatus {
+	if x != nil {
+		return x.Status
+	}
+	return AppointmentStatus_APPOINTMENT_STATUS_UNSPECIFIED
+}
+
+func (x *AppointmentSummary) GetStartTime() int64 {
+	if x != nil {
+		return x.StartTime
+	}
+	return 0
+}
+
+func (x *AppointmentSummary) GetEndTime() int64 {
+	if x != nil {
+		return x.EndTime
+	}
+	return 0
+}
+
+func (x *AppointmentSummary) GetPriceVnd() int64 {
+	if x != nil {
+		return x.PriceVnd
+	}
+	return 0
+}
+
+func (x *AppointmentSummary) GetSpecializationName() string {
+	if x != nil {
+		return x.SpecializationName
+	}
+	return ""
+}
+
+func (x *AppointmentSummary) GetPatientFullName() string {
+	if x != nil {
+		return x.PatientFullName
+	}
+	return ""
+}
+
 var File_booking_v1_booking_payment_proto protoreflect.FileDescriptor
 
 const file_booking_v1_booking_payment_proto_rawDesc = "" +
@@ -357,7 +556,23 @@ const file_booking_v1_booking_payment_proto_rawDesc = "" +
 	"\x0eappointment_id\x18\x01 \x01(\tR\rappointmentId\"\x85\x01\n" +
 	"\x1cGetAppointmentStatusResponse\x12%\n" +
 	"\x0eappointment_id\x18\x01 \x01(\tR\rappointmentId\x12>\n" +
-	"\x06status\x18\x02 \x01(\x0e2&.mindcare.booking.v1.AppointmentStatusR\x06status*f\n" +
+	"\x06status\x18\x02 \x01(\x0e2&.mindcare.booking.v1.AppointmentStatusR\x06status\"I\n" +
+	"\x1eGetAppointmentSummariesRequest\x12'\n" +
+	"\x0fappointment_ids\x18\x01 \x03(\tR\x0eappointmentIds\"n\n" +
+	"\x1fGetAppointmentSummariesResponse\x12K\n" +
+	"\fappointments\x18\x01 \x03(\v2'.mindcare.booking.v1.AppointmentSummaryR\fappointments\"\xeb\x02\n" +
+	"\x12AppointmentSummary\x12%\n" +
+	"\x0eappointment_id\x18\x01 \x01(\tR\rappointmentId\x12\x1d\n" +
+	"\n" +
+	"patient_id\x18\x02 \x01(\tR\tpatientId\x12\x1b\n" +
+	"\texpert_id\x18\x03 \x01(\tR\bexpertId\x12>\n" +
+	"\x06status\x18\x04 \x01(\x0e2&.mindcare.booking.v1.AppointmentStatusR\x06status\x12\x1d\n" +
+	"\n" +
+	"start_time\x18\x05 \x01(\x03R\tstartTime\x12\x19\n" +
+	"\bend_time\x18\x06 \x01(\x03R\aendTime\x12\x1b\n" +
+	"\tprice_vnd\x18\a \x01(\x03R\bpriceVnd\x12/\n" +
+	"\x13specialization_name\x18\b \x01(\tR\x12specializationName\x12*\n" +
+	"\x11patient_full_name\x18\t \x01(\tR\x0fpatientFullName*f\n" +
 	"\rPaymentResult\x12\x1e\n" +
 	"\x1aPAYMENT_RESULT_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16PAYMENT_RESULT_SUCCESS\x10\x01\x12\x19\n" +
@@ -367,10 +582,11 @@ const file_booking_v1_booking_payment_proto_rawDesc = "" +
 	"\"APPOINTMENT_STATUS_PENDING_PAYMENT\x10\x01\x12 \n" +
 	"\x1cAPPOINTMENT_STATUS_CONFIRMED\x10\x02\x12 \n" +
 	"\x1cAPPOINTMENT_STATUS_CANCELLED\x10\x03\x12 \n" +
-	"\x1cAPPOINTMENT_STATUS_COMPLETED\x10\x042\x8b\x02\n" +
+	"\x1cAPPOINTMENT_STATUS_COMPLETED\x10\x042\x92\x03\n" +
 	"\x15BookingPaymentService\x12u\n" +
 	"\x12ApplyPaymentResult\x12..mindcare.booking.v1.ApplyPaymentResultRequest\x1a/.mindcare.booking.v1.ApplyPaymentResultResponse\x12{\n" +
-	"\x14GetAppointmentStatus\x120.mindcare.booking.v1.GetAppointmentStatusRequest\x1a1.mindcare.booking.v1.GetAppointmentStatusResponseb\x06proto3"
+	"\x14GetAppointmentStatus\x120.mindcare.booking.v1.GetAppointmentStatusRequest\x1a1.mindcare.booking.v1.GetAppointmentStatusResponse\x12\x84\x01\n" +
+	"\x17GetAppointmentSummaries\x123.mindcare.booking.v1.GetAppointmentSummariesRequest\x1a4.mindcare.booking.v1.GetAppointmentSummariesResponseb\x06proto3"
 
 var (
 	file_booking_v1_booking_payment_proto_rawDescOnce sync.Once
@@ -385,28 +601,35 @@ func file_booking_v1_booking_payment_proto_rawDescGZIP() []byte {
 }
 
 var file_booking_v1_booking_payment_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_booking_v1_booking_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_booking_v1_booking_payment_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_booking_v1_booking_payment_proto_goTypes = []any{
-	(PaymentResult)(0),                   // 0: mindcare.booking.v1.PaymentResult
-	(AppointmentStatus)(0),               // 1: mindcare.booking.v1.AppointmentStatus
-	(*ApplyPaymentResultRequest)(nil),    // 2: mindcare.booking.v1.ApplyPaymentResultRequest
-	(*ApplyPaymentResultResponse)(nil),   // 3: mindcare.booking.v1.ApplyPaymentResultResponse
-	(*GetAppointmentStatusRequest)(nil),  // 4: mindcare.booking.v1.GetAppointmentStatusRequest
-	(*GetAppointmentStatusResponse)(nil), // 5: mindcare.booking.v1.GetAppointmentStatusResponse
+	(PaymentResult)(0),                      // 0: mindcare.booking.v1.PaymentResult
+	(AppointmentStatus)(0),                  // 1: mindcare.booking.v1.AppointmentStatus
+	(*ApplyPaymentResultRequest)(nil),       // 2: mindcare.booking.v1.ApplyPaymentResultRequest
+	(*ApplyPaymentResultResponse)(nil),      // 3: mindcare.booking.v1.ApplyPaymentResultResponse
+	(*GetAppointmentStatusRequest)(nil),     // 4: mindcare.booking.v1.GetAppointmentStatusRequest
+	(*GetAppointmentStatusResponse)(nil),    // 5: mindcare.booking.v1.GetAppointmentStatusResponse
+	(*GetAppointmentSummariesRequest)(nil),  // 6: mindcare.booking.v1.GetAppointmentSummariesRequest
+	(*GetAppointmentSummariesResponse)(nil), // 7: mindcare.booking.v1.GetAppointmentSummariesResponse
+	(*AppointmentSummary)(nil),              // 8: mindcare.booking.v1.AppointmentSummary
 }
 var file_booking_v1_booking_payment_proto_depIdxs = []int32{
 	0, // 0: mindcare.booking.v1.ApplyPaymentResultRequest.result:type_name -> mindcare.booking.v1.PaymentResult
 	1, // 1: mindcare.booking.v1.ApplyPaymentResultResponse.status:type_name -> mindcare.booking.v1.AppointmentStatus
 	1, // 2: mindcare.booking.v1.GetAppointmentStatusResponse.status:type_name -> mindcare.booking.v1.AppointmentStatus
-	2, // 3: mindcare.booking.v1.BookingPaymentService.ApplyPaymentResult:input_type -> mindcare.booking.v1.ApplyPaymentResultRequest
-	4, // 4: mindcare.booking.v1.BookingPaymentService.GetAppointmentStatus:input_type -> mindcare.booking.v1.GetAppointmentStatusRequest
-	3, // 5: mindcare.booking.v1.BookingPaymentService.ApplyPaymentResult:output_type -> mindcare.booking.v1.ApplyPaymentResultResponse
-	5, // 6: mindcare.booking.v1.BookingPaymentService.GetAppointmentStatus:output_type -> mindcare.booking.v1.GetAppointmentStatusResponse
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	8, // 3: mindcare.booking.v1.GetAppointmentSummariesResponse.appointments:type_name -> mindcare.booking.v1.AppointmentSummary
+	1, // 4: mindcare.booking.v1.AppointmentSummary.status:type_name -> mindcare.booking.v1.AppointmentStatus
+	2, // 5: mindcare.booking.v1.BookingPaymentService.ApplyPaymentResult:input_type -> mindcare.booking.v1.ApplyPaymentResultRequest
+	4, // 6: mindcare.booking.v1.BookingPaymentService.GetAppointmentStatus:input_type -> mindcare.booking.v1.GetAppointmentStatusRequest
+	6, // 7: mindcare.booking.v1.BookingPaymentService.GetAppointmentSummaries:input_type -> mindcare.booking.v1.GetAppointmentSummariesRequest
+	3, // 8: mindcare.booking.v1.BookingPaymentService.ApplyPaymentResult:output_type -> mindcare.booking.v1.ApplyPaymentResultResponse
+	5, // 9: mindcare.booking.v1.BookingPaymentService.GetAppointmentStatus:output_type -> mindcare.booking.v1.GetAppointmentStatusResponse
+	7, // 10: mindcare.booking.v1.BookingPaymentService.GetAppointmentSummaries:output_type -> mindcare.booking.v1.GetAppointmentSummariesResponse
+	8, // [8:11] is the sub-list for method output_type
+	5, // [5:8] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_booking_v1_booking_payment_proto_init() }
@@ -420,7 +643,7 @@ func file_booking_v1_booking_payment_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_booking_v1_booking_payment_proto_rawDesc), len(file_booking_v1_booking_payment_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   4,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

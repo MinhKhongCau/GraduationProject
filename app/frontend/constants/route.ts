@@ -52,6 +52,7 @@ export const ROUTES = {
     APPOINTMENTS: "/admin/appointments",
     SCHEDULES: "/admin/schedules",
     WITHDRAWALS: "/admin/withdrawals",
+    TRANSACTIONS: "/admin/transactions",
     TEMPLATES: "/admin/templates",
     DIMENSIONS: "/admin/dimensions",
     OPTION_GROUPS: "/admin/option-groups",

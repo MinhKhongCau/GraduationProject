@@ -27,6 +27,8 @@ type Expert struct {
 	userInformation    profile.UserInformation
 	details            Details
 	verificationStatus VerificationStatus
+	managerAdminID     *uuid.UUID
+	verifiedAt         *time.Time
 	specializations    []specialization.Specialization
 	createdAt          time.Time
 	updatedAt          time.Time
@@ -43,9 +45,12 @@ type Snapshot struct {
 	UserInformation    profile.UserInformation
 	Details            Details
 	VerificationStatus string
-	Specializations    []specialization.Specialization
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	// ManagerAdminID là Admin đã duyệt (VERIFIED) chuyên gia và trở thành người quản lý.
+	ManagerAdminID  *uuid.UUID
+	VerifiedAt      *time.Time
+	Specializations []specialization.Specialization
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // Reconstitute khôi phục Expert từ dữ liệu đã lưu. Profile EXPERT chưa có bản ghi ExpertProfile
@@ -58,6 +63,8 @@ func Reconstitute(s Snapshot) *Expert {
 		userInformation:    s.UserInformation,
 		details:            s.Details,
 		verificationStatus: verificationStatusFromStorage(s.VerificationStatus),
+		managerAdminID:     s.ManagerAdminID,
+		verifiedAt:         s.VerifiedAt,
 		specializations:    s.Specializations,
 		createdAt:          s.CreatedAt,
 		updatedAt:          s.UpdatedAt,
@@ -72,6 +79,8 @@ func (e *Expert) Snapshot() Snapshot {
 		UserInformation:    e.userInformation,
 		Details:            e.details,
 		VerificationStatus: string(e.verificationStatus),
+		ManagerAdminID:     e.managerAdminID,
+		VerifiedAt:         e.verifiedAt,
 		Specializations:    e.specializations,
 		CreatedAt:          e.createdAt,
 		UpdatedAt:          e.updatedAt,
@@ -81,6 +90,7 @@ func (e *Expert) Snapshot() Snapshot {
 func (e *Expert) UserInformation() profile.UserInformation         { return e.userInformation }
 func (e *Expert) Details() Details                                 { return e.details }
 func (e *Expert) VerificationStatus() VerificationStatus           { return e.verificationStatus }
+func (e *Expert) ManagerAdminID() *uuid.UUID                       { return e.managerAdminID }
 func (e *Expert) Specializations() []specialization.Specialization { return e.specializations }
 
 // SpecializationsChanged cho repository biết có cần đồng bộ lại bảng expert_specializations hay không.
@@ -98,26 +108,46 @@ func (e *Expert) ReviseDetails(d Details) {
 }
 
 // ChangeVerificationStatus đổi trạng thái xác minh; chỉ Admin được phép.
-func (e *Expert) ChangeVerificationStatus(status VerificationStatus, actor profile.Role, at time.Time) error {
+// Admin đầu tiên duyệt (VERIFIED) chuyên gia trở thành người quản lý (managerAdminID);
+// lần duyệt sau của Admin khác không đổi người quản lý, từ chối cũng không xoá người quản lý.
+func (e *Expert) ChangeVerificationStatus(status VerificationStatus, actor profile.Role, actorID uuid.UUID, at time.Time) error {
 	if !actor.IsAdmin() {
 		return ErrVerificationRequiresAdmin
 	}
 	if _, err := ParseVerificationStatus(string(status)); err != nil {
 		return err
 	}
+	if status == StatusVerified && actorID == uuid.Nil {
+		return ErrVerificationRequiresAdmin
+	}
 	if status == e.verificationStatus {
+		// Chuyên gia đã VERIFIED từ trước khi có người quản lý: Admin duyệt lại để nhận quản lý.
+		if status == StatusVerified && e.managerAdminID == nil {
+			e.assignManager(actorID, at)
+		}
 		return nil
 	}
 
+	if status == StatusVerified && e.managerAdminID == nil {
+		e.assignManager(actorID, at)
+	}
 	e.events = append(e.events, VerificationStatusChanged{
-		ProfileID: e.profileID,
-		AuthID:    e.authID,
-		From:      e.verificationStatus,
-		To:        status,
-		At:        at,
+		ProfileID:      e.profileID,
+		AuthID:         e.authID,
+		From:           e.verificationStatus,
+		To:             status,
+		ManagerAdminID: e.managerAdminID,
+		At:             at,
 	})
 	e.verificationStatus = status
 	return nil
+}
+
+func (e *Expert) assignManager(adminID uuid.UUID, at time.Time) {
+	id := adminID
+	verifiedAt := at
+	e.managerAdminID = &id
+	e.verifiedAt = &verifiedAt
 }
 
 // AssignSpecializations thay toàn bộ danh sách chuyên khoa (danh sách rỗng = xoá hết).

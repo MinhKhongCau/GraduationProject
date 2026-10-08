@@ -24,6 +24,7 @@ type CompensationType string
 const (
 	CompensationBookingFulfillment CompensationType = "BOOKING_FULFILLMENT"
 	CompensationDuplicateCapture   CompensationType = "DUPLICATE_GATEWAY_CAPTURE"
+	CompensationAdminReview        CompensationType = "ADMIN_REVIEW"
 )
 
 type CompensationStatus string
@@ -31,6 +32,7 @@ type CompensationStatus string
 const (
 	CompensationManualReview   CompensationStatus = "MANUAL_REVIEW"
 	CompensationRefundRequired CompensationStatus = "REFUND_REQUIRED"
+	CompensationResolved       CompensationStatus = "RESOLVED"
 )
 
 type CompensationReasonCode string
@@ -42,6 +44,8 @@ const (
 	CompensationReasonBookingDeliveryRetries CompensationReasonCode = "BOOKING_DELIVERY_RETRIES_EXHAUSTED"
 	CompensationReasonBookingContract        CompensationReasonCode = "BOOKING_CONTRACT_FAILURE"
 	CompensationReasonDuplicateCapture       CompensationReasonCode = "DUPLICATE_GATEWAY_CAPTURE"
+	CompensationReasonAdminManualReview      CompensationReasonCode = "ADMIN_MANUAL_REVIEW"
+	CompensationReasonAdminRefundRequest     CompensationReasonCode = "ADMIN_REFUND_REQUEST"
 )
 
 type BookingDeliveryFailureCategory string

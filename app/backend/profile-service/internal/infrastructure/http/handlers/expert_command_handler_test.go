@@ -49,9 +49,15 @@ func newTestExpertHandler(snapshot *expert.Snapshot) *ExpertHandler {
 	)
 }
 
+// testActorID là auth id của người gọi (Gateway chèn qua X-User-Id).
+var testActorID = uuid.New()
+
 func serveExpert(h *ExpertHandler, method, id, role string, body any) (*httptest.ResponseRecorder, map[string]any) {
 	r := gin.New()
-	r.Use(func(c *gin.Context) { c.Set(middleware.CtxRole, role) })
+	r.Use(func(c *gin.Context) {
+		c.Set(middleware.CtxRole, role)
+		c.Set(middleware.CtxAuthID, testActorID.String())
+	})
 	r.PUT("/experts/:id", h.Update)
 	r.PATCH("/experts/:id", h.Patch)
 
@@ -117,11 +123,13 @@ func TestExpertHandler(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
-	t.Run("PATCH bởi Admin đổi trạng thái", func(t *testing.T) {
+	t.Run("PATCH bởi Admin đổi trạng thái, Admin duyệt thành người quản lý", func(t *testing.T) {
 		w, resp := serveExpert(newTestExpertHandler(snapshot), http.MethodPatch, authID.String(), "ADMIN",
 			map[string]any{"verification_status": "VERIFIED"})
 		assert.Equal(t, http.StatusOK, w.Code)
 		data := resp["result"].(map[string]any)
-		assert.Equal(t, "VERIFIED", data["expert_profile"].(map[string]any)["verification_status"])
+		expertProfile := data["expert_profile"].(map[string]any)
+		assert.Equal(t, "VERIFIED", expertProfile["verification_status"])
+		assert.Equal(t, testActorID.String(), expertProfile["managed_by_admin_id"])
 	})
 }

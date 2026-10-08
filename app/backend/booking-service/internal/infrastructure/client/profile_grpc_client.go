@@ -7,6 +7,7 @@ import (
 	"time"
 
 	appappointment "booking-service/internal/application/appointment"
+	appointmentdomain "booking-service/internal/domain/appointment"
 	"booking-service/internal/infrastructure/grpc/profilepb"
 
 	"google.golang.org/grpc"
@@ -109,4 +110,46 @@ func toSpecializationInfo(spec *profilepb.Specialization) appappointment.Special
 		Code:   spec.GetCode(),
 		Name:   spec.GetName(),
 	}
+}
+
+var _ appappointment.ProfileDirectory = (*ProfileGRPCClient)(nil)
+
+// profileSummaryBatch khớp giới hạn số id mỗi lần của profile-service.
+const profileSummaryBatch = 100
+
+// GetProfileSummaries tra cứu hồ sơ hàng loạt, tự chia lô theo giới hạn của profile-service.
+func (c *ProfileGRPCClient) GetProfileSummaries(ctx context.Context, authIDs []string) (map[string]appointmentdomain.ParticipantProfile, error) {
+	result := make(map[string]appointmentdomain.ParticipantProfile, len(authIDs))
+	for start := 0; start < len(authIDs); start += profileSummaryBatch {
+		end := min(start+profileSummaryBatch, len(authIDs))
+		callCtx, cancel := context.WithTimeout(ctx, profileGRPCTimeout)
+		resp, err := c.client.GetProfileSummaries(callCtx, &profilepb.GetProfileSummariesRequest{AuthIds: authIDs[start:end]})
+		cancel()
+		if err != nil {
+			return nil, fmt.Errorf("profile-service GetProfileSummaries: %w", err)
+		}
+		for _, p := range resp.GetProfiles() {
+			result[p.GetAuthId()] = appointmentdomain.ParticipantProfile{
+				AuthID:             p.GetAuthId(),
+				Role:               p.GetRole(),
+				FullName:           p.GetFullName(),
+				AvatarURL:          p.GetAvatarUrl(),
+				Email:              p.GetEmail(),
+				PhoneNumber:        p.GetPhoneNumber(),
+				VerificationStatus: p.GetVerificationStatus(),
+			}
+		}
+	}
+	return result, nil
+}
+
+// ListManagedExpertIDs trả auth id các chuyên gia do adminID quản lý (Admin đã duyệt).
+func (c *ProfileGRPCClient) ListManagedExpertIDs(ctx context.Context, adminID string) ([]string, error) {
+	ctx, cancel := context.WithTimeout(ctx, profileGRPCTimeout)
+	defer cancel()
+	resp, err := c.client.ListManagedExpertIds(ctx, &profilepb.ListManagedExpertIdsRequest{AdminId: adminID})
+	if err != nil {
+		return nil, fmt.Errorf("profile-service ListManagedExpertIds: %w", err)
+	}
+	return resp.GetExpertIds(), nil
 }

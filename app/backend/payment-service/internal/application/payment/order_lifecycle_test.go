@@ -525,7 +525,7 @@ func TestInvalidExpiredOrderIPNHasNoSideEffects(t *testing.T) {
 }
 
 func lifecycleUsecase(repo *lifecycleRepo, gateway PaymentGateway, booking *fakeBookingClient, now time.Time, ttl, minimum time.Duration) Usecase {
-	return NewUsecaseWithOptions(repo, repo, gateway, booking, Options{OrderTTL: ttl, MinimumWindow: minimum, Clock: func() time.Time { return now }})
+	return NewUsecaseWithOptions(repo, repo, gateway, booking, Options{OrderTTL: ttl, MinimumWindow: minimum, Clock: func() time.Time { return now }, ManagedExperts: repo})
 }
 
 func lifecycleBooking(appointmentID, expertID uuid.UUID, expiresAt, amount int64) *fakeBookingClient {
@@ -555,6 +555,8 @@ type lifecycleRepo struct {
 	compensationCases     []paymentdomain.PaymentCompensationCase
 	compensationErr       error
 	listForUpdateCount    int
+	// managed: adminID -> chuyên gia Admin đó quản lý (giả lập profile-service).
+	managed map[uuid.UUID][]uuid.UUID
 }
 
 func newLifecycleRepo(orders ...paymentdomain.PaymentOrder) *lifecycleRepo {
@@ -620,8 +622,11 @@ func (r *lifecycleRepo) ListCompensationCases(ctx context.Context, filter Compen
 			continue
 		}
 		order := r.orders[compensationCase.PaymentOrderID]
+		if !containsUUID(filter.ExpertIDs, order.ExpertID) {
+			continue
+		}
 		matches = append(matches, CompensationCaseRecord{
-			Case: compensationCase, PaymentStatus: order.Status,
+			Case: compensationCase, ExpertID: order.ExpertID, PayerID: order.PayerID, PaymentStatus: order.Status,
 			GatewayCaptureStatus: order.GatewayCaptureStatus, FulfillmentStatus: order.FulfillmentStatus,
 		})
 	}
@@ -636,7 +641,7 @@ func (r *lifecycleRepo) GetCompensationCase(ctx context.Context, caseID uuid.UUI
 			copy := r.compensationCases[i]
 			order := r.orders[copy.PaymentOrderID]
 			return &CompensationCaseRecord{
-				Case: copy, PaymentStatus: order.Status,
+				Case: copy, ExpertID: order.ExpertID, PayerID: order.PayerID, PaymentStatus: order.Status,
 				GatewayCaptureStatus: order.GatewayCaptureStatus, FulfillmentStatus: order.FulfillmentStatus,
 			}, nil
 		}

@@ -22,8 +22,10 @@ type ReplaceCommand struct {
 
 // PatchCommand cập nhật một phần (PATCH) hồ sơ chuyên gia; field nil = không thay đổi.
 type PatchCommand struct {
-	AuthID               uuid.UUID
-	ActorRole            profile.Role
+	AuthID    uuid.UUID
+	ActorRole profile.Role
+	// ActorID là auth id của người thực hiện; Admin duyệt chuyên gia sẽ thành người quản lý.
+	ActorID              uuid.UUID
 	UserInformation      profile.UserInformationPatch
 	Email                *string
 	AvatarURL            *string

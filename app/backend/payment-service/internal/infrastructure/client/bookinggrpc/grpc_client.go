@@ -141,3 +141,44 @@ func retryable(category apppayment.BookingDeliveryFailureCategory, message strin
 func permanent(category apppayment.BookingDeliveryFailureCategory, message string) error {
 	return &apppayment.BookingDeliveryError{Category: category, Retryable: false, Message: message}
 }
+
+var _ apppayment.AppointmentDirectory = (*Client)(nil)
+
+// summaryBatch khớp giới hạn số id mỗi lần của booking-service.
+const summaryBatch = 100
+
+// GetAppointmentSummaries tra giờ khám, chuyên khoa, người khám của nhiều lịch hẹn (chia lô 100).
+func (c *Client) GetAppointmentSummaries(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]apppayment.AppointmentInfo, error) {
+	result := make(map[uuid.UUID]apppayment.AppointmentInfo, len(ids))
+	for start := 0; start < len(ids); start += summaryBatch {
+		end := min(start+summaryBatch, len(ids))
+		raw := make([]string, 0, end-start)
+		for _, id := range ids[start:end] {
+			raw = append(raw, id.String())
+		}
+		callCtx, cancel, err := c.outgoingContext(ctx)
+		if err != nil {
+			return result, err
+		}
+		resp, err := c.client.GetAppointmentSummaries(callCtx, &bookingpb.GetAppointmentSummariesRequest{AppointmentIds: raw})
+		cancel()
+		if err != nil {
+			return result, c.mapError("get appointment summaries", err)
+		}
+		for _, a := range resp.GetAppointments() {
+			id, err := uuid.Parse(a.GetAppointmentId())
+			if err != nil {
+				continue
+			}
+			result[id] = apppayment.AppointmentInfo{
+				ID:                 id,
+				Status:             strings.TrimPrefix(a.GetStatus().String(), "APPOINTMENT_STATUS_"),
+				StartTime:          a.GetStartTime(),
+				EndTime:            a.GetEndTime(),
+				SpecializationName: a.GetSpecializationName(),
+				PatientFullName:    a.GetPatientFullName(),
+			}
+		}
+	}
+	return result, nil
+}

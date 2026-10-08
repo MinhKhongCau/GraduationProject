@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"payment-service/internal/application/managedscope"
 	"payment-service/internal/application/readquery"
 	walletdomain "payment-service/internal/domain/wallet"
 	"strings"
@@ -59,4 +60,56 @@ func ParseDirection(value string) (string, error) {
 		return value, nil
 	}
 	return "", fmt.Errorf("direction must be CREDIT or DEBIT")
+}
+
+// ManagedTransactionQuery lọc sổ cái ví của các chuyên gia do Admin quản lý.
+type ManagedTransactionQuery struct {
+	AdminID   uuid.UUID
+	ExpertID  *uuid.UUID
+	Type      *walletdomain.TransactionType
+	Direction string
+	FromMs    int64
+	ToMs      int64
+	Page      readquery.PageRequest
+}
+
+// UserWalletTransaction là một dòng sổ cái kèm chủ ví (auth id chuyên gia).
+type UserWalletTransaction struct {
+	walletdomain.WalletTransaction
+	UserID uuid.UUID
+}
+
+type userTransactionReader interface {
+	ListTransactionsForUsers(ctx context.Context, userIDs []uuid.UUID, query TransactionHistoryQuery) ([]UserWalletTransaction, int64, error)
+}
+
+// ManagedReader cho Admin xem sổ cái ví của các chuyên gia mình đã duyệt.
+type ManagedReader struct {
+	repo     Repository
+	resolver managedscope.Resolver
+}
+
+func NewManagedReader(repo Repository, resolver managedscope.Resolver) *ManagedReader {
+	return &ManagedReader{repo: repo, resolver: resolver}
+}
+
+func (r *ManagedReader) ListManagedTransactions(ctx context.Context, query ManagedTransactionQuery) (*readquery.Page[UserWalletTransaction], error) {
+	scope, err := managedscope.Resolve(ctx, r.resolver, query.AdminID, query.ExpertID)
+	if err != nil {
+		return nil, err
+	}
+	if scope.IsEmpty() {
+		page := readquery.NewPage([]UserWalletTransaction{}, query.Page, 0)
+		return &page, nil
+	}
+	reader, ok := r.repo.(userTransactionReader)
+	if !ok {
+		return nil, errors.New("wallet transaction reader unavailable")
+	}
+	items, total, err := reader.ListTransactionsForUsers(ctx, scope.ExpertIDs(), TransactionHistoryQuery{Type: query.Type, Direction: query.Direction, FromMs: query.FromMs, ToMs: query.ToMs, Page: query.Page})
+	if err != nil {
+		return nil, err
+	}
+	page := readquery.NewPage(items, query.Page, total)
+	return &page, nil
 }

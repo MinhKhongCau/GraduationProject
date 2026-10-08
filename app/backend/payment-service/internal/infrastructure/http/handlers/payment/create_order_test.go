@@ -222,13 +222,13 @@ func (u *fakeCreateOrderUsecase) ProcessIPN(ctx context.Context, params map[stri
 	return u.processAlready, u.processErr
 }
 
-func (u *fakeCreateOrderUsecase) ListCompensationCases(ctx context.Context, filter apppayment.CompensationCaseFilter) (*apppayment.CompensationCasePage, error) {
+func (u *fakeCreateOrderUsecase) ListCompensationCases(ctx context.Context, adminID uuid.UUID, filter apppayment.CompensationCaseFilter) (*apppayment.CompensationCasePage, error) {
 	u.listCalled = true
 	u.compensationFilter = filter
 	return u.compensationPage, u.compensationErr
 }
 
-func (u *fakeCreateOrderUsecase) GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*apppayment.CompensationCase, error) {
+func (u *fakeCreateOrderUsecase) GetCompensationCase(ctx context.Context, adminID, caseID uuid.UUID) (*apppayment.CompensationCase, error) {
 	u.getCalled = true
 	u.compensationCaseID = caseID
 	return u.compensationCase, u.compensationErr

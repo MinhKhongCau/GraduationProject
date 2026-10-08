@@ -31,9 +31,11 @@ func TestCompensationCaseVisibilityFiltersAndExposesSafeGatewayEvidence(t *testi
 		},
 		{ID: uuid.New(), PaymentOrderID: uuid.New(), AppointmentID: uuid.New(), Status: paymentdomain.CompensationManualReview},
 	}
+	adminID := uuid.New()
+	repo.managed = map[uuid.UUID][]uuid.UUID{adminID: {order.ExpertID}}
 	usecase := lifecycleUsecase(repo, &fakePaymentGateway{}, &fakeBookingClient{}, time.Now(), time.Minute, time.Second)
 
-	page, err := usecase.ListCompensationCases(context.Background(), CompensationCaseFilter{
+	page, err := usecase.ListCompensationCases(context.Background(), adminID, CompensationCaseFilter{
 		Status: paymentdomain.CompensationRefundRequired, AppointmentID: &appointmentID, PaymentOrderID: &orderID,
 	})
 	if err != nil {
@@ -42,7 +44,7 @@ func TestCompensationCaseVisibilityFiltersAndExposesSafeGatewayEvidence(t *testi
 	if page.Total != 1 || page.Page != 0 || page.Size != 20 || len(page.Items) != 1 || page.Items[0].AmountVND != 250000 || !page.Items[0].MoneyPaid || page.Items[0].PaymentStatus != "SUCCESS" {
 		t.Fatalf("unexpected page: %+v", page)
 	}
-	detail, err := usecase.GetCompensationCase(context.Background(), caseID)
+	detail, err := usecase.GetCompensationCase(context.Background(), adminID, caseID)
 	if err != nil || detail.ID != caseID {
 		t.Fatalf("unexpected detail: %+v err=%v", detail, err)
 	}
@@ -58,7 +60,7 @@ func TestCompensationCaseVisibilityFiltersAndExposesSafeGatewayEvidence(t *testi
 func TestCompensationCaseVisibilityRejectsInvalidFilter(t *testing.T) {
 	repo := newLifecycleRepo()
 	usecase := lifecycleUsecase(repo, &fakePaymentGateway{}, &fakeBookingClient{}, time.Now(), time.Minute, time.Second)
-	_, err := usecase.ListCompensationCases(context.Background(), CompensationCaseFilter{Status: "RESOLVED"})
+	_, err := usecase.ListCompensationCases(context.Background(), uuid.New(), CompensationCaseFilter{Status: "CLOSED"})
 	if !errors.Is(err, ErrInvalidCompensationFilter) {
 		t.Fatalf("expected validation error, got %v", err)
 	}

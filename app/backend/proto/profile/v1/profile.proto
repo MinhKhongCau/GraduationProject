@@ -1,4 +1,4 @@
-// Hợp đồng gRPC nội bộ giữa booking-service (client) và profile-service (server).
+// Hợp đồng gRPC nội bộ giữa booking-service, payment-service (client) và profile-service (server).
 // Chỉ dùng trong mạng Docker nội bộ, KHÔNG public qua API Gateway.
 //
 // Sinh code: chạy scripts/gen-proto.sh ở thư mục gốc repo. Code sinh ra được commit vào
@@ -17,6 +17,31 @@ service ProfileQueryService {
   //   NOT_FOUND           - không có chuyên gia, hoặc hồ sơ không tồn tại/không thuộc owner_id
   //   FAILED_PRECONDITION - chuyên gia không phụ trách chuyên khoa specialization_id
   rpc GetBookingInfo(GetBookingInfoRequest) returns (GetBookingInfoResponse);
+
+  // ListManagedExpertIds trả về auth account id của các chuyên gia do admin_id quản lý
+  // (Admin đã duyệt VERIFIED chuyên gia đó). payment-service dùng để giới hạn phạm vi
+  // giao dịch Admin được xem/xử lý.
+  //
+  // Lỗi:
+  //   INVALID_ARGUMENT - admin_id không phải UUID hợp lệ
+  rpc ListManagedExpertIds(ListManagedExpertIdsRequest) returns (ListManagedExpertIdsResponse);
+
+  // GetProfileSummaries trả thông tin hiển thị (tên, ảnh, liên hệ) của nhiều tài khoản một lần,
+  // dùng để ghép tên chuyên gia/bệnh nhân vào lịch hẹn và giao dịch. Id không tồn tại bị bỏ qua;
+  // tối đa 100 id mỗi lần.
+  //
+  // Lỗi:
+  //   INVALID_ARGUMENT - có id không phải UUID hoặc quá 100 id
+  rpc GetProfileSummaries(GetProfileSummariesRequest) returns (GetProfileSummariesResponse);
+}
+
+message ListManagedExpertIdsRequest {
+  // Auth account id của Admin.
+  string admin_id = 1;
+}
+
+message ListManagedExpertIdsResponse {
+  repeated string expert_ids = 1;
 }
 
 message GetBookingInfoRequest {
@@ -65,4 +90,25 @@ message PatientRecord {
   string address = 8;
   // SELF / PARENT / CHILD / SPOUSE / SIBLING / RELATIVE / OTHER
   string relationship = 9;
+}
+
+message GetProfileSummariesRequest {
+  // Auth account id (profiles.auth_id).
+  repeated string auth_ids = 1;
+}
+
+message GetProfileSummariesResponse {
+  repeated ProfileSummary profiles = 1;
+}
+
+message ProfileSummary {
+  string auth_id = 1;
+  // PATIENT / EXPERT / ADMIN
+  string role = 2;
+  string full_name = 3;
+  string avatar_url = 4;
+  string email = 5;
+  string phone_number = 6;
+  // Chỉ có giá trị với chuyên gia.
+  string verification_status = 7;
 }

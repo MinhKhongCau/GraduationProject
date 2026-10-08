@@ -1,26 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, FileText, Video } from "lucide-react";
-import { Card, Button, Badge, type BadgeTone } from "@/components/ui";
+import { CalendarClock, Eye, FileText, Video } from "lucide-react";
+import { Card, Button, Badge } from "@/components/ui";
 import { useAppointmentMedicalRecord } from "@/hooks";
 import { MedicalRecordDetailModal } from "@/components/medical-record/MedicalRecordDetailModal";
-import type { AppointmentStatus } from "@/types";
+import {
+  APPOINTMENT_STATUS_TEXT as STATUS_TEXT,
+  APPOINTMENT_STATUS_TONES as STATUS_TONES,
+  AppointmentDetailModal,
+  formatAppointmentTime,
+} from "@/components/appointment";
 import type { AppointmentWithExpert } from "@/hooks";
-
-const STATUS_TONES: Record<AppointmentStatus, BadgeTone> = {
-  PENDING_PAYMENT: "warning",
-  CONFIRMED: "success",
-  CANCELLED: "danger",
-  COMPLETED: "primary",
-};
-
-const STATUS_TEXT: Record<AppointmentStatus, string> = {
-  PENDING_PAYMENT: "Chờ thanh toán",
-  CONFIRMED: "Đã xác nhận",
-  CANCELLED: "Đã hủy",
-  COMPLETED: "Đã hoàn thành",
-};
 
 export interface BookingListItemProps {
   appointment: AppointmentWithExpert;
@@ -31,6 +22,7 @@ export interface BookingListItemProps {
 
 export function BookingListItem({ appointment, onCancel, onPayNow, isPaying }: BookingListItemProps) {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [appointmentDetailOpen, setAppointmentDetailOpen] = useState(false);
   const { data: medicalRecord } = useAppointmentMedicalRecord(appointment.appointmentId);
 
   const canCancel =
@@ -54,8 +46,15 @@ export function BookingListItem({ appointment, onCancel, onPayNow, isPaying }: B
                 </Badge>
               )}
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs font-medium text-foreground">
+              {formatAppointmentTime(appointment.startTime, appointment.endTime)}
+              {appointment.specializationName && (
+                <span className="text-muted-foreground"> · {appointment.specializationName}</span>
+              )}
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Đặt lịch lúc {new Date(appointment.createdAt).toLocaleString("vi-VN")}
+              {appointment.price ? ` · ${appointment.price.toLocaleString("vi-VN")} đ` : ""}
             </p>
             {appointment.statusLabel === "CANCELLED" && appointment.cancellationReason && (
               <p className="mt-1 text-xs text-muted-foreground">Lý do hủy: {appointment.cancellationReason}</p>
@@ -78,6 +77,11 @@ export function BookingListItem({ appointment, onCancel, onPayNow, isPaying }: B
           <Badge tone={STATUS_TONES[appointment.statusLabel] ?? "neutral"}>
             {STATUS_TEXT[appointment.statusLabel] || appointment.statusLabel}
           </Badge>
+
+          <Button size="sm" variant="ghost" onClick={() => setAppointmentDetailOpen(true)}>
+            <Eye className="h-3.5 w-3.5" />
+            Chi tiết
+          </Button>
 
           {medicalRecord && (
             <Button
@@ -103,6 +107,11 @@ export function BookingListItem({ appointment, onCancel, onPayNow, isPaying }: B
           )}
         </div>
       </Card>
+
+      <AppointmentDetailModal
+        appointmentId={appointmentDetailOpen ? appointment.appointmentId : null}
+        onClose={() => setAppointmentDetailOpen(false)}
+      />
 
       {/* Modal xem chi tiết bệnh án */}
       <MedicalRecordDetailModal

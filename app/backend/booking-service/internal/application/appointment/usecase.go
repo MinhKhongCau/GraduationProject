@@ -25,14 +25,20 @@ type Usecase interface {
 }
 
 type ReadUsecase interface {
-	ListAppointments(query AppointmentListQuery) (bookingquery.Page[appointmentdomain.Appointment], error)
-	GetAppointmentDetail(actorID, actorRole, appointmentID string) (*appointmentdomain.Appointment, error)
+	// ListAppointments: bệnh nhân/chuyên gia xem lịch hẹn của chính mình. Mọi lịch hẹn trả về đều
+	// được gắn hồ sơ chuyên gia và tài khoản đặt lịch (profile-service gRPC).
+	ListAppointments(ctx context.Context, query AppointmentListQuery) (bookingquery.Page[appointmentdomain.Appointment], error)
+	// ListAdminAppointments: Admin chỉ xem lịch hẹn của chuyên gia mình đã duyệt (quản lý).
+	ListAdminAppointments(ctx context.Context, query AppointmentListQuery) (bookingquery.Page[appointmentdomain.Appointment], error)
+	GetAppointmentDetail(ctx context.Context, actorID, actorRole, appointmentID string) (*appointmentdomain.Appointment, error)
 }
 
 type appointmentUsecase struct {
 	repo     Repository
 	uow      UnitOfWork
 	profiles ProfileGateway
+	// directory tra hồ sơ hàng loạt + phạm vi Admin; nil khi profile client không hỗ trợ.
+	directory ProfileDirectory
 }
 
 func NewUsecase(repo Repository) Usecase {
@@ -42,6 +48,9 @@ func NewUsecase(repo Repository) Usecase {
 // NewUsecaseWithProfiles cho phép tạo cuộc hẹn/trang xác nhận, cần đọc hồ sơ từ profile-service.
 func NewUsecaseWithProfiles(repo Repository, profiles ProfileGateway) Usecase {
 	usecase := &appointmentUsecase{repo: repo, profiles: profiles}
+	if directory, ok := profiles.(ProfileDirectory); ok {
+		usecase.directory = directory
+	}
 	if uow, ok := repo.(UnitOfWork); ok {
 		usecase.uow = uow
 	}

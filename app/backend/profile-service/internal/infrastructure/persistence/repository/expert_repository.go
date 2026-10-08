@@ -48,6 +48,8 @@ func (r *ExpertRepository) Save(ctx context.Context, e *expert.Expert) error {
 		IntroductionVideoURL: s.Details.IntroductionVideoURL,
 		Bio:                  s.Details.Bio,
 		VerificationStatus:   s.VerificationStatus,
+		ManagedByAdminID:     s.ManagerAdminID,
+		VerifiedAt:           s.VerifiedAt,
 	}
 
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -82,6 +84,8 @@ func toExpert(row *models.Profile) *expert.Expert {
 			Bio:                  ep.Bio,
 		}
 		s.VerificationStatus = ep.VerificationStatus
+		s.ManagerAdminID = ep.ManagedByAdminID
+		s.VerifiedAt = ep.VerifiedAt
 		s.Specializations = toSpecializations(ep.Specializations)
 	}
 	return expert.Reconstitute(s)

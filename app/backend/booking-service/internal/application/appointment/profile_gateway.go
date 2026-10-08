@@ -1,6 +1,7 @@
 package appointment
 
 import (
+	appointmentdomain "booking-service/internal/domain/appointment"
 	"context"
 	"errors"
 )
@@ -56,4 +57,12 @@ type PatientRecordInfo struct {
 	Email        string `json:"email"`
 	Address      string `json:"address"`
 	Relationship string `json:"relationship"`
+}
+
+// ProfileDirectory tra cứu hồ sơ hàng loạt và phạm vi Admin quản lý (profile-service qua gRPC).
+// Admin duyệt chuyên gia trở thành người quản lý chuyên gia đó và chỉ xem lịch hẹn của họ.
+type ProfileDirectory interface {
+	// GetProfileSummaries trả map auth_id -> hồ sơ; id không tồn tại bị bỏ qua.
+	GetProfileSummaries(ctx context.Context, authIDs []string) (map[string]appointmentdomain.ParticipantProfile, error)
+	ListManagedExpertIDs(ctx context.Context, adminID string) ([]string, error)
 }

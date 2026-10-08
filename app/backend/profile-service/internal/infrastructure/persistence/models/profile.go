@@ -84,6 +84,9 @@ type ExpertProfile struct {
 	IntroductionVideoURL string    `gorm:"type:text" json:"introduction_video_url"`
 	Bio                  string    `gorm:"type:text" json:"bio"`
 	VerificationStatus   string    `gorm:"type:varchar(50);default:'UNVERIFIED'" json:"verification_status"`
+	// Admin đã duyệt chuyên gia và trở thành người quản lý (auth id của Admin).
+	ManagedByAdminID *uuid.UUID `gorm:"type:uuid;index" json:"managed_by_admin_id,omitempty"`
+	VerifiedAt       *time.Time `gorm:"type:timestamptz" json:"verified_at,omitempty"`
 
 	// Quan hệ N-N: Chuyên gia và Chuyên khoa (GORM tự tạo bảng trung gian)
 	Specializations []Specialization `gorm:"many2many:expert_specializations;joinForeignKey:ExpertProfileID;joinReferences:SpecID" json:"specializations,omitempty"`

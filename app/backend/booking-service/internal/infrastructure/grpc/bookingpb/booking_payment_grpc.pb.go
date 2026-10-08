@@ -26,8 +26,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BookingPaymentService_ApplyPaymentResult_FullMethodName   = "/mindcare.booking.v1.BookingPaymentService/ApplyPaymentResult"
-	BookingPaymentService_GetAppointmentStatus_FullMethodName = "/mindcare.booking.v1.BookingPaymentService/GetAppointmentStatus"
+	BookingPaymentService_ApplyPaymentResult_FullMethodName      = "/mindcare.booking.v1.BookingPaymentService/ApplyPaymentResult"
+	BookingPaymentService_GetAppointmentStatus_FullMethodName    = "/mindcare.booking.v1.BookingPaymentService/GetAppointmentStatus"
+	BookingPaymentService_GetAppointmentSummaries_FullMethodName = "/mindcare.booking.v1.BookingPaymentService/GetAppointmentSummaries"
 )
 
 // BookingPaymentServiceClient is the client API for BookingPaymentService service.
@@ -50,6 +51,15 @@ type BookingPaymentServiceClient interface {
 	ApplyPaymentResult(ctx context.Context, in *ApplyPaymentResultRequest, opts ...grpc.CallOption) (*ApplyPaymentResultResponse, error)
 	// GetAppointmentStatus trả về trạng thái hiện tại của lịch hẹn (dùng cho trang kết quả thanh toán).
 	GetAppointmentStatus(ctx context.Context, in *GetAppointmentStatusRequest, opts ...grpc.CallOption) (*GetAppointmentStatusResponse, error)
+	// GetAppointmentSummaries trả thông tin hiển thị của nhiều lịch hẹn một lần (giờ khám, giá,
+	// chuyên khoa, người khám) để payment-service ghép vào danh sách giao dịch.
+	// Id không tồn tại bị bỏ qua (không lỗi); tối đa 100 id mỗi lần.
+	//
+	// Lỗi:
+	//
+	//	INVALID_ARGUMENT - có id không phải UUID hoặc quá 100 id
+	//	UNAUTHENTICATED / PERMISSION_DENIED - thiếu hoặc sai internal JWT
+	GetAppointmentSummaries(ctx context.Context, in *GetAppointmentSummariesRequest, opts ...grpc.CallOption) (*GetAppointmentSummariesResponse, error)
 }
 
 type bookingPaymentServiceClient struct {
@@ -80,6 +90,16 @@ func (c *bookingPaymentServiceClient) GetAppointmentStatus(ctx context.Context, 
 	return out, nil
 }
 
+func (c *bookingPaymentServiceClient) GetAppointmentSummaries(ctx context.Context, in *GetAppointmentSummariesRequest, opts ...grpc.CallOption) (*GetAppointmentSummariesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetAppointmentSummariesResponse)
+	err := c.cc.Invoke(ctx, BookingPaymentService_GetAppointmentSummaries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BookingPaymentServiceServer is the server API for BookingPaymentService service.
 // All implementations must embed UnimplementedBookingPaymentServiceServer
 // for forward compatibility.
@@ -100,6 +120,15 @@ type BookingPaymentServiceServer interface {
 	ApplyPaymentResult(context.Context, *ApplyPaymentResultRequest) (*ApplyPaymentResultResponse, error)
 	// GetAppointmentStatus trả về trạng thái hiện tại của lịch hẹn (dùng cho trang kết quả thanh toán).
 	GetAppointmentStatus(context.Context, *GetAppointmentStatusRequest) (*GetAppointmentStatusResponse, error)
+	// GetAppointmentSummaries trả thông tin hiển thị của nhiều lịch hẹn một lần (giờ khám, giá,
+	// chuyên khoa, người khám) để payment-service ghép vào danh sách giao dịch.
+	// Id không tồn tại bị bỏ qua (không lỗi); tối đa 100 id mỗi lần.
+	//
+	// Lỗi:
+	//
+	//	INVALID_ARGUMENT - có id không phải UUID hoặc quá 100 id
+	//	UNAUTHENTICATED / PERMISSION_DENIED - thiếu hoặc sai internal JWT
+	GetAppointmentSummaries(context.Context, *GetAppointmentSummariesRequest) (*GetAppointmentSummariesResponse, error)
 	mustEmbedUnimplementedBookingPaymentServiceServer()
 }
 
@@ -115,6 +144,9 @@ func (UnimplementedBookingPaymentServiceServer) ApplyPaymentResult(context.Conte
 }
 func (UnimplementedBookingPaymentServiceServer) GetAppointmentStatus(context.Context, *GetAppointmentStatusRequest) (*GetAppointmentStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAppointmentStatus not implemented")
+}
+func (UnimplementedBookingPaymentServiceServer) GetAppointmentSummaries(context.Context, *GetAppointmentSummariesRequest) (*GetAppointmentSummariesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAppointmentSummaries not implemented")
 }
 func (UnimplementedBookingPaymentServiceServer) mustEmbedUnimplementedBookingPaymentServiceServer() {}
 func (UnimplementedBookingPaymentServiceServer) testEmbeddedByValue()                               {}
@@ -173,6 +205,24 @@ func _BookingPaymentService_GetAppointmentStatus_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BookingPaymentService_GetAppointmentSummaries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAppointmentSummariesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BookingPaymentServiceServer).GetAppointmentSummaries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BookingPaymentService_GetAppointmentSummaries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BookingPaymentServiceServer).GetAppointmentSummaries(ctx, req.(*GetAppointmentSummariesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BookingPaymentService_ServiceDesc is the grpc.ServiceDesc for BookingPaymentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -187,6 +237,10 @@ var BookingPaymentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAppointmentStatus",
 			Handler:    _BookingPaymentService_GetAppointmentStatus_Handler,
+		},
+		{
+			MethodName: "GetAppointmentSummaries",
+			Handler:    _BookingPaymentService_GetAppointmentSummaries_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -159,6 +159,7 @@ export default function BookAppointmentPage() {
       )}
       {step === "payment" && (
         <PaymentStep
+          appointmentId={createdAppointment?.appointmentId}
           onPay={() => payMutation.mutate()}
           isPending={payMutation.isPending || isPaymentBrowserOpen}
           isError={payMutation.isError}

@@ -16,8 +16,11 @@ func (u *fakeCreateOrderUsecase) ListPaymentOrders(context.Context, apppayment.P
 	page := readquery.NewPage([]apppayment.PaymentOrderView{}, readquery.PageRequest{Page: 0, Size: 20}, 0)
 	return &page, nil
 }
-func (u *fakeCreateOrderUsecase) GetPaymentOrder(context.Context, uuid.UUID, uuid.UUID, bool) (*apppayment.PaymentOrderView, error) {
+func (u *fakeCreateOrderUsecase) GetPaymentOrder(context.Context, uuid.UUID, uuid.UUID) (*apppayment.PaymentOrderView, error) {
 	return nil, apppayment.ErrPaymentOrderForbidden
+}
+func (u *fakeCreateOrderUsecase) SummarizePatientOrders(context.Context, apppayment.PaymentOrderFilter) (*apppayment.PatientOrderSummary, error) {
+	return &apppayment.PatientOrderSummary{}, nil
 }
 
 func TestPaymentOrderListRejectsInvalidPaginationAndMissingIdentity(t *testing.T) {

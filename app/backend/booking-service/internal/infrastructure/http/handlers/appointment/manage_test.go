@@ -3,6 +3,7 @@ package handler
 import (
 	appointmentdomain "booking-service/internal/domain/appointment"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -19,14 +20,18 @@ type mockReadUsecase struct {
 	detailFunc func(actorID, actorRole, appointmentID string) (*appointmentdomain.Appointment, error)
 }
 
-func (m *mockReadUsecase) ListAppointments(query appappointment.AppointmentListQuery) (bookingquery.Page[appointmentdomain.Appointment], error) {
+func (m *mockReadUsecase) ListAppointments(_ context.Context, query appappointment.AppointmentListQuery) (bookingquery.Page[appointmentdomain.Appointment], error) {
 	if m.listFunc != nil {
 		return m.listFunc(query)
 	}
 	return bookingquery.Page[appointmentdomain.Appointment]{}, nil
 }
 
-func (m *mockReadUsecase) GetAppointmentDetail(actorID, actorRole, appointmentID string) (*appointmentdomain.Appointment, error) {
+func (m *mockReadUsecase) ListAdminAppointments(ctx context.Context, query appappointment.AppointmentListQuery) (bookingquery.Page[appointmentdomain.Appointment], error) {
+	return m.ListAppointments(ctx, query)
+}
+
+func (m *mockReadUsecase) GetAppointmentDetail(_ context.Context, actorID, actorRole, appointmentID string) (*appointmentdomain.Appointment, error) {
 	if m.detailFunc != nil {
 		return m.detailFunc(actorID, actorRole, appointmentID)
 	}
@@ -279,4 +284,31 @@ func TestAppointmentManagement(t *testing.T) {
 			t.Fatalf("expected 400 Bad Request, got %d: %s", recorder.Code, recorder.Body.String())
 		}
 	})
+}
+
+func TestAdminAppointmentsEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	var captured appappointment.AppointmentListQuery
+	fullMock := &fullMockHandlerUsecase{mockReadUsecase: mockReadUsecase{
+		listFunc: func(query appappointment.AppointmentListQuery) (bookingquery.Page[appointmentdomain.Appointment], error) {
+			captured = query
+			return bookingquery.Page[appointmentdomain.Appointment]{Items: []appointmentdomain.Appointment{{AppointmentID: "a1"}}, TotalItems: 1}, nil
+		},
+	}}
+	router := gin.New()
+	router.GET("/appointments/admin", NewHandler(fullMock).GetAdmin)
+
+	for role, want := range map[string]int{"PATIENT": http.StatusForbidden, "ADMIN": http.StatusOK} {
+		req := httptest.NewRequest(http.MethodGet, "/appointments/admin?expert_id=expert-1&status=CONFIRMED", nil)
+		req.Header.Set("X-User-Role", role)
+		req.Header.Set("X-User-Id", "admin-1")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != want {
+			t.Fatalf("role %s: expected %d, got %d: %s", role, want, w.Code, w.Body.String())
+		}
+	}
+	if captured.ActorID != "admin-1" || captured.ActorRole != "ADMIN" || captured.ExpertID != "expert-1" || captured.Status == nil {
+		t.Fatalf("admin filter not forwarded: %+v", captured)
+	}
 }

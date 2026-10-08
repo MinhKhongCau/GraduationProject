@@ -27,11 +27,25 @@ func SetupRoutes(
 		// Đơn hàng thanh toán & VNPay Webhook
 		api.POST("/orders", pHandler.CreateOrder)
 		api.GET("/orders", pHandler.ListPaymentOrders)
+		api.GET("/orders/summary", pHandler.SummarizePaymentOrders)
 		api.GET("/orders/:id", pHandler.GetPaymentOrder)
 		api.GET("/vnpay-ipn", pHandler.HandleVNPayIPN)
 		api.GET("/vnpay-return", pHandler.HandleVNPayReturn)
+
+		// Quản lý giao dịch: chuyên gia xem doanh thu của mình
+		api.GET("/expert/orders", pHandler.ListExpertOrders)
+		api.GET("/expert/orders/summary", pHandler.SummarizeExpertOrders)
+		api.GET("/expert/orders/:id", pHandler.GetExpertOrder)
+
+		// Quản lý giao dịch: Admin chỉ thấy/xử lý giao dịch của chuyên gia mình đã duyệt
+		api.GET("/admin/orders", pHandler.ListAdminOrders)
+		api.GET("/admin/orders/summary", pHandler.SummarizeAdminOrders)
+		api.GET("/admin/orders/:id", pHandler.GetAdminOrder)
+		api.POST("/admin/orders/:id/review", pHandler.ReviewOrder)
+		api.GET("/admin/wallet-transactions", wHandler.ListManagedTransactions)
 		api.GET("/compensation-cases", pHandler.ListCompensationCases)
 		api.GET("/compensation-cases/:id", pHandler.GetCompensationCase)
+		api.POST("/compensation-cases/:id/resolve", pHandler.ResolveCompensationCase)
 
 		// Tài khoản ngân hàng
 		api.POST("/bank-accounts", wdHandler.LinkBankAccount)

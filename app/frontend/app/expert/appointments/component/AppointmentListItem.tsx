@@ -1,35 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, FileText, Video, ClipboardList } from "lucide-react";
-import { Badge, Card, Button, type BadgeTone } from "@/components/ui";
-import { useAppointmentMedicalRecord } from "@/hooks";
+import { CalendarClock, Eye, FileText, Video, ClipboardList } from "lucide-react";
+import { Badge, Card, Button } from "@/components/ui";
+import { useAppointmentMedicalRecord, type AppointmentWithPatient } from "@/hooks";
 import { SaveMedicalRecordModal } from "@/components/medical-record/SaveMedicalRecordModal";
 import { MedicalRecordDetailModal } from "@/components/medical-record/MedicalRecordDetailModal";
-import type { Appointment, AppointmentStatus } from "@/types";
-
-const STATUS_TONES: Record<AppointmentStatus, BadgeTone> = {
-  PENDING_PAYMENT: "warning",
-  CONFIRMED: "success",
-  CANCELLED: "danger",
-  COMPLETED: "primary",
-};
-
-const STATUS_TEXT: Record<AppointmentStatus, string> = {
-  PENDING_PAYMENT: "Chờ thanh toán",
-  CONFIRMED: "Đã xác nhận",
-  CANCELLED: "Đã hủy",
-  COMPLETED: "Đã hoàn thành",
-};
-
-export interface AppointmentWithPatient extends Appointment {
-  patientName?: string;
-  patientEmail?: string;
-}
+import {
+  APPOINTMENT_STATUS_TEXT as STATUS_TEXT,
+  APPOINTMENT_STATUS_TONES as STATUS_TONES,
+  AppointmentDetailModal,
+  formatAppointmentTime,
+} from "@/components/appointment";
 
 export function AppointmentListItem({ appointment }: { appointment: AppointmentWithPatient }) {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [appointmentDetailOpen, setAppointmentDetailOpen] = useState(false);
 
   const { data: medicalRecord } = useAppointmentMedicalRecord(appointment.appointmentId);
 
@@ -55,6 +42,12 @@ export function AppointmentListItem({ appointment }: { appointment: AppointmentW
                 </Badge>
               )}
             </div>
+            <p className="mt-0.5 text-xs font-medium text-foreground">
+              {formatAppointmentTime(appointment.startTime, appointment.endTime)}
+              {appointment.specializationName && (
+                <span className="text-muted-foreground"> · {appointment.specializationName}</span>
+              )}
+            </p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Thời gian đặt: {new Date(appointment.createdAt).toLocaleString("vi-VN")}
             </p>
@@ -76,6 +69,11 @@ export function AppointmentListItem({ appointment }: { appointment: AppointmentW
           <Badge tone={STATUS_TONES[appointment.statusLabel] ?? "neutral"}>
             {STATUS_TEXT[appointment.statusLabel] || appointment.statusLabel}
           </Badge>
+
+          <Button size="sm" variant="ghost" onClick={() => setAppointmentDetailOpen(true)}>
+            <Eye className="h-3.5 w-3.5" />
+            Chi tiết
+          </Button>
 
           {canAddRecord && (
             <>
@@ -110,6 +108,11 @@ export function AppointmentListItem({ appointment }: { appointment: AppointmentW
           )}
         </div>
       </Card>
+
+      <AppointmentDetailModal
+        appointmentId={appointmentDetailOpen ? appointment.appointmentId : null}
+        onClose={() => setAppointmentDetailOpen(false)}
+      />
 
       {/* Modal chỉnh sửa / ghi chú bệnh án */}
       <SaveMedicalRecordModal

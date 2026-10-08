@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	appwallet "payment-service/internal/application/wallet"
 	walletdomain "payment-service/internal/domain/wallet"
 
@@ -77,16 +78,7 @@ func (r *walletRepository) GetTransactionsByWalletID(walletID uuid.UUID) ([]wall
 }
 
 func (r *walletRepository) ListTransactions(walletID uuid.UUID, filter appwallet.TransactionHistoryQuery) ([]walletdomain.WalletTransaction, int64, error) {
-	query := r.db.Model(&walletdomain.WalletTransaction{}).Where("wallet_id = ? AND created_at >= ? AND created_at < ?", walletID, filter.FromMs, filter.ToMs)
-	if filter.Type != nil {
-		query = query.Where("type = ?", *filter.Type)
-	}
-	if filter.Direction == "CREDIT" {
-		query = query.Where("amount > 0")
-	}
-	if filter.Direction == "DEBIT" {
-		query = query.Where("amount < 0")
-	}
+	query := walletTransactionFilterQuery(r.db.Model(&walletdomain.WalletTransaction{}).Where("wallet_id = ?", walletID), "", filter)
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -94,6 +86,51 @@ func (r *walletRepository) ListTransactions(walletID uuid.UUID, filter appwallet
 	var items []walletdomain.WalletTransaction
 	err := query.Order("created_at DESC, id DESC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&items).Error
 	return items, total, err
+}
+
+type userWalletTransactionRow struct {
+	walletdomain.WalletTransaction `gorm:"embedded"`
+	WalletUserID                   uuid.UUID `gorm:"column:wallet_user_id"`
+}
+
+// ListTransactionsForUsers trả sổ cái ví của nhiều người dùng (phạm vi chuyên gia Admin quản lý).
+func (r *walletRepository) ListTransactionsForUsers(ctx context.Context, userIDs []uuid.UUID, filter appwallet.TransactionHistoryQuery) ([]appwallet.UserWalletTransaction, int64, error) {
+	query := r.db.WithContext(ctx).
+		Table("payment_wallet_transactions AS tx").
+		Joins("JOIN payment_wallets AS wallet ON wallet.id = tx.wallet_id").
+		Where("wallet.user_id IN ?", userIDs)
+	query = walletTransactionFilterQuery(query, "tx.", filter)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var rows []userWalletTransactionRow
+	err := query.Select("tx.*, wallet.user_id AS wallet_user_id").
+		Order("tx.created_at DESC, tx.id DESC").
+		Limit(filter.Page.Size).Offset(filter.Page.Offset()).
+		Scan(&rows).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	items := make([]appwallet.UserWalletTransaction, len(rows))
+	for i := range rows {
+		items[i] = appwallet.UserWalletTransaction{WalletTransaction: rows[i].WalletTransaction, UserID: rows[i].WalletUserID}
+	}
+	return items, total, nil
+}
+
+func walletTransactionFilterQuery(query *gorm.DB, prefix string, filter appwallet.TransactionHistoryQuery) *gorm.DB {
+	query = query.Where(prefix+"created_at >= ? AND "+prefix+"created_at < ?", filter.FromMs, filter.ToMs)
+	if filter.Type != nil {
+		query = query.Where(prefix+"type = ?", *filter.Type)
+	}
+	if filter.Direction == "CREDIT" {
+		query = query.Where(prefix + "amount > 0")
+	}
+	if filter.Direction == "DEBIT" {
+		query = query.Where(prefix + "amount < 0")
+	}
+	return query
 }
 
 func (r *walletRepository) WithTransaction(fn func(tx *gorm.DB) error) error {
