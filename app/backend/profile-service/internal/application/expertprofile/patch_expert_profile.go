@@ -40,7 +40,7 @@ func (uc *PatchExpertProfile) Execute(ctx context.Context, cmd PatchCommand) (Ex
 		if err != nil {
 			return ExpertProfileView{}, err
 		}
-		if err := e.ChangeVerificationStatus(status, cmd.ActorRole, time.Now()); err != nil {
+		if err := e.ChangeVerificationStatus(status, cmd.ActorRole, cmd.ActorID, time.Now()); err != nil {
 			return ExpertProfileView{}, err
 		}
 	}

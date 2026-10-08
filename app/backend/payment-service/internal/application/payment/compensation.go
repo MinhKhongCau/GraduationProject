@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"fmt"
+	"payment-service/internal/application/managedscope"
 	paymentdomain "payment-service/internal/domain/payment"
 
 	"github.com/google/uuid"
@@ -18,15 +19,21 @@ type CompensationCaseFilter struct {
 	ReasonCode     paymentdomain.CompensationReasonCode
 	AppointmentID  *uuid.UUID
 	PaymentOrderID *uuid.UUID
-	FromMs         int64
-	ToMs           int64
-	Page           int
-	Size           int
+	// ExpertID (tuỳ chọn) lọc theo một chuyên gia; phải nằm trong phạm vi Admin quản lý.
+	ExpertID *uuid.UUID
+	// ExpertIDs là phạm vi chuyên gia Admin quản lý (do usecase điền, không lấy từ request).
+	ExpertIDs []uuid.UUID
+	FromMs    int64
+	ToMs      int64
+	Page      int
+	Size      int
 }
 
 type CompensationCase struct {
 	ID                       uuid.UUID                            `json:"id"`
 	PaymentOrderID           uuid.UUID                            `json:"payment_order_id"`
+	ExpertID                 uuid.UUID                            `json:"expert_id"`
+	PayerID                  uuid.UUID                            `json:"payer_id"`
 	AppointmentID            uuid.UUID                            `json:"appointment_id"`
 	Type                     paymentdomain.CompensationType       `json:"type"`
 	Status                   paymentdomain.CompensationStatus     `json:"status"`
@@ -66,15 +73,25 @@ type CompensationCaseReader interface {
 
 type CompensationCaseRecord struct {
 	Case                 paymentdomain.PaymentCompensationCase
+	ExpertID             uuid.UUID
+	PayerID              uuid.UUID
 	PaymentStatus        paymentdomain.PaymentOrderStatus
 	GatewayCaptureStatus paymentdomain.GatewayCaptureStatus
 	FulfillmentStatus    paymentdomain.FulfillmentStatus
 }
 
-func (u *paymentUsecase) ListCompensationCases(ctx context.Context, filter CompensationCaseFilter) (*CompensationCasePage, error) {
+func (u *paymentUsecase) ListCompensationCases(ctx context.Context, adminID uuid.UUID, filter CompensationCaseFilter) (*CompensationCasePage, error) {
 	if err := normalizeCompensationFilter(&filter); err != nil {
 		return nil, err
 	}
+	scope, err := managedscope.Resolve(ctx, u.managedExperts, adminID, filter.ExpertID)
+	if err != nil {
+		return nil, err
+	}
+	if scope.IsEmpty() {
+		return &CompensationCasePage{Items: []CompensationCase{}, Page: filter.Page, Size: filter.Size}, nil
+	}
+	filter.ExpertIDs = scope.ExpertIDs()
 	reader, ok := u.repo.(CompensationCaseReader)
 	if !ok {
 		return nil, ErrCompensationReaderUnavailable
@@ -94,7 +111,17 @@ func (u *paymentUsecase) ListCompensationCases(ctx context.Context, filter Compe
 	return &CompensationCasePage{Items: items, Total: total, TotalItems: total, TotalPages: totalPages, HasNext: filter.Page+1 < totalPages, HasPrevious: filter.Page > 0, Page: filter.Page, Size: filter.Size}, nil
 }
 
-func (u *paymentUsecase) GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*CompensationCase, error) {
+func (u *paymentUsecase) GetCompensationCase(ctx context.Context, adminID, caseID uuid.UUID) (*CompensationCase, error) {
+	row, err := u.managedCompensationCase(ctx, adminID, caseID)
+	if err != nil {
+		return nil, err
+	}
+	result := compensationCaseFromRecord(row)
+	return &result, nil
+}
+
+// managedCompensationCase đọc hồ sơ bồi hoàn và kiểm tra đơn của nó thuộc chuyên gia adminID quản lý.
+func (u *paymentUsecase) managedCompensationCase(ctx context.Context, adminID, caseID uuid.UUID) (*CompensationCaseRecord, error) {
 	if caseID == uuid.Nil {
 		return nil, fmt.Errorf("%w: invalid case id", ErrInvalidCompensationFilter)
 	}
@@ -106,12 +133,14 @@ func (u *paymentUsecase) GetCompensationCase(ctx context.Context, caseID uuid.UU
 	if err != nil {
 		return nil, err
 	}
-	result := compensationCaseFromRecord(row)
-	return &result, nil
+	if _, err := managedscope.Resolve(ctx, u.managedExperts, adminID, &row.ExpertID); err != nil {
+		return nil, err
+	}
+	return row, nil
 }
 
 func normalizeCompensationFilter(filter *CompensationCaseFilter) error {
-	if filter.Status != "" && filter.Status != paymentdomain.CompensationManualReview && filter.Status != paymentdomain.CompensationRefundRequired {
+	if filter.Status != "" && filter.Status != paymentdomain.CompensationManualReview && filter.Status != paymentdomain.CompensationRefundRequired && filter.Status != paymentdomain.CompensationResolved {
 		return fmt.Errorf("%w: unsupported status", ErrInvalidCompensationFilter)
 	}
 	if filter.Page < 0 {
@@ -137,6 +166,8 @@ func compensationCaseFromRecord(record *CompensationCaseRecord) CompensationCase
 	return CompensationCase{
 		ID:                       row.ID,
 		PaymentOrderID:           row.PaymentOrderID,
+		ExpertID:                 record.ExpertID,
+		PayerID:                  record.PayerID,
 		AppointmentID:            row.AppointmentID,
 		Type:                     row.Type,
 		Status:                   row.Status,

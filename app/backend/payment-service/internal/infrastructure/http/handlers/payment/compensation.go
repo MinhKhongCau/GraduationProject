@@ -16,11 +16,12 @@ import (
 )
 
 // ListCompensationCases handles GET /api/v1/payments/compensation-cases.
-// @Summary      [ADMIN] List payment compensation cases
+// @Summary      [ADMIN] List payment compensation cases of experts I manage
 // @Tags         Admin - Payments
 // @Produce      json
 // @Security     BearerAuth
-// @Param        status            query string false "MANUAL_REVIEW or REFUND_REQUIRED"
+// @Param        status            query string false "MANUAL_REVIEW, REFUND_REQUIRED or RESOLVED"
+// @Param        expert_id         query string false "Expert auth UUID (must be managed by me)"
 // @Param        appointment_id    query string false "Appointment UUID"
 // @Param        payment_order_id  query string false "Payment order UUID"
 // @Param        page              query int    false "Page number"
@@ -32,7 +33,8 @@ import (
 // @Failure      500 {object} response.Response
 // @Router       /payments/compensation-cases [get]
 func (h *Handler) ListCompensationCases(c *gin.Context) {
-	if !requireAdmin(c) {
+	adminID, ok := requireAdmin(c)
+	if !ok {
 		return
 	}
 	filter, err := compensationFilterFromRequest(c)
@@ -40,15 +42,9 @@ func (h *Handler) ListCompensationCases(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "Invalid compensation case filter", err.Error())
 		return
 	}
-	result, err := h.usecase.ListCompensationCases(c.Request.Context(), filter)
+	result, err := h.usecase.ListCompensationCases(c.Request.Context(), adminID, filter)
 	if err != nil {
-		status := http.StatusInternalServerError
-		message := "Failed to list compensation cases"
-		if errors.Is(err, apppayment.ErrInvalidCompensationFilter) {
-			status = http.StatusBadRequest
-			message = "Invalid compensation case filter"
-		}
-		response.Error(c, status, message, err.Error())
+		writePaymentReadError(c, err, "Failed to list compensation cases")
 		return
 	}
 	response.Success(c, "Compensation cases retrieved successfully", result)
@@ -68,7 +64,8 @@ func (h *Handler) ListCompensationCases(c *gin.Context) {
 // @Failure      500 {object} response.Response
 // @Router       /payments/compensation-cases/{id} [get]
 func (h *Handler) GetCompensationCase(c *gin.Context) {
-	if !requireAdmin(c) {
+	adminID, ok := requireAdmin(c)
+	if !ok {
 		return
 	}
 	caseID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
@@ -76,36 +73,24 @@ func (h *Handler) GetCompensationCase(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "Invalid compensation case ID", err.Error())
 		return
 	}
-	result, err := h.usecase.GetCompensationCase(c.Request.Context(), caseID)
+	result, err := h.usecase.GetCompensationCase(c.Request.Context(), adminID, caseID)
 	if err != nil {
-		switch {
-		case errors.Is(err, apppayment.ErrCompensationCaseNotFound):
-			response.Error(c, http.StatusNotFound, "Compensation case not found", err.Error())
-		case errors.Is(err, apppayment.ErrInvalidCompensationFilter):
-			response.Error(c, http.StatusBadRequest, "Invalid compensation case ID", err.Error())
-		default:
-			response.Error(c, http.StatusInternalServerError, "Failed to get compensation case", err.Error())
-		}
+		writePaymentReadError(c, err, "Failed to get compensation case")
 		return
 	}
 	response.Success(c, "Compensation case retrieved successfully", result)
 }
 
-func requireAdmin(c *gin.Context) bool {
-	if c.GetHeader("X-User-Role") != "ADMIN" {
-		response.Error(c, http.StatusForbidden, "Only administrators can view compensation cases", "forbidden")
-		return false
-	}
-	if _, err := uuid.Parse(strings.TrimSpace(c.GetHeader("X-User-Id"))); err != nil {
-		response.Error(c, http.StatusUnauthorized, "Invalid or missing X-User-Id header", err.Error())
-		return false
-	}
-	return true
+func requireAdmin(c *gin.Context) (uuid.UUID, bool) {
+	return requireActor(c, "ADMIN", "Only administrators can view compensation cases")
 }
 
 func compensationFilterFromRequest(c *gin.Context) (apppayment.CompensationCaseFilter, error) {
 	filter := apppayment.CompensationCaseFilter{Status: paymentdomain.CompensationStatus(strings.TrimSpace(c.Query("status"))), ReasonCode: paymentdomain.CompensationReasonCode(strings.TrimSpace(c.Query("reason_code")))}
 	var err error
+	if filter.ExpertID, err = optionalUUID(c.Query("expert_id")); err != nil {
+		return filter, err
+	}
 	if filter.AppointmentID, err = optionalUUID(c.Query("appointment_id")); err != nil {
 		return filter, err
 	}

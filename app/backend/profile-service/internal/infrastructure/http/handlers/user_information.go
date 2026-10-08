@@ -61,8 +61,12 @@ func writeInvalidDateOfBirth(c *gin.Context, err error) {
 
 // sanitizePublicProfile ẩn thông tin cá nhân khi trả profile cho người khác xem.
 // Chuyên gia giữ nguyên thông tin vì đây là hồ sơ công khai để bệnh nhân lựa chọn.
+// Riêng Admin quản lý chuyên gia là thông tin nội bộ nên luôn bị ẩn.
 func sanitizePublicProfile(p *models.Profile) {
 	if p.Role == models.RoleExpert {
+		if p.ExpertProfile != nil {
+			p.ExpertProfile.ManagedByAdminID = nil
+		}
 		return
 	}
 	p.UserInformation = models.UserInformation{FullName: p.UserInformation.FullName}

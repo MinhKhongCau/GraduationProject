@@ -22,10 +22,11 @@ func TestReconstitute_DefaultsMissingStatusToUnverified(t *testing.T) {
 
 func TestChangeVerificationStatus(t *testing.T) {
 	now := time.Now()
+	adminID := uuid.New()
 
 	t.Run("chỉ Admin được đổi trạng thái", func(t *testing.T) {
 		e := newExpert("PENDING")
-		err := e.ChangeVerificationStatus(StatusVerified, profile.RoleExpert, now)
+		err := e.ChangeVerificationStatus(StatusVerified, profile.RoleExpert, adminID, now)
 		assert.ErrorIs(t, err, ErrVerificationRequiresAdmin)
 		assert.Equal(t, StatusPending, e.VerificationStatus())
 		assert.Empty(t, e.PullEvents())
@@ -33,17 +34,17 @@ func TestChangeVerificationStatus(t *testing.T) {
 
 	t.Run("không phải Admin bị từ chối kể cả khi trạng thái không đổi", func(t *testing.T) {
 		e := newExpert("PENDING")
-		assert.ErrorIs(t, e.ChangeVerificationStatus(StatusPending, profile.RolePatient, now), ErrVerificationRequiresAdmin)
+		assert.ErrorIs(t, e.ChangeVerificationStatus(StatusPending, profile.RolePatient, adminID, now), ErrVerificationRequiresAdmin)
 	})
 
 	t.Run("trạng thái không hợp lệ", func(t *testing.T) {
 		e := newExpert("PENDING")
-		assert.ErrorIs(t, e.ChangeVerificationStatus("APPROVED", profile.RoleAdmin, now), ErrInvalidVerificationStatus)
+		assert.ErrorIs(t, e.ChangeVerificationStatus("APPROVED", profile.RoleAdmin, adminID, now), ErrInvalidVerificationStatus)
 	})
 
 	t.Run("Admin đổi trạng thái phát sinh event", func(t *testing.T) {
 		e := newExpert("PENDING")
-		assert.NoError(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, now))
+		assert.NoError(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, adminID, now))
 		assert.Equal(t, StatusVerified, e.VerificationStatus())
 
 		events := e.PullEvents()
@@ -56,8 +57,50 @@ func TestChangeVerificationStatus(t *testing.T) {
 
 	t.Run("giữ nguyên trạng thái thì không phát event", func(t *testing.T) {
 		e := newExpert("VERIFIED")
-		assert.NoError(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, now))
+		assert.NoError(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, adminID, now))
 		assert.Empty(t, e.PullEvents())
+	})
+}
+
+func TestChangeVerificationStatus_AssignsManager(t *testing.T) {
+	now := time.Now()
+	adminA, adminB := uuid.New(), uuid.New()
+
+	t.Run("Admin duyệt trở thành người quản lý", func(t *testing.T) {
+		e := newExpert("PENDING")
+		assert.NoError(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, adminA, now))
+		assert.Equal(t, &adminA, e.ManagerAdminID())
+		assert.NotNil(t, e.Snapshot().VerifiedAt)
+
+		changed := e.PullEvents()[0].(VerificationStatusChanged)
+		assert.Equal(t, &adminA, changed.ManagerAdminID)
+	})
+
+	t.Run("Admin khác duyệt lại không đổi người quản lý", func(t *testing.T) {
+		e := newExpert("PENDING")
+		assert.NoError(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, adminA, now))
+		assert.NoError(t, e.ChangeVerificationStatus(StatusRejected, profile.RoleAdmin, adminB, now))
+		assert.Equal(t, &adminA, e.ManagerAdminID())
+		assert.NoError(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, adminB, now))
+		assert.Equal(t, &adminA, e.ManagerAdminID())
+	})
+
+	t.Run("từ chối không gán người quản lý", func(t *testing.T) {
+		e := newExpert("PENDING")
+		assert.NoError(t, e.ChangeVerificationStatus(StatusRejected, profile.RoleAdmin, adminA, now))
+		assert.Nil(t, e.ManagerAdminID())
+	})
+
+	t.Run("chuyên gia VERIFIED chưa có người quản lý được nhận quản lý khi duyệt lại", func(t *testing.T) {
+		e := newExpert("VERIFIED")
+		assert.NoError(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, adminB, now))
+		assert.Equal(t, &adminB, e.ManagerAdminID())
+		assert.Empty(t, e.PullEvents())
+	})
+
+	t.Run("duyệt mà không xác định được Admin bị từ chối", func(t *testing.T) {
+		e := newExpert("PENDING")
+		assert.ErrorIs(t, e.ChangeVerificationStatus(StatusVerified, profile.RoleAdmin, uuid.Nil, now), ErrVerificationRequiresAdmin)
 	})
 }
 

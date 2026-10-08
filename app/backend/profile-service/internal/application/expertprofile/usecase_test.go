@@ -223,6 +223,20 @@ func TestPatchExpertProfile(t *testing.T) {
 		assert.Equal(t, "expert.verification_status_changed", f.publisher.events[0].EventName())
 	})
 
+	t.Run("Admin duyệt chuyên gia trở thành người quản lý", func(t *testing.T) {
+		f := newFixture()
+		uc := NewPatchExpertProfile(f.experts, f.specs, f.publisher)
+		adminID := uuid.New()
+
+		view, err := uc.Execute(context.Background(), PatchCommand{
+			AuthID: f.authID, ActorRole: profile.RoleAdmin, ActorID: adminID, VerificationStatus: strPtr("VERIFIED"),
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "VERIFIED", view.ExpertProfile.VerificationStatus)
+		require.NotNil(t, view.ExpertProfile.ManagedByAdminID)
+		assert.Equal(t, adminID, *view.ExpertProfile.ManagedByAdminID)
+	})
+
 	t.Run("chuyên gia tự đổi trạng thái bị từ chối và không lưu gì", func(t *testing.T) {
 		f := newFixture()
 		uc := NewPatchExpertProfile(f.experts, f.specs, f.publisher)

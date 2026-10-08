@@ -110,6 +110,30 @@ func (s *ProfileQueryServer) GetBookingInfo(ctx context.Context, req *profilepb.
 	return resp, nil
 }
 
+// ListManagedExpertIds trả về auth id các chuyên gia do Admin admin_id quản lý.
+func (s *ProfileQueryServer) ListManagedExpertIds(ctx context.Context, req *profilepb.ListManagedExpertIdsRequest) (*profilepb.ListManagedExpertIdsResponse, error) {
+	adminID, err := uuid.Parse(req.GetAdminId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "admin_id không hợp lệ")
+	}
+
+	var expertIDs []uuid.UUID
+	err = s.db.WithContext(ctx).
+		Model(&models.Profile{}).
+		Joins("JOIN expert_profiles ON expert_profiles.profile_id = profiles.id").
+		Where("profiles.role = ? AND expert_profiles.managed_by_admin_id = ?", models.RoleExpert, adminID).
+		Pluck("profiles.auth_id", &expertIDs).Error
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "truy vấn chuyên gia được quản lý: %v", err)
+	}
+
+	resp := &profilepb.ListManagedExpertIdsResponse{ExpertIds: make([]string, 0, len(expertIDs))}
+	for _, id := range expertIDs {
+		resp.ExpertIds = append(resp.ExpertIds, id.String())
+	}
+	return resp, nil
+}
+
 func toExpertSummary(p *models.Profile) *profilepb.ExpertSummary {
 	summary := &profilepb.ExpertSummary{
 		ExpertId: p.AuthID.String(),

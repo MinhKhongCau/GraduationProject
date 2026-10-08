@@ -1,4 +1,4 @@
-// Hợp đồng gRPC nội bộ giữa booking-service (client) và profile-service (server).
+// Hợp đồng gRPC nội bộ giữa booking-service, payment-service (client) và profile-service (server).
 // Chỉ dùng trong mạng Docker nội bộ, KHÔNG public qua API Gateway.
 //
 // Sinh code: chạy scripts/gen-proto.sh ở thư mục gốc repo. Code sinh ra được commit vào
@@ -28,6 +28,95 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type ListManagedExpertIdsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Auth account id của Admin.
+	AdminId       string `protobuf:"bytes,1,opt,name=admin_id,json=adminId,proto3" json:"admin_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListManagedExpertIdsRequest) Reset() {
+	*x = ListManagedExpertIdsRequest{}
+	mi := &file_profile_v1_profile_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListManagedExpertIdsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListManagedExpertIdsRequest) ProtoMessage() {}
+
+func (x *ListManagedExpertIdsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_profile_v1_profile_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListManagedExpertIdsRequest.ProtoReflect.Descriptor instead.
+func (*ListManagedExpertIdsRequest) Descriptor() ([]byte, []int) {
+	return file_profile_v1_profile_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *ListManagedExpertIdsRequest) GetAdminId() string {
+	if x != nil {
+		return x.AdminId
+	}
+	return ""
+}
+
+type ListManagedExpertIdsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ExpertIds     []string               `protobuf:"bytes,1,rep,name=expert_ids,json=expertIds,proto3" json:"expert_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListManagedExpertIdsResponse) Reset() {
+	*x = ListManagedExpertIdsResponse{}
+	mi := &file_profile_v1_profile_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListManagedExpertIdsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListManagedExpertIdsResponse) ProtoMessage() {}
+
+func (x *ListManagedExpertIdsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_profile_v1_profile_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListManagedExpertIdsResponse.ProtoReflect.Descriptor instead.
+func (*ListManagedExpertIdsResponse) Descriptor() ([]byte, []int) {
+	return file_profile_v1_profile_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ListManagedExpertIdsResponse) GetExpertIds() []string {
+	if x != nil {
+		return x.ExpertIds
+	}
+	return nil
+}
+
 type GetBookingInfoRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Auth account id của chuyên gia (chính là expert_id trong booking-service).
@@ -44,7 +133,7 @@ type GetBookingInfoRequest struct {
 
 func (x *GetBookingInfoRequest) Reset() {
 	*x = GetBookingInfoRequest{}
-	mi := &file_profile_v1_profile_proto_msgTypes[0]
+	mi := &file_profile_v1_profile_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -56,7 +145,7 @@ func (x *GetBookingInfoRequest) String() string {
 func (*GetBookingInfoRequest) ProtoMessage() {}
 
 func (x *GetBookingInfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_v1_profile_proto_msgTypes[0]
+	mi := &file_profile_v1_profile_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -69,7 +158,7 @@ func (x *GetBookingInfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBookingInfoRequest.ProtoReflect.Descriptor instead.
 func (*GetBookingInfoRequest) Descriptor() ([]byte, []int) {
-	return file_profile_v1_profile_proto_rawDescGZIP(), []int{0}
+	return file_profile_v1_profile_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *GetBookingInfoRequest) GetExpertId() string {
@@ -112,7 +201,7 @@ type GetBookingInfoResponse struct {
 
 func (x *GetBookingInfoResponse) Reset() {
 	*x = GetBookingInfoResponse{}
-	mi := &file_profile_v1_profile_proto_msgTypes[1]
+	mi := &file_profile_v1_profile_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -124,7 +213,7 @@ func (x *GetBookingInfoResponse) String() string {
 func (*GetBookingInfoResponse) ProtoMessage() {}
 
 func (x *GetBookingInfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_v1_profile_proto_msgTypes[1]
+	mi := &file_profile_v1_profile_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -137,7 +226,7 @@ func (x *GetBookingInfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetBookingInfoResponse.ProtoReflect.Descriptor instead.
 func (*GetBookingInfoResponse) Descriptor() ([]byte, []int) {
-	return file_profile_v1_profile_proto_rawDescGZIP(), []int{1}
+	return file_profile_v1_profile_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GetBookingInfoResponse) GetExpert() *ExpertSummary {
@@ -175,7 +264,7 @@ type ExpertSummary struct {
 
 func (x *ExpertSummary) Reset() {
 	*x = ExpertSummary{}
-	mi := &file_profile_v1_profile_proto_msgTypes[2]
+	mi := &file_profile_v1_profile_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -187,7 +276,7 @@ func (x *ExpertSummary) String() string {
 func (*ExpertSummary) ProtoMessage() {}
 
 func (x *ExpertSummary) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_v1_profile_proto_msgTypes[2]
+	mi := &file_profile_v1_profile_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -200,7 +289,7 @@ func (x *ExpertSummary) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpertSummary.ProtoReflect.Descriptor instead.
 func (*ExpertSummary) Descriptor() ([]byte, []int) {
-	return file_profile_v1_profile_proto_rawDescGZIP(), []int{2}
+	return file_profile_v1_profile_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ExpertSummary) GetExpertId() string {
@@ -256,7 +345,7 @@ type Specialization struct {
 
 func (x *Specialization) Reset() {
 	*x = Specialization{}
-	mi := &file_profile_v1_profile_proto_msgTypes[3]
+	mi := &file_profile_v1_profile_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -268,7 +357,7 @@ func (x *Specialization) String() string {
 func (*Specialization) ProtoMessage() {}
 
 func (x *Specialization) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_v1_profile_proto_msgTypes[3]
+	mi := &file_profile_v1_profile_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -281,7 +370,7 @@ func (x *Specialization) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Specialization.ProtoReflect.Descriptor instead.
 func (*Specialization) Descriptor() ([]byte, []int) {
-	return file_profile_v1_profile_proto_rawDescGZIP(), []int{3}
+	return file_profile_v1_profile_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Specialization) GetSpecId() string {
@@ -325,7 +414,7 @@ type PatientRecord struct {
 
 func (x *PatientRecord) Reset() {
 	*x = PatientRecord{}
-	mi := &file_profile_v1_profile_proto_msgTypes[4]
+	mi := &file_profile_v1_profile_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -337,7 +426,7 @@ func (x *PatientRecord) String() string {
 func (*PatientRecord) ProtoMessage() {}
 
 func (x *PatientRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_profile_v1_profile_proto_msgTypes[4]
+	mi := &file_profile_v1_profile_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -350,7 +439,7 @@ func (x *PatientRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PatientRecord.ProtoReflect.Descriptor instead.
 func (*PatientRecord) Descriptor() ([]byte, []int) {
-	return file_profile_v1_profile_proto_rawDescGZIP(), []int{4}
+	return file_profile_v1_profile_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PatientRecord) GetRecordId() string {
@@ -420,7 +509,12 @@ var File_profile_v1_profile_proto protoreflect.FileDescriptor
 
 const file_profile_v1_profile_proto_rawDesc = "" +
 	"\n" +
-	"\x18profile/v1/profile.proto\x12\x13mindcare.profile.v1\"\xa8\x01\n" +
+	"\x18profile/v1/profile.proto\x12\x13mindcare.profile.v1\"8\n" +
+	"\x1bListManagedExpertIdsRequest\x12\x19\n" +
+	"\badmin_id\x18\x01 \x01(\tR\aadminId\"=\n" +
+	"\x1cListManagedExpertIdsResponse\x12\x1d\n" +
+	"\n" +
+	"expert_ids\x18\x01 \x03(\tR\texpertIds\"\xa8\x01\n" +
 	"\x15GetBookingInfoRequest\x12\x1b\n" +
 	"\texpert_id\x18\x01 \x01(\tR\bexpertId\x12*\n" +
 	"\x11patient_record_id\x18\x02 \x01(\tR\x0fpatientRecordId\x12\x19\n" +
@@ -451,9 +545,10 @@ const file_profile_v1_profile_proto_rawDesc = "" +
 	"\fphone_number\x18\x06 \x01(\tR\vphoneNumber\x12\x14\n" +
 	"\x05email\x18\a \x01(\tR\x05email\x12\x18\n" +
 	"\aaddress\x18\b \x01(\tR\aaddress\x12\"\n" +
-	"\frelationship\x18\t \x01(\tR\frelationship2\x80\x01\n" +
+	"\frelationship\x18\t \x01(\tR\frelationship2\xfd\x01\n" +
 	"\x13ProfileQueryService\x12i\n" +
-	"\x0eGetBookingInfo\x12*.mindcare.profile.v1.GetBookingInfoRequest\x1a+.mindcare.profile.v1.GetBookingInfoResponseb\x06proto3"
+	"\x0eGetBookingInfo\x12*.mindcare.profile.v1.GetBookingInfoRequest\x1a+.mindcare.profile.v1.GetBookingInfoResponse\x12{\n" +
+	"\x14ListManagedExpertIds\x120.mindcare.profile.v1.ListManagedExpertIdsRequest\x1a1.mindcare.profile.v1.ListManagedExpertIdsResponseb\x06proto3"
 
 var (
 	file_profile_v1_profile_proto_rawDescOnce sync.Once
@@ -467,23 +562,27 @@ func file_profile_v1_profile_proto_rawDescGZIP() []byte {
 	return file_profile_v1_profile_proto_rawDescData
 }
 
-var file_profile_v1_profile_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_profile_v1_profile_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_profile_v1_profile_proto_goTypes = []any{
-	(*GetBookingInfoRequest)(nil),  // 0: mindcare.profile.v1.GetBookingInfoRequest
-	(*GetBookingInfoResponse)(nil), // 1: mindcare.profile.v1.GetBookingInfoResponse
-	(*ExpertSummary)(nil),          // 2: mindcare.profile.v1.ExpertSummary
-	(*Specialization)(nil),         // 3: mindcare.profile.v1.Specialization
-	(*PatientRecord)(nil),          // 4: mindcare.profile.v1.PatientRecord
+	(*ListManagedExpertIdsRequest)(nil),  // 0: mindcare.profile.v1.ListManagedExpertIdsRequest
+	(*ListManagedExpertIdsResponse)(nil), // 1: mindcare.profile.v1.ListManagedExpertIdsResponse
+	(*GetBookingInfoRequest)(nil),        // 2: mindcare.profile.v1.GetBookingInfoRequest
+	(*GetBookingInfoResponse)(nil),       // 3: mindcare.profile.v1.GetBookingInfoResponse
+	(*ExpertSummary)(nil),                // 4: mindcare.profile.v1.ExpertSummary
+	(*Specialization)(nil),               // 5: mindcare.profile.v1.Specialization
+	(*PatientRecord)(nil),                // 6: mindcare.profile.v1.PatientRecord
 }
 var file_profile_v1_profile_proto_depIdxs = []int32{
-	2, // 0: mindcare.profile.v1.GetBookingInfoResponse.expert:type_name -> mindcare.profile.v1.ExpertSummary
-	4, // 1: mindcare.profile.v1.GetBookingInfoResponse.patient_record:type_name -> mindcare.profile.v1.PatientRecord
-	3, // 2: mindcare.profile.v1.GetBookingInfoResponse.specialization:type_name -> mindcare.profile.v1.Specialization
-	3, // 3: mindcare.profile.v1.ExpertSummary.specializations:type_name -> mindcare.profile.v1.Specialization
-	0, // 4: mindcare.profile.v1.ProfileQueryService.GetBookingInfo:input_type -> mindcare.profile.v1.GetBookingInfoRequest
-	1, // 5: mindcare.profile.v1.ProfileQueryService.GetBookingInfo:output_type -> mindcare.profile.v1.GetBookingInfoResponse
-	5, // [5:6] is the sub-list for method output_type
-	4, // [4:5] is the sub-list for method input_type
+	4, // 0: mindcare.profile.v1.GetBookingInfoResponse.expert:type_name -> mindcare.profile.v1.ExpertSummary
+	6, // 1: mindcare.profile.v1.GetBookingInfoResponse.patient_record:type_name -> mindcare.profile.v1.PatientRecord
+	5, // 2: mindcare.profile.v1.GetBookingInfoResponse.specialization:type_name -> mindcare.profile.v1.Specialization
+	5, // 3: mindcare.profile.v1.ExpertSummary.specializations:type_name -> mindcare.profile.v1.Specialization
+	2, // 4: mindcare.profile.v1.ProfileQueryService.GetBookingInfo:input_type -> mindcare.profile.v1.GetBookingInfoRequest
+	0, // 5: mindcare.profile.v1.ProfileQueryService.ListManagedExpertIds:input_type -> mindcare.profile.v1.ListManagedExpertIdsRequest
+	3, // 6: mindcare.profile.v1.ProfileQueryService.GetBookingInfo:output_type -> mindcare.profile.v1.GetBookingInfoResponse
+	1, // 7: mindcare.profile.v1.ProfileQueryService.ListManagedExpertIds:output_type -> mindcare.profile.v1.ListManagedExpertIdsResponse
+	6, // [6:8] is the sub-list for method output_type
+	4, // [4:6] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
 	4, // [4:4] is the sub-list for extension extendee
 	0, // [0:4] is the sub-list for field type_name
@@ -500,7 +599,7 @@ func file_profile_v1_profile_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_profile_v1_profile_proto_rawDesc), len(file_profile_v1_profile_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

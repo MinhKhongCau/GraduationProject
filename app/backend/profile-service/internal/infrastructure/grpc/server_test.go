@@ -29,3 +29,11 @@ func TestGetBookingInfoRejectsInvalidIDs(t *testing.T) {
 		})
 	}
 }
+
+func TestListManagedExpertIdsRejectsInvalidAdminID(t *testing.T) {
+	server := NewProfileQueryServer(nil, nil)
+	_, err := server.ListManagedExpertIds(context.Background(), &profilepb.ListManagedExpertIdsRequest{AdminId: "x"})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", err)
+	}
+}

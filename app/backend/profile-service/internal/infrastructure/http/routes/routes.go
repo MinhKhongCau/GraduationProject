@@ -73,7 +73,8 @@ func SetupRoutes(r *gin.Engine, h Handlers) {
 			admin.PATCH("/patients/:id", handlers.PatchPatient)
 			admin.GET("/patients/:id/medical-histories", handlers.ListPatientMedicalHistories)
 
-			// Chuyên gia (duyệt hồ sơ, chỉnh sửa thay mặt)
+			// Chuyên gia (duyệt hồ sơ, chỉnh sửa thay mặt). Admin duyệt chuyên gia trở thành người quản lý.
+			admin.GET("/experts/managed", handlers.ListManagedExperts)
 			admin.PUT("/experts/:id", h.Expert.Update)
 			admin.PATCH("/experts/:id", h.Expert.Patch)
 
