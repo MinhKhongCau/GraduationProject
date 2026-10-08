@@ -108,3 +108,226 @@ export interface CreateOrderResponse {
   paymentUrl: string;
   status: OrderStatus;
 }
+
+// ---------------------------------------------------------------------------
+// Transaction management (payment-service /orders, /expert/orders, /admin/orders)
+// ---------------------------------------------------------------------------
+
+/** APPOINTMENT = paid booking, TOP_UP = wallet top-up (no appointment, no expert). */
+export type PaymentOrderType = "APPOINTMENT" | "TOP_UP";
+
+export type FulfillmentStatus =
+  | "PENDING"
+  | "BOOKING_CONFIRMED"
+  | "BOOKING_FAILED"
+  | "MANUAL_REVIEW"
+  | "REFUND_REQUIRED";
+
+export type GatewayCaptureStatus = "PENDING" | "CAPTURED" | "FAILED" | "CAPTURED_DUPLICATE";
+
+/** payment-service's zero-based page envelope (readquery.Page). */
+export interface PaymentPage<T> {
+  items: T[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+/** Shared list filters; `from`/`to` are YYYY-MM-DD (server defaults to a 30-day window). */
+export interface PaymentOrderFilters {
+  status?: OrderStatus;
+  type?: PaymentOrderType;
+  fulfillmentStatus?: FulfillmentStatus;
+  from?: string;
+  to?: string;
+  /** Zero-based. */
+  page?: number;
+  size?: number;
+}
+
+/** Admin can also narrow to one managed expert or one patient. */
+export interface AdminPaymentOrderFilters extends PaymentOrderFilters {
+  expertId?: string;
+  payerId?: string;
+}
+
+/** Name/avatar of a payer or expert, attached by payment-service via profile-service gRPC. */
+export interface PaymentParty {
+  id: string;
+  fullName: string;
+  avatarUrl?: string;
+  email?: string;
+}
+
+/** Session info of an order's appointment, attached via booking-service gRPC. */
+export interface PaymentAppointmentInfo {
+  id: string;
+  status: string;
+  startTime: number;
+  endTime: number;
+  specializationName?: string;
+  /** Examined person on the booking (may differ from the paying account). */
+  patientFullName?: string;
+}
+
+export interface PatientPaymentOrder {
+  id: string;
+  appointmentId?: string;
+  payerId: string;
+  expertId: string;
+  expert?: PaymentParty;
+  appointment?: PaymentAppointmentInfo;
+  type: PaymentOrderType;
+  amountVnd: number;
+  status: OrderStatus;
+  fulfillmentStatus: FulfillmentStatus;
+  gatewayCaptureStatus: GatewayCaptureStatus;
+  gateway: PaymentGateway;
+  gatewayTransactionReference: string;
+  expiresAt: number;
+  createdAt: number;
+  paidAt?: number;
+}
+
+export interface ExpertPaymentOrder {
+  id: string;
+  appointmentId?: string;
+  payerId: string;
+  payer?: PaymentParty;
+  appointment?: PaymentAppointmentInfo;
+  type: PaymentOrderType;
+  grossAmount: number;
+  commissionRate: number;
+  commissionAmount: number;
+  netAmount: number;
+  status: OrderStatus;
+  fulfillmentStatus: FulfillmentStatus;
+  released: boolean;
+  createdAt: number;
+  paidAt?: number;
+}
+
+export interface AdminPaymentOrder {
+  id: string;
+  appointmentId?: string;
+  payerId: string;
+  expertId: string;
+  payer?: PaymentParty;
+  expert?: PaymentParty;
+  appointment?: PaymentAppointmentInfo;
+  type: PaymentOrderType;
+  grossAmount: number;
+  commissionRate: number;
+  commissionAmount: number;
+  netAmount: number;
+  gateway: PaymentGateway;
+  gatewayTxnRef: string;
+  gatewayResponseCode?: string;
+  gatewayTransactionStatus?: string;
+  gatewayPaymentDate?: string;
+  status: OrderStatus;
+  gatewayCaptureStatus: GatewayCaptureStatus;
+  fulfillmentStatus: FulfillmentStatus;
+  released: boolean;
+  createdAt: number;
+  expiresAt: number;
+  paidAt?: number;
+}
+
+/** Money totals only count SUCCESS orders. `from`/`to` are the applied window in epoch ms. */
+export interface PatientOrderSummary {
+  totalOrders: number;
+  successOrders: number;
+  totalPaid: number;
+  from: number;
+  to: number;
+}
+
+export interface ExpertOrderSummary {
+  totalOrders: number;
+  successOrders: number;
+  grossTotal: number;
+  commissionTotal: number;
+  netTotal: number;
+  from: number;
+  to: number;
+}
+
+export interface AdminOrderSummary extends ExpertOrderSummary {
+  pendingOrders: number;
+  failedOrders: number;
+  expiredOrders: number;
+  managedExperts: number;
+}
+
+export type CompensationStatus = "MANUAL_REVIEW" | "REFUND_REQUIRED" | "RESOLVED";
+export type AdminReviewAction = Exclude<CompensationStatus, "RESOLVED">;
+
+export interface CompensationCase {
+  id: string;
+  paymentOrderId: string;
+  expertId: string;
+  payerId: string;
+  appointmentId: string;
+  type: string;
+  status: CompensationStatus;
+  paymentStatus: OrderStatus;
+  moneyPaid: boolean;
+  fulfillmentStatus: FulfillmentStatus;
+  reasonCode: string;
+  safeReason: string;
+  amountVnd: number;
+  createdAt: number;
+  updatedAt: number;
+  resolvedAt?: number;
+  resolutionNote?: string;
+}
+
+export interface CompensationCaseFilters {
+  status?: CompensationStatus;
+  expertId?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}
+
+/** Compensation list uses its own page shape (total + totalItems). */
+export interface CompensationCasePage extends PaymentPage<CompensationCase> {
+  total: number;
+}
+
+export type WalletTransactionType =
+  | "PAYMENT_RECEIVED"
+  | "COMMISSION_DEDUCTED"
+  | "REFUND"
+  | "WITHDRAWAL_LOCKED"
+  | "WITHDRAWAL_COMPLETED"
+  | "WITHDRAWAL_REJECTED"
+  | "ADJUSTMENT";
+
+export interface ManagedWalletTransaction {
+  id: string;
+  walletId: string;
+  expertId: string;
+  type: WalletTransactionType;
+  /** Signed: > 0 credit, < 0 debit. */
+  amount: number;
+  balanceAfter: number;
+  referenceType: string;
+  referenceId: string;
+  createdAt: number;
+}
+
+export interface ManagedWalletTransactionFilters {
+  expertId?: string;
+  type?: WalletTransactionType;
+  direction?: "CREDIT" | "DEBIT";
+  from?: string;
+  to?: string;
+  page?: number;
+  size?: number;
+}

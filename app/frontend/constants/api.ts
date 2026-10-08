@@ -29,6 +29,8 @@ export const PROFILE_ENDPOINTS = {
   SPECIALIZATION_STATUS: (specId: string) => `/profiles/specializations/${specId}/status`,
   ME_SPECIALIZATION: (specId: string) => `/profiles/me/specializations/${specId}`,
   EXPERTS: "/profiles/experts",
+  /** [ADMIN] Experts the logged-in admin approved and therefore manages. */
+  MANAGED_EXPERTS: "/profiles/experts/managed",
   EXPERT: (accountId: string) => `/profiles/experts/${accountId}`,
   PROFILE: (accountId: string) => `/profiles/public/${accountId}`,
 };
@@ -42,6 +44,9 @@ export const BOOKING_ENDPOINTS = {
   APPOINTMENTS: "/booking/appointments",
   EXPERT_APPOINTMENTS: "/booking/appointments/expert",
   APPOINTMENT_CONFIRMATION: "/booking/appointments/confirmation",
+  APPOINTMENT: (appointmentId: string) => `/booking/appointments/${appointmentId}`,
+  /** [ADMIN] Scoped to experts the admin approved (manages). */
+  ADMIN_APPOINTMENTS: "/booking/appointments/admin",
   CANCEL_APPOINTMENT: (appointmentId: string) => `/booking/appointments/${appointmentId}/cancel`,
   APPOINTMENT_MEDICAL_RECORD: (appointmentId: string) => `/booking/appointments/${appointmentId}/medical-record`,
   MEDICAL_RECORDS: "/booking/medical-records",
@@ -67,6 +72,21 @@ export const PAYMENT_ENDPOINTS = {
   ORDERS: "/payments/orders",
   /** Public: verifies the VNPay return query (vnp_SecureHash), settles the order and returns payment + booking status. */
   VNPAY_RETURN: "/payments/vnpay-return",
+  /** [PATIENT] Totals of own payments (total paid counts SUCCESS only). */
+  ORDERS_SUMMARY: "/payments/orders/summary",
+  ORDER: (orderId: string) => `/payments/orders/${orderId}`,
+  /** [EXPERT] Orders paid to me with gross / commission / net. */
+  EXPERT_ORDERS: "/payments/expert/orders",
+  EXPERT_ORDERS_SUMMARY: "/payments/expert/orders/summary",
+  EXPERT_ORDER: (orderId: string) => `/payments/expert/orders/${orderId}`,
+  /** [ADMIN] Scoped to experts the admin approved (= manages); others return 403. */
+  ADMIN_ORDERS: "/payments/admin/orders",
+  ADMIN_ORDERS_SUMMARY: "/payments/admin/orders/summary",
+  ADMIN_ORDER: (orderId: string) => `/payments/admin/orders/${orderId}`,
+  ADMIN_ORDER_REVIEW: (orderId: string) => `/payments/admin/orders/${orderId}/review`,
+  ADMIN_WALLET_TRANSACTIONS: "/payments/admin/wallet-transactions",
+  COMPENSATION_CASES: "/payments/compensation-cases",
+  COMPENSATION_CASE_RESOLVE: (caseId: string) => `/payments/compensation-cases/${caseId}/resolve`,
 };
 
 export const ASSESSMENT_ENDPOINTS = {
@@ -141,6 +161,8 @@ export const QUERY_KEYS = {
   availableTimes: (expertId: string, date: string) =>
     ["booking", "available-times", expertId, date] as const,
   myBookings: () => ["booking", "my-bookings"] as const,
+  appointmentDetail: (appointmentId: string) => ["booking", "appointment", appointmentId] as const,
+  adminAppointments: (filters?: object) => ["booking", "admin-appointments", filters ?? {}] as const,
   bookingConfirmation: (params: Record<string, unknown>) => ["booking", "confirmation", params] as const,
   expertAppointments: (filters?: Record<string, unknown>) =>
     ["booking", "expert-appointments", filters ?? {}] as const,
@@ -148,6 +170,16 @@ export const QUERY_KEYS = {
   myAvailabilities: () => ["booking", "availabilities", "me"] as const,
   expertSlots: (params?: Record<string, unknown>) => ["booking", "expert-slots", params ?? {}] as const,
   wallet: (ownerId: string) => ["payment", "wallet", ownerId] as const,
+  myPaymentOrders: (filters?: object) => ["payment", "orders", "me", filters ?? {}] as const,
+  myPaymentSummary: (filters?: object) => ["payment", "orders", "me", "summary", filters ?? {}] as const,
+  expertPaymentOrders: (filters?: object) => ["payment", "orders", "expert", filters ?? {}] as const,
+  expertPaymentSummary: (filters?: object) => ["payment", "orders", "expert", "summary", filters ?? {}] as const,
+  adminPaymentOrders: (filters?: object) => ["payment", "orders", "admin", filters ?? {}] as const,
+  adminPaymentSummary: (filters?: object) => ["payment", "orders", "admin", "summary", filters ?? {}] as const,
+  adminPaymentOrder: (orderId: string) => ["payment", "orders", "admin", "detail", orderId] as const,
+  compensationCases: (filters?: object) => ["payment", "compensation-cases", filters ?? {}] as const,
+  managedWalletTransactions: (filters?: object) => ["payment", "wallet-transactions", "managed", filters ?? {}] as const,
+  managedExperts: (filters?: object) => ["experts", "managed", filters ?? {}] as const,
   assessmentTemplates: () => ["assessment", "templates"] as const,
   assessmentTemplate: (slug: string) => ["assessment", "template", slug] as const,
   assessmentQuestions: (templateId: string) => ["assessment", "questions", templateId] as const,

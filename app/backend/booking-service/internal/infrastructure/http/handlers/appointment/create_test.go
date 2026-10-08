@@ -97,8 +97,8 @@ func TestCreateAppointment(t *testing.T) {
 		h := NewHandler(mockUsecase)
 
 		body := map[string]string{
-			"expert_id": "expert-uuid-1",
-			"slot_id":   "slot-uuid-1",
+			"expert_id":         "expert-uuid-1",
+			"slot_id":           "slot-uuid-1",
 			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
@@ -137,8 +137,8 @@ func TestCreateAppointment(t *testing.T) {
 		h := NewHandler(mockUsecase)
 
 		body := map[string]string{
-			"expert_id": "expert-uuid-1",
-			"slot_id":   "slot-uuid-unlocked",
+			"expert_id":         "expert-uuid-1",
+			"slot_id":           "slot-uuid-unlocked",
 			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
@@ -166,8 +166,8 @@ func TestCreateAppointment(t *testing.T) {
 		h := NewHandler(mockUsecase)
 
 		body := map[string]string{
-			"expert_id": "expert-uuid-1",
-			"slot_id":   "slot-uuid-expired",
+			"expert_id":         "expert-uuid-1",
+			"slot_id":           "slot-uuid-expired",
 			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
@@ -195,8 +195,8 @@ func TestCreateAppointment(t *testing.T) {
 		h := NewHandler(mockUsecase)
 
 		body := map[string]string{
-			"expert_id": "expert-uuid-1",
-			"slot_id":   "slot-uuid-timeoff",
+			"expert_id":         "expert-uuid-1",
+			"slot_id":           "slot-uuid-timeoff",
 			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)
@@ -220,8 +220,8 @@ func TestCreateAppointment(t *testing.T) {
 		h := NewHandler(mockUsecase)
 
 		body := map[string]string{
-			"expert_id": "expert-uuid-1",
-			"slot_id":   "slot-uuid-1",
+			"expert_id":         "expert-uuid-1",
+			"slot_id":           "slot-uuid-1",
 			"patient_record_id": "record-uuid-1",
 		}
 		jsonBytes, _ := json.Marshal(body)

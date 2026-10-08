@@ -13,6 +13,7 @@ import (
 	"payment-service/internal/infrastructure/client/bookinggrpc"
 	"payment-service/internal/infrastructure/client/bookingrest"
 	"payment-service/internal/infrastructure/client/internalauth"
+	"payment-service/internal/infrastructure/client/profilegrpc"
 	"payment-service/internal/infrastructure/client/vnpay"
 	paymentHandler "payment-service/internal/infrastructure/http/handlers/payment"
 	walletHandler "payment-service/internal/infrastructure/http/handlers/wallet"
@@ -65,6 +66,14 @@ func main() {
 	defer bookingSvcClient.Close()
 	log.Printf("🛰️  Booking gRPC client target: %s", config.AppConfig.BookingGRPCAddr)
 
+	// 1.4 profile-service gRPC: danh sách chuyên gia mà Admin quản lý (Admin đã duyệt chuyên gia)
+	profileClient, err := profilegrpc.New(config.AppConfig.ProfileGRPCAddr)
+	if err != nil {
+		log.Fatalf("Failed to init profile gRPC client: %v", err)
+	}
+	defer profileClient.Close()
+	log.Printf("🛰️  Profile gRPC client target: %s", config.AppConfig.ProfileGRPCAddr)
+
 	// 2. Kết nối CSDL & Chạy Migration
 	config.ConnectDB()
 
@@ -91,13 +100,16 @@ func main() {
 
 	paymentUoW := repository.NewUnitOfWork(config.DB, walletUsecase)
 	paymentUsecase := apppayment.NewUsecaseWithOptions(paymentRepo, paymentUoW, vnpayClient, bookingSvcClient, apppayment.Options{
-		OrderTTL:      config.AppConfig.PaymentOrderTTL,
-		MinimumWindow: config.AppConfig.PaymentMinUsableWindow,
+		OrderTTL:       config.AppConfig.PaymentOrderTTL,
+		MinimumWindow:  config.AppConfig.PaymentMinUsableWindow,
+		ManagedExperts: profileClient,
+		Profiles:       profileClient,
+		Appointments:   bookingSvcClient,
 	})
 	withdrawalUsecase := appwithdrawal.NewUsecase(withdrawalRepo, walletUsecase)
 
 	// Handlers
-	wHandler := walletHandler.NewHandler(walletUsecase)
+	wHandler := walletHandler.NewHandler(walletUsecase).WithManagedReader(appwallet.NewManagedReader(walletRepo, profileClient))
 	pHandler := paymentHandler.NewHandler(paymentUsecase)
 	wdHandler := withdrawalHandler.NewHandler(withdrawalUsecase)
 

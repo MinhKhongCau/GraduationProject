@@ -41,17 +41,19 @@
       "myPosts": "Các bài bạn đã chia sẻ với cộng đồng.",
       "expertPatients": "Những người bạn đã tư vấn.",
       "clinicalRecords": "Ghi chú buổi tư vấn và hồ sơ y tế.",
-      "expertWallet": "Thu nhập và yêu cầu rút tiền.",
+      "expertWallet": "Thu nhập, hoa hồng và số tiền thực nhận.",
       "forum": "Trả lời câu hỏi và chia sẻ kiến thức.",
       "specializations": "Các chuyên khoa chuyên gia có thể chọn.",
-      "adminAppointments": "Toàn bộ lịch hẹn trên nền tảng.",
+      "adminAppointments": "Lịch hẹn của các chuyên gia bạn đã duyệt.",
       "schedules": "Mẫu ca làm và lịch rảnh của chuyên gia.",
       "withdrawals": "Duyệt và xử lý yêu cầu rút tiền.",
       "templates": "Các mẫu đánh giá bệnh nhân có thể làm.",
       "dimensions": "Các chiều chấm điểm dùng trong mẫu.",
       "optionGroups": "Thang trả lời dùng lại cho câu hỏi.",
-      "questions": "Ngân hàng câu hỏi cho mọi bài đánh giá."
-    }
+      "questions": "Ngân hàng câu hỏi cho mọi bài đánh giá.",
+      "transactions": "Giao dịch của các chuyên gia bạn đã duyệt."
+    },
+    "transactions": "Quản lý giao dịch"
   },
   "common": {
     "save": "Lưu",
@@ -63,5 +65,64 @@
     "viewAll": "Xem tất cả",
     "search": "Tìm kiếm",
     "language": "Ngôn ngữ"
+  },
+  "payment": {
+    "status": {
+      "PENDING": "Chờ thanh toán",
+      "SUCCESS": "Đã thanh toán",
+      "FAILED": "Thất bại",
+      "EXPIRED": "Hết hạn"
+    },
+    "fulfillment": {
+      "PENDING": "Đang xử lý",
+      "BOOKING_CONFIRMED": "Đã xác nhận lịch",
+      "BOOKING_FAILED": "Đặt lịch lỗi",
+      "MANUAL_REVIEW": "Cần kiểm tra",
+      "REFUND_REQUIRED": "Cần hoàn tiền"
+    },
+    "compensation": {
+      "MANUAL_REVIEW": "Cần kiểm tra",
+      "REFUND_REQUIRED": "Cần hoàn tiền",
+      "RESOLVED": "Đã xử lý"
+    },
+    "type": {
+      "APPOINTMENT": "Lịch hẹn",
+      "TOP_UP": "Nạp ví"
+    },
+    "filter": {
+      "status": "Trạng thái",
+      "type": "Loại",
+      "all": "Tất cả",
+      "from": "Từ ngày",
+      "to": "Đến ngày"
+    },
+    "summary": {
+      "orders": "Số đơn",
+      "successOrders": "{{count}} đã thanh toán",
+      "gross": "Tổng doanh thu",
+      "commission": "Hoa hồng",
+      "net": "Thực nhận"
+    },
+    "col": {
+      "date": "Thời gian",
+      "type": "Loại",
+      "patient": "Bệnh nhân",
+      "gross": "Tổng tiền",
+      "commission": "Hoa hồng",
+      "net": "Thực nhận",
+      "status": "Trạng thái",
+      "session": "Buổi khám"
+    },
+    "patient": {
+      "history": "Lịch sử thanh toán",
+      "totalPaid": "Tổng đã thanh toán"
+    },
+    "expert": {
+      "title": "Thu nhập",
+      "description": "Các khoản thanh toán cho buổi tư vấn, hoa hồng nền tảng và số tiền bạn thực nhận.",
+      "released": "Khả dụng",
+      "onHold": "Đang tạm giữ"
+    },
+    "empty": "Không có giao dịch nào trong khoảng thời gian này."
   }
 }

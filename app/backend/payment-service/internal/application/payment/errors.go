@@ -21,4 +21,6 @@ var (
 	ErrPaymentOrderNotFound          = errors.New("payment order not found")
 	ErrPaymentOrderForbidden         = errors.New("payment order access denied")
 	ErrPaymentOrderReaderUnavailable = errors.New("payment order reader unavailable")
+	ErrOrderReviewStoreUnavailable   = errors.New("payment order review store unavailable")
+	ErrCompensationCaseExists        = errors.New("compensation case already exists for this order and reason")
 )

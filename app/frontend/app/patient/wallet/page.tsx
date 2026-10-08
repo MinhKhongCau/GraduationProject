@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BalanceCard } from "./component/BalanceCard";
-import { TransactionListItem } from "./component/TransactionListItem";
+import { PaymentHistory } from "./component/PaymentHistory";
 import { TopUpDialog } from "./component/TopUpDialog";
 import { WithdrawDialog } from "./component/WithdrawDialog";
 import { Button, Card, PageHeader, Spinner } from "@/components/ui";
 import { useApiMutation } from "@/hooks";
 import { paymentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
-import { TRANSACTIONS_MOCK } from "@/data";
 import { useAuthContext } from "@/context/AuthContext";
 import { useErrorContext } from "@/context/ErrorContext";
 import type { CreateWithdrawalRequest } from "@/types";
@@ -75,14 +74,7 @@ export default function WalletPage() {
         <>
           <BalanceCard balance={wallet.balance} onTopUp={() => setTopUpOpen(true)} onWithdraw={() => setWithdrawOpen(true)} />
 
-          <Card className="mt-6 overflow-hidden">
-            <h2 className="border-b border-border px-5 py-4 text-base font-semibold text-foreground">Transaction history</h2>
-            <div className="divide-y divide-border">
-              {TRANSACTIONS_MOCK.map((transaction) => (
-                <TransactionListItem key={transaction.txnId} transaction={transaction} />
-              ))}
-            </div>
-          </Card>
+          <PaymentHistory />
 
           <TopUpDialog
             open={topUpOpen}

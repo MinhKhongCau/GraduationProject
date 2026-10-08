@@ -23,6 +23,8 @@ interface RawExpertDetail {
   introductionVideoUrl?: string;
   bio?: string;
   verificationStatus: ExpertVerificationStatus;
+  /** Auth id of the admin who approved (and now manages) this expert. Hidden on public routes. */
+  managedByAdminId?: string;
   specializations?: Specialization[];
 }
 
@@ -49,6 +51,7 @@ function toExpertProfile(raw: RawExpertProfile): ExpertProfile {
     introductionVideoUrl: detail?.introductionVideoUrl,
     bio: detail?.bio,
     verificationStatus: detail?.verificationStatus ?? "UNVERIFIED",
+    managedByAdminId: detail?.managedByAdminId || undefined,
     specializations: detail?.specializations ?? [],
   };
 }
@@ -85,6 +88,17 @@ export async function listExperts(
 ): Promise<PaginatedResponse<ExpertProfile>> {
   const response = await profileClient.get<PageResult<RawExpertProfile>>(
     PROFILE_ENDPOINTS.EXPERTS,
+    { params }
+  );
+  return toPaginated(response.data, toExpertProfile);
+}
+
+/** [ADMIN] Experts the logged-in admin approved and therefore manages. */
+export async function listManagedExperts(
+  params: Omit<ListExpertsParams, "specializationId"> = {}
+): Promise<PaginatedResponse<ExpertProfile>> {
+  const response = await profileClient.get<PageResult<RawExpertProfile>>(
+    PROFILE_ENDPOINTS.MANAGED_EXPERTS,
     { params }
   );
   return toPaginated(response.data, toExpertProfile);

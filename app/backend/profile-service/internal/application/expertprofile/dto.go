@@ -39,6 +39,8 @@ type ExpertDetailsView struct {
 	IntroductionVideoURL string               `json:"introduction_video_url"`
 	Bio                  string               `json:"bio"`
 	VerificationStatus   string               `json:"verification_status"`
+	ManagedByAdminID     *uuid.UUID           `json:"managed_by_admin_id,omitempty"`
+	VerifiedAt           *time.Time           `json:"verified_at,omitempty"`
 	Specializations      []SpecializationView `json:"specializations,omitempty"`
 }
 
@@ -78,6 +80,8 @@ func NewExpertProfileView(e *expert.Expert) ExpertProfileView {
 			IntroductionVideoURL: s.Details.IntroductionVideoURL,
 			Bio:                  s.Details.Bio,
 			VerificationStatus:   s.VerificationStatus,
+			ManagedByAdminID:     s.ManagerAdminID,
+			VerifiedAt:           s.VerifiedAt,
 			Specializations:      specs,
 		},
 	}

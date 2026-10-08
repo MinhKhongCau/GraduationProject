@@ -36,11 +36,11 @@ func (m *mockPaymentOrderUsecase) ProcessIPN(ctx context.Context, queryParams ma
 	return false, nil
 }
 
-func (m *mockPaymentOrderUsecase) ListCompensationCases(ctx context.Context, filter apppayment.CompensationCaseFilter) (*apppayment.CompensationCasePage, error) {
+func (m *mockPaymentOrderUsecase) ListCompensationCases(ctx context.Context, adminID uuid.UUID, filter apppayment.CompensationCaseFilter) (*apppayment.CompensationCasePage, error) {
 	return nil, nil
 }
 
-func (m *mockPaymentOrderUsecase) GetCompensationCase(ctx context.Context, caseID uuid.UUID) (*apppayment.CompensationCase, error) {
+func (m *mockPaymentOrderUsecase) GetCompensationCase(ctx context.Context, adminID, caseID uuid.UUID) (*apppayment.CompensationCase, error) {
 	return nil, nil
 }
 

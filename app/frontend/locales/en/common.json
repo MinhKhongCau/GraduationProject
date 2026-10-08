@@ -41,17 +41,19 @@
       "myPosts": "Posts you have shared with the community.",
       "expertPatients": "Everyone you have counselled so far.",
       "clinicalRecords": "Session notes and medical records.",
-      "expertWallet": "Earnings and withdrawal requests.",
+      "expertWallet": "Earnings, commission and net amount.",
       "forum": "Answer questions and share knowledge.",
       "specializations": "Areas of expertise experts can list.",
-      "adminAppointments": "Every booking across the platform.",
+      "adminAppointments": "Bookings of the experts you approved.",
       "schedules": "Shift templates and expert availability.",
       "withdrawals": "Review and process payout requests.",
       "templates": "Assessment templates patients can take.",
       "dimensions": "Scoring dimensions used by templates.",
       "optionGroups": "Reusable answer scales for questions.",
-      "questions": "The question bank behind every assessment."
-    }
+      "questions": "The question bank behind every assessment.",
+      "transactions": "Payments of the experts you approved."
+    },
+    "transactions": "Transactions"
   },
   "common": {
     "save": "Save",
@@ -63,5 +65,64 @@
     "viewAll": "View all",
     "search": "Search",
     "language": "Language"
+  },
+  "payment": {
+    "status": {
+      "PENDING": "Pending",
+      "SUCCESS": "Paid",
+      "FAILED": "Failed",
+      "EXPIRED": "Expired"
+    },
+    "fulfillment": {
+      "PENDING": "Processing",
+      "BOOKING_CONFIRMED": "Booking confirmed",
+      "BOOKING_FAILED": "Booking failed",
+      "MANUAL_REVIEW": "Manual review",
+      "REFUND_REQUIRED": "Refund required"
+    },
+    "compensation": {
+      "MANUAL_REVIEW": "Manual review",
+      "REFUND_REQUIRED": "Refund required",
+      "RESOLVED": "Resolved"
+    },
+    "type": {
+      "APPOINTMENT": "Appointment",
+      "TOP_UP": "Wallet top-up"
+    },
+    "filter": {
+      "status": "Status",
+      "type": "Type",
+      "all": "All",
+      "from": "From",
+      "to": "To"
+    },
+    "summary": {
+      "orders": "Orders",
+      "successOrders": "{{count}} paid",
+      "gross": "Gross revenue",
+      "commission": "Commission",
+      "net": "Net amount"
+    },
+    "col": {
+      "date": "Date",
+      "type": "Type",
+      "patient": "Patient",
+      "gross": "Gross",
+      "commission": "Commission",
+      "net": "Net",
+      "status": "Status",
+      "session": "Session"
+    },
+    "patient": {
+      "history": "Payment history",
+      "totalPaid": "Total paid"
+    },
+    "expert": {
+      "title": "Earnings",
+      "description": "Payments for your sessions, platform commission and what you receive.",
+      "released": "Available",
+      "onHold": "On hold"
+    },
+    "empty": "No transactions in this period."
   }
 }

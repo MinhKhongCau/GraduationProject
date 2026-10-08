@@ -39,8 +39,8 @@ docker run --rm \
       done
     }
 
-    # profile/v1/profile.proto: profile-service (server) + booking-service (client)
-    gen profile/v1/profile.proto profilepb profile-service booking-service
+    # profile/v1/profile.proto: profile-service (server) + booking-service, payment-service (client)
+    gen profile/v1/profile.proto profilepb profile-service booking-service payment-service
     # booking/v1/booking_payment.proto: booking-service (server) + payment-service (client)
     gen booking/v1/booking_payment.proto bookingpb booking-service payment-service
     # payment/v1/payment_events.proto: payment-service (publisher) + booking-service (consumer)

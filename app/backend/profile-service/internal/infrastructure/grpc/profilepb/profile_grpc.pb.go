@@ -1,4 +1,4 @@
-// Hợp đồng gRPC nội bộ giữa booking-service (client) và profile-service (server).
+// Hợp đồng gRPC nội bộ giữa booking-service, payment-service (client) và profile-service (server).
 // Chỉ dùng trong mạng Docker nội bộ, KHÔNG public qua API Gateway.
 //
 // Sinh code: chạy scripts/gen-proto.sh ở thư mục gốc repo. Code sinh ra được commit vào
@@ -26,7 +26,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProfileQueryService_GetBookingInfo_FullMethodName = "/mindcare.profile.v1.ProfileQueryService/GetBookingInfo"
+	ProfileQueryService_GetBookingInfo_FullMethodName       = "/mindcare.profile.v1.ProfileQueryService/GetBookingInfo"
+	ProfileQueryService_ListManagedExpertIds_FullMethodName = "/mindcare.profile.v1.ProfileQueryService/ListManagedExpertIds"
+	ProfileQueryService_GetProfileSummaries_FullMethodName  = "/mindcare.profile.v1.ProfileQueryService/GetProfileSummaries"
 )
 
 // ProfileQueryServiceClient is the client API for ProfileQueryService service.
@@ -42,6 +44,22 @@ type ProfileQueryServiceClient interface {
 	//	NOT_FOUND           - không có chuyên gia, hoặc hồ sơ không tồn tại/không thuộc owner_id
 	//	FAILED_PRECONDITION - chuyên gia không phụ trách chuyên khoa specialization_id
 	GetBookingInfo(ctx context.Context, in *GetBookingInfoRequest, opts ...grpc.CallOption) (*GetBookingInfoResponse, error)
+	// ListManagedExpertIds trả về auth account id của các chuyên gia do admin_id quản lý
+	// (Admin đã duyệt VERIFIED chuyên gia đó). payment-service dùng để giới hạn phạm vi
+	// giao dịch Admin được xem/xử lý.
+	//
+	// Lỗi:
+	//
+	//	INVALID_ARGUMENT - admin_id không phải UUID hợp lệ
+	ListManagedExpertIds(ctx context.Context, in *ListManagedExpertIdsRequest, opts ...grpc.CallOption) (*ListManagedExpertIdsResponse, error)
+	// GetProfileSummaries trả thông tin hiển thị (tên, ảnh, liên hệ) của nhiều tài khoản một lần,
+	// dùng để ghép tên chuyên gia/bệnh nhân vào lịch hẹn và giao dịch. Id không tồn tại bị bỏ qua;
+	// tối đa 100 id mỗi lần.
+	//
+	// Lỗi:
+	//
+	//	INVALID_ARGUMENT - có id không phải UUID hoặc quá 100 id
+	GetProfileSummaries(ctx context.Context, in *GetProfileSummariesRequest, opts ...grpc.CallOption) (*GetProfileSummariesResponse, error)
 }
 
 type profileQueryServiceClient struct {
@@ -62,6 +80,26 @@ func (c *profileQueryServiceClient) GetBookingInfo(ctx context.Context, in *GetB
 	return out, nil
 }
 
+func (c *profileQueryServiceClient) ListManagedExpertIds(ctx context.Context, in *ListManagedExpertIdsRequest, opts ...grpc.CallOption) (*ListManagedExpertIdsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListManagedExpertIdsResponse)
+	err := c.cc.Invoke(ctx, ProfileQueryService_ListManagedExpertIds_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *profileQueryServiceClient) GetProfileSummaries(ctx context.Context, in *GetProfileSummariesRequest, opts ...grpc.CallOption) (*GetProfileSummariesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetProfileSummariesResponse)
+	err := c.cc.Invoke(ctx, ProfileQueryService_GetProfileSummaries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProfileQueryServiceServer is the server API for ProfileQueryService service.
 // All implementations must embed UnimplementedProfileQueryServiceServer
 // for forward compatibility.
@@ -75,6 +113,22 @@ type ProfileQueryServiceServer interface {
 	//	NOT_FOUND           - không có chuyên gia, hoặc hồ sơ không tồn tại/không thuộc owner_id
 	//	FAILED_PRECONDITION - chuyên gia không phụ trách chuyên khoa specialization_id
 	GetBookingInfo(context.Context, *GetBookingInfoRequest) (*GetBookingInfoResponse, error)
+	// ListManagedExpertIds trả về auth account id của các chuyên gia do admin_id quản lý
+	// (Admin đã duyệt VERIFIED chuyên gia đó). payment-service dùng để giới hạn phạm vi
+	// giao dịch Admin được xem/xử lý.
+	//
+	// Lỗi:
+	//
+	//	INVALID_ARGUMENT - admin_id không phải UUID hợp lệ
+	ListManagedExpertIds(context.Context, *ListManagedExpertIdsRequest) (*ListManagedExpertIdsResponse, error)
+	// GetProfileSummaries trả thông tin hiển thị (tên, ảnh, liên hệ) của nhiều tài khoản một lần,
+	// dùng để ghép tên chuyên gia/bệnh nhân vào lịch hẹn và giao dịch. Id không tồn tại bị bỏ qua;
+	// tối đa 100 id mỗi lần.
+	//
+	// Lỗi:
+	//
+	//	INVALID_ARGUMENT - có id không phải UUID hoặc quá 100 id
+	GetProfileSummaries(context.Context, *GetProfileSummariesRequest) (*GetProfileSummariesResponse, error)
 	mustEmbedUnimplementedProfileQueryServiceServer()
 }
 
@@ -87,6 +141,12 @@ type UnimplementedProfileQueryServiceServer struct{}
 
 func (UnimplementedProfileQueryServiceServer) GetBookingInfo(context.Context, *GetBookingInfoRequest) (*GetBookingInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBookingInfo not implemented")
+}
+func (UnimplementedProfileQueryServiceServer) ListManagedExpertIds(context.Context, *ListManagedExpertIdsRequest) (*ListManagedExpertIdsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListManagedExpertIds not implemented")
+}
+func (UnimplementedProfileQueryServiceServer) GetProfileSummaries(context.Context, *GetProfileSummariesRequest) (*GetProfileSummariesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProfileSummaries not implemented")
 }
 func (UnimplementedProfileQueryServiceServer) mustEmbedUnimplementedProfileQueryServiceServer() {}
 func (UnimplementedProfileQueryServiceServer) testEmbeddedByValue()                             {}
@@ -127,6 +187,42 @@ func _ProfileQueryService_GetBookingInfo_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProfileQueryService_ListManagedExpertIds_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListManagedExpertIdsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProfileQueryServiceServer).ListManagedExpertIds(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProfileQueryService_ListManagedExpertIds_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProfileQueryServiceServer).ListManagedExpertIds(ctx, req.(*ListManagedExpertIdsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProfileQueryService_GetProfileSummaries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProfileSummariesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProfileQueryServiceServer).GetProfileSummaries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProfileQueryService_GetProfileSummaries_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProfileQueryServiceServer).GetProfileSummaries(ctx, req.(*GetProfileSummariesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProfileQueryService_ServiceDesc is the grpc.ServiceDesc for ProfileQueryService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -137,6 +233,14 @@ var ProfileQueryService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBookingInfo",
 			Handler:    _ProfileQueryService_GetBookingInfo_Handler,
+		},
+		{
+			MethodName: "ListManagedExpertIds",
+			Handler:    _ProfileQueryService_ListManagedExpertIds_Handler,
+		},
+		{
+			MethodName: "GetProfileSummaries",
+			Handler:    _ProfileQueryService_GetProfileSummaries_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

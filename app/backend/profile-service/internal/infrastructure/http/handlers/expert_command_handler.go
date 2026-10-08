@@ -187,6 +187,7 @@ func (h *ExpertHandler) patchFor(c *gin.Context, authID uuid.UUID) {
 	view, err := h.patch.Execute(c.Request.Context(), expertprofile.PatchCommand{
 		AuthID:               authID,
 		ActorRole:            profile.Role(c.GetString(middleware.CtxRole)),
+		ActorID:              actorID(c),
 		UserInformation:      patch,
 		Email:                req.Email,
 		AvatarURL:            req.AvatarURL,
@@ -200,6 +201,15 @@ func (h *ExpertHandler) patchFor(c *gin.Context, authID uuid.UUID) {
 		return
 	}
 	response.Success(c, "Cập nhật hồ sơ thành công", view)
+}
+
+// actorID đọc auth id của người gọi do Gateway chèn vào; không hợp lệ thì trả uuid.Nil.
+func actorID(c *gin.Context) uuid.UUID {
+	id, err := uuid.Parse(c.GetString(middleware.CtxAuthID))
+	if err != nil {
+		return uuid.Nil
+	}
+	return id
 }
 
 func writeExpertError(c *gin.Context, err error) {

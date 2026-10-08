@@ -28,7 +28,11 @@ const PaymentServiceCallerID = "payment-service"
 type PaymentResultHandler interface {
 	HandlePaymentResult(command appappointment.HandlePaymentResultCommand) error
 	GetAppointmentByID(appointmentID string) (*appointmentdomain.Appointment, error)
+	GetAppointmentSummaries(ctx context.Context, appointmentIDs []string) ([]appointmentdomain.Appointment, error)
 }
+
+// maxSummaryIDs giới hạn số lịch hẹn mỗi lần tra cứu hàng loạt.
+const maxSummaryIDs = 100
 
 // CallerVerifier verify giá trị metadata "authorization" và trả về client_id của service gọi.
 type CallerVerifier func(authorization string) (string, error)
@@ -164,4 +168,37 @@ func toProtoStatus(s appointmentdomain.AppointmentStatus) bookingpb.AppointmentS
 	default:
 		return bookingpb.AppointmentStatus_APPOINTMENT_STATUS_UNSPECIFIED
 	}
+}
+
+// GetAppointmentSummaries trả thông tin hiển thị của nhiều lịch hẹn; id không tồn tại bị bỏ qua.
+func (s *BookingPaymentServer) GetAppointmentSummaries(ctx context.Context, req *bookingpb.GetAppointmentSummariesRequest) (*bookingpb.GetAppointmentSummariesResponse, error) {
+	ids := req.GetAppointmentIds()
+	if len(ids) > maxSummaryIDs {
+		return nil, status.Errorf(codes.InvalidArgument, "tối đa %d appointment_id mỗi lần", maxSummaryIDs)
+	}
+	for _, id := range ids {
+		if _, err := uuid.Parse(id); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "appointment_id không hợp lệ: %q", id)
+		}
+	}
+	appointments, err := s.appointments.GetAppointmentSummaries(ctx, ids)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "đọc lịch hẹn: %v", err)
+	}
+	resp := &bookingpb.GetAppointmentSummariesResponse{Appointments: make([]*bookingpb.AppointmentSummary, 0, len(appointments))}
+	for i := range appointments {
+		a := &appointments[i]
+		resp.Appointments = append(resp.Appointments, &bookingpb.AppointmentSummary{
+			AppointmentId:      a.AppointmentID,
+			PatientId:          a.PatientID,
+			ExpertId:           a.ExpertID,
+			Status:             toProtoStatus(a.Status),
+			StartTime:          a.StartTime,
+			EndTime:            a.EndTime,
+			PriceVnd:           int64(a.Price),
+			SpecializationName: a.SpecializationName,
+			PatientFullName:    a.Patient.FullName,
+		})
+	}
+	return resp, nil
 }

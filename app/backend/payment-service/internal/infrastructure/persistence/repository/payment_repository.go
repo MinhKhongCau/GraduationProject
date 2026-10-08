@@ -72,9 +72,69 @@ func (r *paymentRepository) GetPaymentOrder(ctx context.Context, orderID uuid.UU
 }
 
 func (r *paymentRepository) ListPaymentOrders(ctx context.Context, filter apppayment.PaymentOrderFilter) ([]paymentdomain.PaymentOrder, int64, error) {
-	query := r.db.WithContext(ctx).Model(&paymentdomain.PaymentOrder{}).Where("payer_id = ?", filter.PayerID)
+	query := paymentOrderFilterQuery(r.db.WithContext(ctx).Model(&paymentdomain.PaymentOrder{}), filter)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var orders []paymentdomain.PaymentOrder
+	err := query.Order("created_at DESC, id DESC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&orders).Error
+	return orders, total, err
+}
+
+type paymentOrderTotalsRow struct {
+	TotalOrders      int64
+	PendingOrders    int64
+	SuccessOrders    int64
+	FailedOrders     int64
+	ExpiredOrders    int64
+	GrossAmount      int64
+	CommissionAmount int64
+	NetAmount        int64
+}
+
+// SummarizePaymentOrders tổng hợp theo cùng bộ lọc với ListPaymentOrders (bỏ phân trang) trong một
+// câu truy vấn; tổng tiền chỉ tính đơn SUCCESS.
+func (r *paymentRepository) SummarizePaymentOrders(ctx context.Context, filter apppayment.PaymentOrderFilter) (apppayment.PaymentOrderTotals, error) {
+	var row paymentOrderTotalsRow
+	err := paymentOrderFilterQuery(r.db.WithContext(ctx).Model(&paymentdomain.PaymentOrder{}), filter).
+		Select(paymentOrderTotalsSelect,
+			paymentdomain.OrderStatusPending, paymentdomain.OrderStatusSuccess, paymentdomain.OrderStatusFailed, paymentdomain.OrderStatusExpired,
+			paymentdomain.OrderStatusSuccess, paymentdomain.OrderStatusSuccess, paymentdomain.OrderStatusSuccess).
+		Scan(&row).Error
+	if err != nil {
+		return apppayment.PaymentOrderTotals{}, err
+	}
+	return apppayment.PaymentOrderTotals(row), nil
+}
+
+const paymentOrderTotalsSelect = `COUNT(*) AS total_orders,
+	COUNT(*) FILTER (WHERE status = ?) AS pending_orders,
+	COUNT(*) FILTER (WHERE status = ?) AS success_orders,
+	COUNT(*) FILTER (WHERE status = ?) AS failed_orders,
+	COUNT(*) FILTER (WHERE status = ?) AS expired_orders,
+	COALESCE(SUM(gross_amount) FILTER (WHERE status = ?), 0) AS gross_amount,
+	COALESCE(SUM(commission_amount) FILTER (WHERE status = ?), 0) AS commission_amount,
+	COALESCE(SUM(net_amount) FILTER (WHERE status = ?), 0) AS net_amount`
+
+func paymentOrderFilterQuery(query *gorm.DB, filter apppayment.PaymentOrderFilter) *gorm.DB {
+	if filter.PayerID != uuid.Nil {
+		query = query.Where("payer_id = ?", filter.PayerID)
+	}
+	if filter.ExpertID != uuid.Nil {
+		query = query.Where("expert_id = ?", filter.ExpertID)
+	}
+	if filter.ScopeExperts {
+		query = query.Where("expert_id IN ?", filter.ExpertIDs)
+	}
 	if filter.AppointmentID != nil {
 		query = query.Where("appointment_id = ?", *filter.AppointmentID)
+	}
+	switch filter.Type {
+	case apppayment.PaymentOrderTypeAppointment:
+		query = query.Where("appointment_id IS NOT NULL")
+	case apppayment.PaymentOrderTypeTopUp:
+		query = query.Where("appointment_id IS NULL")
 	}
 	if filter.Status != nil {
 		query = query.Where("status = ?", *filter.Status)
@@ -88,13 +148,51 @@ func (r *paymentRepository) ListPaymentOrders(ctx context.Context, filter apppay
 	if filter.ToMs > 0 {
 		query = query.Where("created_at < ?", filter.ToMs)
 	}
-	var total int64
-	if err := query.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var orders []paymentdomain.PaymentOrder
-	err := query.Order("created_at DESC, id DESC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Find(&orders).Error
-	return orders, total, err
+	return query
+}
+
+// ApplyOrderReview khoá đơn thanh toán, áp dụng thay đổi của Admin và lưu hồ sơ bồi hoàn trong
+// cùng transaction.
+func (r *paymentRepository) ApplyOrderReview(ctx context.Context, orderID uuid.UUID, apply func(order *paymentdomain.PaymentOrder) (*paymentdomain.PaymentCompensationCase, error)) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var order paymentdomain.PaymentOrder
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", orderID).First(&order).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apppayment.ErrPaymentOrderNotFound
+		}
+		if err != nil {
+			return err
+		}
+		compensationCase, err := apply(&order)
+		if err != nil {
+			return err
+		}
+		if err := tx.Save(&order).Error; err != nil {
+			return mapWriteError(err)
+		}
+		if err := tx.Create(compensationCase).Error; err != nil {
+			return mapWriteError(err)
+		}
+		return nil
+	})
+}
+
+// UpdateCompensationCase khoá hồ sơ bồi hoàn, áp dụng thay đổi và lưu lại.
+func (r *paymentRepository) UpdateCompensationCase(ctx context.Context, caseID uuid.UUID, apply func(compensationCase *paymentdomain.PaymentCompensationCase) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var compensationCase paymentdomain.PaymentCompensationCase
+		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", caseID).First(&compensationCase).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apppayment.ErrCompensationCaseNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if err := apply(&compensationCase); err != nil {
+			return err
+		}
+		return tx.Save(&compensationCase).Error
+	})
 }
 
 func (r *paymentRepository) GetByIDForUpdate(tx *gorm.DB, orderID uuid.UUID) (*paymentdomain.PaymentOrder, error) {
@@ -144,6 +242,8 @@ func (r *paymentRepository) Update(order *paymentdomain.PaymentOrder) error {
 
 type compensationCaseRow struct {
 	paymentdomain.PaymentCompensationCase `gorm:"embedded"`
+	PaymentExpertID                       uuid.UUID                          `gorm:"column:payment_expert_id"`
+	PaymentPayerID                        uuid.UUID                          `gorm:"column:payment_payer_id"`
 	PaymentStatus                         paymentdomain.PaymentOrderStatus   `gorm:"column:payment_status"`
 	GatewayCaptureStatus                  paymentdomain.GatewayCaptureStatus `gorm:"column:payment_gateway_capture_status"`
 	FulfillmentStatus                     paymentdomain.FulfillmentStatus    `gorm:"column:payment_fulfillment_status"`
@@ -163,6 +263,8 @@ func (r *paymentRepository) ListCompensationCases(ctx context.Context, filter ap
 	if filter.PaymentOrderID != nil {
 		query = query.Where("compensation.payment_order_id = ?", *filter.PaymentOrderID)
 	}
+	// Phạm vi chuyên gia Admin quản lý luôn được áp dụng (rỗng = không có hồ sơ nào).
+	query = query.Where("payment.expert_id IN ?", filter.ExpertIDs)
 	if filter.FromMs > 0 {
 		query = query.Where("compensation.created_at >= ?", filter.FromMs)
 	}
@@ -202,7 +304,7 @@ func (r *paymentRepository) GetCompensationCase(ctx context.Context, caseID uuid
 
 func compensationCaseReadQuery(db *gorm.DB) *gorm.DB {
 	return db.Table("payment_compensation_cases AS compensation").
-		Select("compensation.*, payment.status AS payment_status, payment.gateway_capture_status AS payment_gateway_capture_status, payment.fulfillment_status AS payment_fulfillment_status").
+		Select("compensation.*, payment.expert_id AS payment_expert_id, payment.payer_id AS payment_payer_id, payment.status AS payment_status, payment.gateway_capture_status AS payment_gateway_capture_status, payment.fulfillment_status AS payment_fulfillment_status").
 		Joins("JOIN payment_orders AS payment ON payment.id = compensation.payment_order_id")
 }
 
@@ -216,7 +318,7 @@ func compensationCaseRecords(rows []compensationCaseRow) []apppayment.Compensati
 
 func compensationCaseRecord(row compensationCaseRow) apppayment.CompensationCaseRecord {
 	return apppayment.CompensationCaseRecord{
-		Case: row.PaymentCompensationCase, PaymentStatus: row.PaymentStatus,
+		Case: row.PaymentCompensationCase, ExpertID: row.PaymentExpertID, PayerID: row.PaymentPayerID, PaymentStatus: row.PaymentStatus,
 		GatewayCaptureStatus: row.GatewayCaptureStatus, FulfillmentStatus: row.FulfillmentStatus,
 	}
 }
@@ -336,6 +438,8 @@ func mapWriteError(err error) error {
 			return apppayment.ErrActivePendingOrderExists
 		case "ux_payment_orders_success_appointment":
 			return apppayment.ErrAppointmentAlreadyPaid
+		case "ux_payment_compensation_cases_order_reason":
+			return apppayment.ErrCompensationCaseExists
 		}
 	}
 	return err

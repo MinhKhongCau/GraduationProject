@@ -46,6 +46,9 @@ func (r *pgRepository) ListAppointments(filter appappointment.AppointmentListQue
 	if filter.ExpertID != "" {
 		query = query.Where("appointment.expert_id = ?", filter.ExpertID)
 	}
+	if filter.ScopeExperts {
+		query = query.Where("appointment.expert_id IN ?", filter.ExpertIDs)
+	}
 	if filter.FromMs > 0 {
 		query = query.Where("slot.start_time >= ?", filter.FromMs)
 	}
@@ -65,6 +68,20 @@ func (r *pgRepository) ListAppointments(filter appappointment.AppointmentListQue
 		appointments[i].StatusLabel = appointments[i].Status.String()
 	}
 	return appointments, total, err
+}
+
+// GetAppointmentsByIDs đọc nhiều lịch hẹn kèm giá/giờ khám của slot; id không tồn tại bị bỏ qua.
+func (r *pgRepository) GetAppointmentsByIDs(appointmentIDs []string) ([]appointmentdomain.Appointment, error) {
+	var appointments []appointmentdomain.Appointment
+	err := r.db.Table(`"Booking_Appointments" appointment`).
+		Joins(`JOIN "Booking_Expert_Slots" slot ON slot.slot_id = appointment.slot_id`).
+		Where("appointment.appointment_id IN ?", appointmentIDs).
+		Select("appointment.*, slot.price, slot.start_time, slot.end_time").
+		Scan(&appointments).Error
+	for i := range appointments {
+		appointments[i].StatusLabel = appointments[i].Status.String()
+	}
+	return appointments, err
 }
 
 // Láº¥y danh sÃ¡ch cuá»™c háº¹n cá»§a Patient

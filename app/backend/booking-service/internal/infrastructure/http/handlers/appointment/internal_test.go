@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"context"
 	appointmentdomain "booking-service/internal/domain/appointment"
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"

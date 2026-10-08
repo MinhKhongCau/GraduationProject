@@ -19,7 +19,9 @@ type VerificationStatusChanged struct {
 	AuthID    uuid.UUID
 	From      VerificationStatus
 	To        VerificationStatus
-	At        time.Time
+	// ManagerAdminID là Admin quản lý chuyên gia sau thay đổi (nil nếu chưa có).
+	ManagerAdminID *uuid.UUID
+	At             time.Time
 }
 
 func (e VerificationStatusChanged) EventName() string     { return "expert.verification_status_changed" }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	apppayment "payment-service/internal/application/payment"
+	paymentdomain "payment-service/internal/domain/payment"
 
 	"github.com/google/uuid"
 
@@ -52,5 +53,37 @@ func TestCompensationReadQueryJoinsPaymentState(t *testing.T) {
 		if !strings.Contains(normalized, fragment) {
 			t.Fatalf("query missing %q: %s", fragment, normalized)
 		}
+	}
+}
+
+func TestPaymentOrderFilterQueryAppliesRoleScope(t *testing.T) {
+	db, err := gorm.Open(postgres.New(postgres.Config{DSN: "host=localhost user=test dbname=test sslmode=disable"}), &gorm.Config{
+		DryRun: true, DisableAutomaticPing: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expertA, expertB := uuid.New(), uuid.New()
+	render := func(filter apppayment.PaymentOrderFilter) string {
+		var rows []paymentdomain.PaymentOrder
+		sql := db.ToSQL(func(tx *gorm.DB) *gorm.DB {
+			return paymentOrderFilterQuery(tx.Model(&paymentdomain.PaymentOrder{}), filter).Find(&rows)
+		})
+		return strings.ToLower(strings.Join(strings.Fields(sql), " "))
+	}
+
+	admin := render(apppayment.PaymentOrderFilter{ScopeExperts: true, ExpertIDs: []uuid.UUID{expertA, expertB}, Type: apppayment.PaymentOrderTypeAppointment})
+	for _, fragment := range []string{"expert_id in (", expertA.String(), expertB.String(), "appointment_id is not null"} {
+		if !strings.Contains(admin, fragment) {
+			t.Fatalf("admin query missing %q: %s", fragment, admin)
+		}
+	}
+	if strings.Contains(admin, "payer_id") {
+		t.Fatalf("admin query must not filter by payer when not requested: %s", admin)
+	}
+
+	expert := render(apppayment.PaymentOrderFilter{ExpertID: expertA, Type: apppayment.PaymentOrderTypeTopUp})
+	if !strings.Contains(expert, "expert_id = '"+expertA.String()+"'") || !strings.Contains(expert, "appointment_id is null") {
+		t.Fatalf("expert query is not scoped: %s", expert)
 	}
 }
