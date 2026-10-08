@@ -44,6 +44,9 @@ export const BOOKING_ENDPOINTS = {
   APPOINTMENTS: "/booking/appointments",
   EXPERT_APPOINTMENTS: "/booking/appointments/expert",
   APPOINTMENT_CONFIRMATION: "/booking/appointments/confirmation",
+  APPOINTMENT: (appointmentId: string) => `/booking/appointments/${appointmentId}`,
+  /** [ADMIN] Scoped to experts the admin approved (manages). */
+  ADMIN_APPOINTMENTS: "/booking/appointments/admin",
   CANCEL_APPOINTMENT: (appointmentId: string) => `/booking/appointments/${appointmentId}/cancel`,
   APPOINTMENT_MEDICAL_RECORD: (appointmentId: string) => `/booking/appointments/${appointmentId}/medical-record`,
   MEDICAL_RECORDS: "/booking/medical-records",
@@ -158,6 +161,8 @@ export const QUERY_KEYS = {
   availableTimes: (expertId: string, date: string) =>
     ["booking", "available-times", expertId, date] as const,
   myBookings: () => ["booking", "my-bookings"] as const,
+  appointmentDetail: (appointmentId: string) => ["booking", "appointment", appointmentId] as const,
+  adminAppointments: (filters?: object) => ["booking", "admin-appointments", filters ?? {}] as const,
   bookingConfirmation: (params: Record<string, unknown>) => ["booking", "confirmation", params] as const,
   expertAppointments: (filters?: Record<string, unknown>) =>
     ["booking", "expert-appointments", filters ?? {}] as const,

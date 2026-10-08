@@ -12,6 +12,7 @@ import {
   formatDateTime,
   formatVnd,
 } from "@/components/payment";
+import { formatAppointmentTime } from "@/components/appointment";
 import { useApiQuery, useTranslation } from "@/hooks";
 import { paymentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -81,7 +82,13 @@ export function PaymentHistory() {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground">
                       <OrderTypeLabel type={order.type} />
+                      {order.expert?.fullName && <span className="font-normal text-muted-foreground"> · {order.expert.fullName}</span>}
                     </p>
+                    {order.appointment && (
+                      <p className="mt-0.5 text-xs text-foreground">
+                        {t("payment.col.session", "Session")}: {formatAppointmentTime(order.appointment.startTime, order.appointment.endTime)}
+                      </p>
+                    )}
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {formatDateTime(order.paidAt ?? order.createdAt)} · {order.gateway}
                     </p>

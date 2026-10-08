@@ -154,11 +154,32 @@ export interface AdminPaymentOrderFilters extends PaymentOrderFilters {
   payerId?: string;
 }
 
+/** Name/avatar of a payer or expert, attached by payment-service via profile-service gRPC. */
+export interface PaymentParty {
+  id: string;
+  fullName: string;
+  avatarUrl?: string;
+  email?: string;
+}
+
+/** Session info of an order's appointment, attached via booking-service gRPC. */
+export interface PaymentAppointmentInfo {
+  id: string;
+  status: string;
+  startTime: number;
+  endTime: number;
+  specializationName?: string;
+  /** Examined person on the booking (may differ from the paying account). */
+  patientFullName?: string;
+}
+
 export interface PatientPaymentOrder {
   id: string;
   appointmentId?: string;
   payerId: string;
   expertId: string;
+  expert?: PaymentParty;
+  appointment?: PaymentAppointmentInfo;
   type: PaymentOrderType;
   amountVnd: number;
   status: OrderStatus;
@@ -175,6 +196,8 @@ export interface ExpertPaymentOrder {
   id: string;
   appointmentId?: string;
   payerId: string;
+  payer?: PaymentParty;
+  appointment?: PaymentAppointmentInfo;
   type: PaymentOrderType;
   grossAmount: number;
   commissionRate: number;
@@ -192,6 +215,9 @@ export interface AdminPaymentOrder {
   appointmentId?: string;
   payerId: string;
   expertId: string;
+  payer?: PaymentParty;
+  expert?: PaymentParty;
+  appointment?: PaymentAppointmentInfo;
   type: PaymentOrderType;
   grossAmount: number;
   commissionRate: number;

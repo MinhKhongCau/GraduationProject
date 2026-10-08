@@ -139,8 +139,8 @@ export const ADMIN_NAV_ITEMS: NavItem[] = [
   },
   { id: "patients", labelKey: "nav.patients", label: "Patients", href: ROUTES.ADMIN.PATIENTS, icon: Users },
   {
-    id: "appointments", labelKey: "nav.appointments", label: "Appointments", href: ROUTES.ADMIN.APPOINTMENTS, icon: CalendarCheck, comingSoon: true,
-    descriptionKey: "nav.desc.adminAppointments", description: "Every booking across the platform.",
+    id: "appointments", labelKey: "nav.appointments", label: "Appointments", href: ROUTES.ADMIN.APPOINTMENTS, icon: CalendarCheck,
+    descriptionKey: "nav.desc.adminAppointments", description: "Bookings of the experts you approved.",
   },
   {
     id: "schedules", labelKey: "nav.schedules", label: "Schedules", href: ROUTES.ADMIN.SCHEDULES, icon: CalendarClock, comingSoon: true,

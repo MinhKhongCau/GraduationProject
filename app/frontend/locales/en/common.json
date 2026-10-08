@@ -44,7 +44,7 @@
       "expertWallet": "Earnings, commission and net amount.",
       "forum": "Answer questions and share knowledge.",
       "specializations": "Areas of expertise experts can list.",
-      "adminAppointments": "Every booking across the platform.",
+      "adminAppointments": "Bookings of the experts you approved.",
       "schedules": "Shift templates and expert availability.",
       "withdrawals": "Review and process payout requests.",
       "templates": "Assessment templates patients can take.",
@@ -110,7 +110,8 @@
       "gross": "Gross",
       "commission": "Commission",
       "net": "Net",
-      "status": "Status"
+      "status": "Status",
+      "session": "Session"
     },
     "patient": {
       "history": "Payment history",

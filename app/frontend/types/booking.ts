@@ -40,13 +40,53 @@ export interface Appointment {
   statusLabel: AppointmentStatus;
   meetingLink: string;
   price?: number;
+  /** Slot start/end (Unix ms), joined from the booked slot. */
+  startTime?: number;
+  endTime?: number;
   specializationId?: string | null;
   specializationName?: string;
   /** Snapshot of the patient record chosen at booking time (empty on legacy appointments). */
   patient?: AppointmentPatient;
+  /** Expert profile, attached by booking-service via profile-service gRPC (absent if lookup failed). */
+  expert?: AppointmentParty;
+  /** Account that booked (may differ from the examined person in `patient`). */
+  patientAccount?: AppointmentParty;
   createdAt: number;
   updatedAt: number;
   confirmedAt: number | null;
+}
+
+/** Display profile of an appointment participant (profile-service ProfileSummary). */
+export interface AppointmentParty {
+  authId: string;
+  role: string;
+  fullName: string;
+  avatarUrl?: string;
+  email?: string;
+  phoneNumber?: string;
+  verificationStatus?: string;
+}
+
+/** booking-service list filters; `from`/`to` are YYYY-MM-DD on the slot start time. */
+export interface AppointmentListParams {
+  from?: string;
+  to?: string;
+  status?: AppointmentStatus;
+  expertId?: string;
+  patientId?: string;
+  /** Zero-based. */
+  page?: number;
+  size?: number;
+}
+
+export interface AppointmentPage {
+  items: Appointment[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 export interface AvailableDatesResponse {

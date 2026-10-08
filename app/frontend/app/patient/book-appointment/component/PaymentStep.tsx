@@ -3,17 +3,45 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { Loader2, AlertTriangle } from "lucide-react";
-import { Button, buttonClasses } from "@/components/ui";
-import { ROUTES } from "@/constants";
+import { Button, Card, buttonClasses } from "@/components/ui";
+import { formatAppointmentTime } from "@/components/appointment";
+import { useApiQuery } from "@/hooks";
+import { bookingApi } from "@/api";
+import { QUERY_KEYS, ROUTES } from "@/constants";
 
 export interface PaymentStepProps {
+  /** The PENDING_PAYMENT appointment just created; its detail is shown while paying. */
+  appointmentId?: string;
   onPay: () => void;
   isPending: boolean;
   isError: boolean;
 }
 
+/** What the patient is paying for: expert, session time, specialization and fee. */
+function BookingSummary({ appointmentId }: { appointmentId: string }) {
+  const { data: appointment } = useApiQuery({
+    queryKey: QUERY_KEYS.appointmentDetail(appointmentId),
+    queryFn: () => bookingApi.getAppointmentDetail(appointmentId),
+  });
+  if (!appointment) return null;
+
+  return (
+    <Card className="mb-8 w-full max-w-md p-4 text-left text-sm">
+      <p className="font-semibold text-foreground">{appointment.expert?.fullName ?? "Chuyên gia"}</p>
+      <p className="mt-1 text-muted-foreground">{formatAppointmentTime(appointment.startTime, appointment.endTime)}</p>
+      {appointment.specializationName && <p className="text-muted-foreground">{appointment.specializationName}</p>}
+      {appointment.patient?.fullName && (
+        <p className="text-muted-foreground">Người khám: {appointment.patient.fullName}</p>
+      )}
+      {appointment.price ? (
+        <p className="mt-2 font-semibold text-foreground">{appointment.price.toLocaleString("vi-VN")} đ</p>
+      ) : null}
+    </Card>
+  );
+}
+
 /** Auto-creates the VNPay order on mount and redirects; offers retry/pay-later on failure. */
-export function PaymentStep({ onPay, isPending, isError }: PaymentStepProps) {
+export function PaymentStep({ appointmentId, onPay, isPending, isError }: PaymentStepProps) {
   useEffect(() => {
     onPay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -21,6 +49,7 @@ export function PaymentStep({ onPay, isPending, isError }: PaymentStepProps) {
 
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
+      {appointmentId && <BookingSummary appointmentId={appointmentId} />}
       {isError ? (
         <>
           <AlertTriangle className="mb-4 h-12 w-12 text-danger" />

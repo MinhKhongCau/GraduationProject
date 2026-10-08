@@ -10,6 +10,7 @@ import {
   formatDateTime,
   formatVnd,
 } from "@/components/payment";
+import { formatAppointmentTime } from "@/components/appointment";
 import { useApiMutation, useApiQuery } from "@/hooks";
 import { paymentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -85,9 +86,25 @@ export function OrderDetailModal({ orderId, expertName, onClose }: OrderDetailMo
               </div>
             </Row>
             <Row label="Loại"><OrderTypeLabel type={order.type} /></Row>
-            <Row label="Chuyên gia">{expertName(order.expertId)}</Row>
-            <Row label="Bệnh nhân (ID)">{order.payerId}</Row>
-            <Row label="Lịch hẹn (ID)">{order.appointmentId ?? "—"}</Row>
+            <Row label="Chuyên gia">{order.expert?.fullName ?? expertName(order.expertId)}</Row>
+            <Row label="Người thanh toán">
+              {order.payer?.fullName ?? "—"}
+              <span className="block text-xs text-muted-foreground">{order.payer?.email ?? order.payerId}</span>
+            </Row>
+            <Row label="Lịch hẹn">
+              {order.appointment ? (
+                <>
+                  {formatAppointmentTime(order.appointment.startTime, order.appointment.endTime)}
+                  <span className="block text-xs text-muted-foreground">
+                    {[order.appointment.specializationName, order.appointment.patientFullName && `Người khám: ${order.appointment.patientFullName}`, order.appointment.status]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </>
+              ) : (
+                order.appointmentId ?? "—"
+              )}
+            </Row>
             <Row label="Tổng tiền">{formatVnd(order.grossAmount)}</Row>
             <Row label="Hoa hồng">
               {formatVnd(order.commissionAmount)} ({Math.round(order.commissionRate * 100)}%)

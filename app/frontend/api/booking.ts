@@ -12,6 +12,8 @@ import type {
   BookingListResponse,
   GetExpertAppointmentsParams,
   Appointment,
+  AppointmentListParams,
+  AppointmentPage,
   ServiceEnvelope,
   TimeTemplate,
   Availability,
@@ -68,21 +70,56 @@ export async function createAppointment(
   return response.data.data;
 }
 
-/** [PATIENT] GET /booking/appointments — no pagination/filter/sort support server-side. */
+function toDateParam(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * booking-service filters on the slot start time and defaults to today..+29 days, which hides
+ * past sessions. Lists ask for ~6 months either side instead (server max range is 366 days).
+ */
+function defaultAppointmentWindow(): { from: string; to: string } {
+  const from = new Date();
+  from.setDate(from.getDate() - 180);
+  const to = new Date();
+  to.setDate(to.getDate() + 180);
+  return { from: toDateParam(from), to: toDateParam(to) };
+}
+
+/** [PATIENT] GET /booking/appointments — each item carries `expert` from profile-service. */
 export async function getMyBookings(): Promise<Appointment[]> {
   const response = await bookingClient.get<ServiceEnvelope<BookingListResponse>>(
-    BOOKING_ENDPOINTS.APPOINTMENTS
+    BOOKING_ENDPOINTS.APPOINTMENTS,
+    { params: { ...defaultAppointmentWindow(), size: 100 } }
   );
   return response.data.data.appointments ?? [];
+}
+
+/** [PATIENT/EXPERT/ADMIN] Detail with expert + booking account profiles. Admin: managed experts only (403 otherwise). */
+export async function getAppointmentDetail(appointmentId: string): Promise<Appointment> {
+  const response = await bookingClient.get<ServiceEnvelope<Appointment>>(
+    BOOKING_ENDPOINTS.APPOINTMENT(appointmentId)
+  );
+  return response.data.data;
+}
+
+/** [ADMIN] Appointments of experts the admin approved (manages). */
+export async function listAdminAppointments(params: AppointmentListParams = {}): Promise<AppointmentPage> {
+  const response = await bookingClient.get<ServiceEnvelope<AppointmentPage>>(
+    BOOKING_ENDPOINTS.ADMIN_APPOINTMENTS,
+    { params }
+  );
+  return response.data.data;
 }
 
 /** [EXPERT] GET /booking/appointments/expert */
 export async function getExpertAppointments(
   params: GetExpertAppointmentsParams = {}
 ): Promise<Appointment[]> {
+  const hasLegacyRange = params.fromDate !== undefined || params.toDate !== undefined;
   const response = await bookingClient.get<ServiceEnvelope<BookingListResponse>>(
     BOOKING_ENDPOINTS.EXPERT_APPOINTMENTS,
-    { params }
+    { params: hasLegacyRange ? params : { ...defaultAppointmentWindow(), size: 100, ...params } }
   );
   return response.data.data.appointments ?? [];
 }

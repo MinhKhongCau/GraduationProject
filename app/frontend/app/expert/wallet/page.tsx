@@ -13,6 +13,7 @@ import {
   formatVnd,
   shortId,
 } from "@/components/payment";
+import { formatAppointmentTime } from "@/components/appointment";
 import { useApiQuery, useTranslation } from "@/hooks";
 import { paymentApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
@@ -100,12 +101,19 @@ export default function ExpertWalletPage() {
                   <tr key={order.id} className="transition-colors hover:bg-surface/60">
                     <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">
                       {formatDateTime(order.paidAt ?? order.createdAt)}
+                      {order.appointment && (
+                        <div className="text-xs text-foreground">
+                          {t("payment.col.session", "Session")}: {formatAppointmentTime(order.appointment.startTime, order.appointment.endTime)}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-foreground">
                       <OrderTypeLabel type={order.type} />
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground" title={order.payerId}>
-                      {shortId(order.payerId)}
+                    <td className="px-4 py-3 text-foreground" title={order.payerId}>
+                      {order.appointment?.patientFullName || order.payer?.fullName || (
+                        <span className="font-mono text-xs text-muted-foreground">{shortId(order.payerId)}</span>
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatVnd(order.grossAmount)}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums text-danger">
