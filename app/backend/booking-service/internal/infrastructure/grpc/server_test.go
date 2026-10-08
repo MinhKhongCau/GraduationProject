@@ -25,6 +25,13 @@ type fakeAppointments struct {
 	applyErr error
 	appt     *appointmentdomain.Appointment
 	getErr   error
+	batch    []appointmentdomain.Appointment
+	batchIDs []string
+}
+
+func (f *fakeAppointments) GetAppointmentSummaries(_ context.Context, ids []string) ([]appointmentdomain.Appointment, error) {
+	f.batchIDs = ids
+	return f.batch, nil
 }
 
 func (f *fakeAppointments) HandlePaymentResult(command appappointment.HandlePaymentResultCommand) error {
@@ -176,5 +183,29 @@ func TestGetAppointmentStatus(t *testing.T) {
 	missing := startTestServer(t, &fakeAppointments{getErr: appappointment.ErrNotFound})
 	if _, err := missing.GetAppointmentStatus(asCaller(PaymentServiceCallerID), &bookingpb.GetAppointmentStatusRequest{AppointmentId: appointmentID}); status.Code(err) != codes.NotFound {
 		t.Fatalf("expected NotFound, got %v", err)
+	}
+}
+
+func TestGetAppointmentSummariesMapsSlotFieldsAndValidatesIDs(t *testing.T) {
+	id := uuid.NewString()
+	fake := &fakeAppointments{batch: []appointmentdomain.Appointment{{
+		AppointmentID: id, PatientID: "p", ExpertID: "e", Status: appointmentdomain.AppointmentStatusConfirmed,
+		StartTime: 1000, EndTime: 2000, Price: 350000, SpecializationName: "Tâm lý",
+		Patient: appointmentdomain.PatientSnapshot{FullName: "Nguyễn Văn A"},
+	}}}
+	client := startTestServer(t, fake)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+PaymentServiceCallerID)
+
+	resp, err := client.GetAppointmentSummaries(ctx, &bookingpb.GetAppointmentSummariesRequest{AppointmentIds: []string{id}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := resp.GetAppointments()
+	if len(got) != 1 || got[0].GetPriceVnd() != 350000 || got[0].GetStartTime() != 1000 || got[0].GetPatientFullName() != "Nguyễn Văn A" ||
+		got[0].GetStatus() != bookingpb.AppointmentStatus_APPOINTMENT_STATUS_CONFIRMED {
+		t.Fatalf("unexpected summaries: %+v", got)
+	}
+	if _, err := client.GetAppointmentSummaries(ctx, &bookingpb.GetAppointmentSummariesRequest{AppointmentIds: []string{"bad"}}); status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument, got %v", err)
 	}
 }

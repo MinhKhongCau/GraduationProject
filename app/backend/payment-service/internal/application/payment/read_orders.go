@@ -85,6 +85,8 @@ type PaymentOrderView struct {
 	AppointmentID               *uuid.UUID                         `json:"appointment_id,omitempty"`
 	PayerID                     uuid.UUID                          `json:"payer_id"`
 	ExpertID                    uuid.UUID                          `json:"expert_id"`
+	Expert                      *PartySummary                      `json:"expert,omitempty"`
+	Appointment                 *AppointmentInfo                   `json:"appointment,omitempty"`
 	Type                        PaymentOrderType                   `json:"type"`
 	AmountVND                   int64                              `json:"amount_vnd"`
 	Status                      string                             `json:"status"`
@@ -102,6 +104,8 @@ type ExpertPaymentOrderView struct {
 	ID                uuid.UUID                       `json:"id"`
 	AppointmentID     *uuid.UUID                      `json:"appointment_id,omitempty"`
 	PayerID           uuid.UUID                       `json:"payer_id"`
+	Payer             *PartySummary                   `json:"payer,omitempty"`
+	Appointment       *AppointmentInfo                `json:"appointment,omitempty"`
 	Type              PaymentOrderType                `json:"type"`
 	GrossAmount       int64                           `json:"gross_amount"`
 	CommissionRate    float64                         `json:"commission_rate"`
@@ -120,6 +124,9 @@ type AdminPaymentOrderView struct {
 	AppointmentID            *uuid.UUID                         `json:"appointment_id,omitempty"`
 	PayerID                  uuid.UUID                          `json:"payer_id"`
 	ExpertID                 uuid.UUID                          `json:"expert_id"`
+	Payer                    *PartySummary                      `json:"payer,omitempty"`
+	Expert                   *PartySummary                      `json:"expert,omitempty"`
+	Appointment              *AppointmentInfo                   `json:"appointment,omitempty"`
 	Type                     PaymentOrderType                   `json:"type"`
 	GrossAmount              int64                              `json:"gross_amount"`
 	CommissionRate           float64                            `json:"commission_rate"`
@@ -165,7 +172,7 @@ func (u *paymentUsecase) GetPaymentOrder(ctx context.Context, payerID, orderID u
 	if order.PayerID != payerID {
 		return nil, ErrPaymentOrderForbidden
 	}
-	result := paymentOrderView(order)
+	result := paymentOrderView(order, u.loadOrderContext(ctx, []paymentdomain.PaymentOrder{*order}))
 	return &result, nil
 }
 
@@ -208,7 +215,7 @@ func (u *paymentUsecase) summarize(ctx context.Context, filter PaymentOrderFilte
 	return reader.SummarizePaymentOrders(ctx, filter)
 }
 
-func listOrders[T any](ctx context.Context, u *paymentUsecase, filter PaymentOrderFilter, view func(*paymentdomain.PaymentOrder) T) (*readquery.Page[T], error) {
+func listOrders[T any](ctx context.Context, u *paymentUsecase, filter PaymentOrderFilter, view func(*paymentdomain.PaymentOrder, orderContext) T) (*readquery.Page[T], error) {
 	if filter.ScopeExperts && len(filter.ExpertIDs) == 0 {
 		page := readquery.NewPage([]T{}, filter.Page, 0)
 		return &page, nil
@@ -221,9 +228,10 @@ func listOrders[T any](ctx context.Context, u *paymentUsecase, filter PaymentOrd
 	if err != nil {
 		return nil, err
 	}
+	oc := u.loadOrderContext(ctx, orders)
 	items := make([]T, len(orders))
 	for i := range orders {
-		items[i] = view(&orders[i])
+		items[i] = view(&orders[i], oc)
 	}
 	page := readquery.NewPage(items, filter.Page, total)
 	return &page, nil
@@ -271,14 +279,14 @@ func ParseFulfillmentStatus(value string) (paymentdomain.FulfillmentStatus, erro
 	return status, nil
 }
 
-func paymentOrderView(order *paymentdomain.PaymentOrder) PaymentOrderView {
-	return PaymentOrderView{ID: order.ID, AppointmentID: order.AppointmentID, PayerID: order.PayerID, ExpertID: order.ExpertID, Type: paymentOrderType(order), AmountVND: order.GrossAmount.Int64(), Status: order.Status.String(), FulfillmentStatus: order.FulfillmentStatus, GatewayCaptureStatus: order.GatewayCaptureStatus, Gateway: order.Gateway, GatewayTransactionReference: order.GatewayTxnRef, ExpiresAt: order.ExpiresAt, CreatedAt: order.CreatedAt, PaidAt: order.PaidAt}
+func paymentOrderView(order *paymentdomain.PaymentOrder, oc orderContext) PaymentOrderView {
+	return PaymentOrderView{ID: order.ID, AppointmentID: order.AppointmentID, PayerID: order.PayerID, ExpertID: order.ExpertID, Expert: oc.party(order.ExpertID), Appointment: oc.appointment(order.AppointmentID), Type: paymentOrderType(order), AmountVND: order.GrossAmount.Int64(), Status: order.Status.String(), FulfillmentStatus: order.FulfillmentStatus, GatewayCaptureStatus: order.GatewayCaptureStatus, Gateway: order.Gateway, GatewayTransactionReference: order.GatewayTxnRef, ExpiresAt: order.ExpiresAt, CreatedAt: order.CreatedAt, PaidAt: order.PaidAt}
 }
 
-func expertPaymentOrderView(order *paymentdomain.PaymentOrder) ExpertPaymentOrderView {
-	return ExpertPaymentOrderView{ID: order.ID, AppointmentID: order.AppointmentID, PayerID: order.PayerID, Type: paymentOrderType(order), GrossAmount: order.GrossAmount.Int64(), CommissionRate: order.CommissionRate, CommissionAmount: order.CommissionAmount.Int64(), NetAmount: order.NetAmount.Int64(), Status: order.Status.String(), FulfillmentStatus: order.FulfillmentStatus, Released: order.Released, CreatedAt: order.CreatedAt, PaidAt: order.PaidAt}
+func expertPaymentOrderView(order *paymentdomain.PaymentOrder, oc orderContext) ExpertPaymentOrderView {
+	return ExpertPaymentOrderView{ID: order.ID, AppointmentID: order.AppointmentID, PayerID: order.PayerID, Payer: oc.party(order.PayerID), Appointment: oc.appointment(order.AppointmentID), Type: paymentOrderType(order), GrossAmount: order.GrossAmount.Int64(), CommissionRate: order.CommissionRate, CommissionAmount: order.CommissionAmount.Int64(), NetAmount: order.NetAmount.Int64(), Status: order.Status.String(), FulfillmentStatus: order.FulfillmentStatus, Released: order.Released, CreatedAt: order.CreatedAt, PaidAt: order.PaidAt}
 }
 
-func adminPaymentOrderView(order *paymentdomain.PaymentOrder) AdminPaymentOrderView {
-	return AdminPaymentOrderView{ID: order.ID, AppointmentID: order.AppointmentID, PayerID: order.PayerID, ExpertID: order.ExpertID, Type: paymentOrderType(order), GrossAmount: order.GrossAmount.Int64(), CommissionRate: order.CommissionRate, CommissionAmount: order.CommissionAmount.Int64(), NetAmount: order.NetAmount.Int64(), Gateway: order.Gateway, GatewayTxnRef: order.GatewayTxnRef, GatewayResponseCode: order.GatewayResponseCode, GatewayTransactionStatus: order.GatewayTransactionStatus, GatewayPaymentDate: order.GatewayPaymentDate, Status: order.Status.String(), GatewayCaptureStatus: order.GatewayCaptureStatus, FulfillmentStatus: order.FulfillmentStatus, Released: order.Released, CreatedAt: order.CreatedAt, ExpiresAt: order.ExpiresAt, PaidAt: order.PaidAt}
+func adminPaymentOrderView(order *paymentdomain.PaymentOrder, oc orderContext) AdminPaymentOrderView {
+	return AdminPaymentOrderView{ID: order.ID, AppointmentID: order.AppointmentID, PayerID: order.PayerID, ExpertID: order.ExpertID, Payer: oc.party(order.PayerID), Expert: oc.party(order.ExpertID), Appointment: oc.appointment(order.AppointmentID), Type: paymentOrderType(order), GrossAmount: order.GrossAmount.Int64(), CommissionRate: order.CommissionRate, CommissionAmount: order.CommissionAmount.Int64(), NetAmount: order.NetAmount.Int64(), Gateway: order.Gateway, GatewayTxnRef: order.GatewayTxnRef, GatewayResponseCode: order.GatewayResponseCode, GatewayTransactionStatus: order.GatewayTransactionStatus, GatewayPaymentDate: order.GatewayPaymentDate, Status: order.Status.String(), GatewayCaptureStatus: order.GatewayCaptureStatus, FulfillmentStatus: order.FulfillmentStatus, Released: order.Released, CreatedAt: order.CreatedAt, ExpiresAt: order.ExpiresAt, PaidAt: order.PaidAt}
 }

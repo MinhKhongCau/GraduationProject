@@ -23,6 +23,15 @@ service BookingPaymentService {
 
   // GetAppointmentStatus trả về trạng thái hiện tại của lịch hẹn (dùng cho trang kết quả thanh toán).
   rpc GetAppointmentStatus(GetAppointmentStatusRequest) returns (GetAppointmentStatusResponse);
+
+  // GetAppointmentSummaries trả thông tin hiển thị của nhiều lịch hẹn một lần (giờ khám, giá,
+  // chuyên khoa, người khám) để payment-service ghép vào danh sách giao dịch.
+  // Id không tồn tại bị bỏ qua (không lỗi); tối đa 100 id mỗi lần.
+  //
+  // Lỗi:
+  //   INVALID_ARGUMENT - có id không phải UUID hoặc quá 100 id
+  //   UNAUTHENTICATED / PERMISSION_DENIED - thiếu hoặc sai internal JWT
+  rpc GetAppointmentSummaries(GetAppointmentSummariesRequest) returns (GetAppointmentSummariesResponse);
 }
 
 enum PaymentResult {
@@ -58,4 +67,27 @@ message GetAppointmentStatusRequest {
 message GetAppointmentStatusResponse {
   string appointment_id = 1;
   AppointmentStatus status = 2;
+}
+
+message GetAppointmentSummariesRequest {
+  repeated string appointment_ids = 1;
+}
+
+message GetAppointmentSummariesResponse {
+  repeated AppointmentSummary appointments = 1;
+}
+
+message AppointmentSummary {
+  string appointment_id = 1;
+  // Auth account id của bệnh nhân đặt lịch và chuyên gia.
+  string patient_id = 2;
+  string expert_id = 3;
+  AppointmentStatus status = 4;
+  // Giờ khám (Unix ms) và giá slot (VND).
+  int64 start_time = 5;
+  int64 end_time = 6;
+  int64 price_vnd = 7;
+  string specialization_name = 8;
+  // Tên người khám (hồ sơ người khám lúc đặt lịch, có thể khác chủ tài khoản).
+  string patient_full_name = 9;
 }

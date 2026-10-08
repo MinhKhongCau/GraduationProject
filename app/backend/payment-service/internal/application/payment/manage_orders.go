@@ -39,7 +39,7 @@ func (u *paymentUsecase) GetExpertOrder(ctx context.Context, expertID, orderID u
 	if order.ExpertID != expertID {
 		return nil, ErrPaymentOrderForbidden
 	}
-	result := expertPaymentOrderView(order)
+	result := expertPaymentOrderView(order, u.loadOrderContext(ctx, []paymentdomain.PaymentOrder{*order}))
 	return &result, nil
 }
 
@@ -79,7 +79,7 @@ func (u *paymentUsecase) GetAdminOrder(ctx context.Context, adminID, orderID uui
 	if err != nil {
 		return nil, err
 	}
-	result := adminPaymentOrderView(order)
+	result := adminPaymentOrderView(order, u.loadOrderContext(ctx, []paymentdomain.PaymentOrder{*order}))
 	return &result, nil
 }
 

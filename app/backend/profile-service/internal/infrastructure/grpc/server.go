@@ -134,6 +134,64 @@ func (s *ProfileQueryServer) ListManagedExpertIds(ctx context.Context, req *prof
 	return resp, nil
 }
 
+// maxSummaryIDs giới hạn số id mỗi lần tra cứu hàng loạt.
+const maxSummaryIDs = 100
+
+// GetProfileSummaries trả tên/ảnh/liên hệ của nhiều tài khoản; id không tồn tại bị bỏ qua.
+func (s *ProfileQueryServer) GetProfileSummaries(ctx context.Context, req *profilepb.GetProfileSummariesRequest) (*profilepb.GetProfileSummariesResponse, error) {
+	if len(req.GetAuthIds()) > maxSummaryIDs {
+		return nil, status.Errorf(codes.InvalidArgument, "tối đa %d id mỗi lần", maxSummaryIDs)
+	}
+	authIDs := make([]uuid.UUID, 0, len(req.GetAuthIds()))
+	for _, raw := range req.GetAuthIds() {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "auth_id không hợp lệ: %q", raw)
+		}
+		authIDs = append(authIDs, id)
+	}
+	resp := &profilepb.GetProfileSummariesResponse{Profiles: []*profilepb.ProfileSummary{}}
+	if len(authIDs) == 0 {
+		return resp, nil
+	}
+
+	var rows []models.Profile
+	err := s.db.WithContext(ctx).
+		Preload("PatientProfile").
+		Preload("ExpertProfile").
+		Preload("AdminProfile").
+		Where("auth_id IN ?", authIDs).
+		Find(&rows).Error
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "truy vấn hồ sơ: %v", err)
+	}
+	for i := range rows {
+		resp.Profiles = append(resp.Profiles, toProfileSummary(&rows[i]))
+	}
+	return resp, nil
+}
+
+func toProfileSummary(p *models.Profile) *profilepb.ProfileSummary {
+	summary := &profilepb.ProfileSummary{
+		AuthId:      p.AuthID.String(),
+		Role:        string(p.Role),
+		FullName:    p.UserInformation.FullName,
+		PhoneNumber: p.UserInformation.PhoneNumber,
+	}
+	switch {
+	case p.ExpertProfile != nil:
+		summary.Email = p.ExpertProfile.Email
+		summary.AvatarUrl = p.ExpertProfile.AvatarURL
+		summary.VerificationStatus = p.ExpertProfile.VerificationStatus
+	case p.PatientProfile != nil:
+		summary.Email = p.PatientProfile.Email
+		summary.AvatarUrl = p.PatientProfile.AvatarURL
+	case p.AdminProfile != nil:
+		summary.Email = p.AdminProfile.Email
+	}
+	return summary
+}
+
 func toExpertSummary(p *models.Profile) *profilepb.ExpertSummary {
 	summary := &profilepb.ExpertSummary{
 		ExpertId: p.AuthID.String(),

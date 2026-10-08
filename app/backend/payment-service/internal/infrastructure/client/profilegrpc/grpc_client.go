@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"payment-service/internal/application/managedscope"
+	apppayment "payment-service/internal/application/payment"
 	"payment-service/internal/infrastructure/grpc/profilepb"
 
 	"github.com/google/uuid"
@@ -55,4 +56,35 @@ func (c *Client) ListManagedExpertIDs(ctx context.Context, adminID uuid.UUID) ([
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+var _ apppayment.ProfileDirectory = (*Client)(nil)
+
+// summaryBatch khớp giới hạn số id mỗi lần của profile-service.
+const summaryBatch = 100
+
+// GetProfileSummaries tra tên/ảnh/email của bệnh nhân và chuyên gia, tự chia lô 100 id.
+func (c *Client) GetProfileSummaries(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]apppayment.PartySummary, error) {
+	result := make(map[uuid.UUID]apppayment.PartySummary, len(ids))
+	for start := 0; start < len(ids); start += summaryBatch {
+		end := min(start+summaryBatch, len(ids))
+		raw := make([]string, 0, end-start)
+		for _, id := range ids[start:end] {
+			raw = append(raw, id.String())
+		}
+		callCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+		resp, err := c.client.GetProfileSummaries(callCtx, &profilepb.GetProfileSummariesRequest{AuthIds: raw})
+		cancel()
+		if err != nil {
+			return result, fmt.Errorf("profile-service GetProfileSummaries: %w", err)
+		}
+		for _, p := range resp.GetProfiles() {
+			id, err := uuid.Parse(p.GetAuthId())
+			if err != nil {
+				continue
+			}
+			result[id] = apppayment.PartySummary{ID: id, FullName: p.GetFullName(), AvatarURL: p.GetAvatarUrl(), Email: p.GetEmail()}
+		}
+	}
+	return result, nil
 }

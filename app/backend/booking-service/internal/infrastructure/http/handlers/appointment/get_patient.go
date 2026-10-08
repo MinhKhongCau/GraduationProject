@@ -45,7 +45,7 @@ func (h *Handler) GetPatient(c *gin.Context) {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve appointments", "appointment reader unavailable")
 		return
 	}
-	page, err := h.reader.ListAppointments(filter)
+	page, err := h.reader.ListAppointments(c.Request.Context(), filter)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, "Failed to retrieve appointments", err.Error())
 		return

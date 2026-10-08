@@ -82,6 +82,9 @@ type paymentUsecase struct {
 	clock         func() time.Time
 	// managedExperts cho biết Admin quản lý những chuyên gia nào (profile-service).
 	managedExperts managedscope.Resolver
+	// profiles/appointments ghép tên và giờ khám vào danh sách giao dịch (tuỳ chọn).
+	profiles     ProfileDirectory
+	appointments AppointmentDirectory
 }
 
 func NewUsecase(repo Repository, uow UnitOfWork, vnpayClient PaymentGateway, bookingClient BookingServiceClient) Usecase {
@@ -93,6 +96,8 @@ type Options struct {
 	MinimumWindow  time.Duration
 	Clock          func() time.Time
 	ManagedExperts managedscope.Resolver
+	Profiles       ProfileDirectory
+	Appointments   AppointmentDirectory
 }
 
 func NewUsecaseWithOptions(repo Repository, uow UnitOfWork, vnpayClient PaymentGateway, bookingClient BookingServiceClient, options Options) Usecase {
@@ -114,5 +119,7 @@ func NewUsecaseWithOptions(repo Repository, uow UnitOfWork, vnpayClient PaymentG
 		minimumWindow:  options.MinimumWindow,
 		clock:          options.Clock,
 		managedExperts: options.ManagedExperts,
+		profiles:       options.Profiles,
+		appointments:   options.Appointments,
 	}
 }

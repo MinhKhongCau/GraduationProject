@@ -36,9 +36,13 @@ type Appointment struct {
 	SpecializationID   *string           `json:"specialization_id"   gorm:"column:specialization_id;type:uuid"`
 	SpecializationName string            `json:"specialization_name" gorm:"column:specialization_name;type:varchar(255)"`
 	Patient            PatientSnapshot   `json:"patient"             gorm:"embedded;embeddedPrefix:patient_"`
-	CreatedAt          int64             `json:"created_at"          gorm:"column:created_at"`   // Unix ms
-	UpdatedAt          int64             `json:"updated_at"          gorm:"column:updated_at"`   // Unix ms
-	ConfirmedAt        *int64            `json:"confirmed_at"        gorm:"column:confirmed_at"` // Unix ms, nullable
+	// Expert / PatientAccount: hồ sơ chuyên gia và tài khoản đã đặt lịch, lấy từ profile-service qua
+	// gRPC mỗi lần đọc lịch hẹn (không lưu DB). nil khi profile-service không trả về.
+	Expert         *ParticipantProfile `json:"expert,omitempty"          gorm:"-"`
+	PatientAccount *ParticipantProfile `json:"patient_account,omitempty" gorm:"-"`
+	CreatedAt      int64               `json:"created_at"          gorm:"column:created_at"`   // Unix ms
+	UpdatedAt      int64               `json:"updated_at"          gorm:"column:updated_at"`   // Unix ms
+	ConfirmedAt    *int64              `json:"confirmed_at"        gorm:"column:confirmed_at"` // Unix ms, nullable
 }
 
 // PatientSnapshot - Hồ sơ người khám tại thời điểm đặt lịch, lấy từ profile-service qua gRPC.
@@ -51,6 +55,29 @@ type PatientSnapshot struct {
 	PhoneNumber  string  `json:"phone_number"  gorm:"column:phone_number;type:varchar(20)"`
 	Email        string  `json:"email"         gorm:"column:email;type:varchar(255)"`
 	Relationship string  `json:"relationship"  gorm:"column:relationship;type:varchar(20)"`
+}
+
+// ParticipantProfile - Thông tin hiển thị hiện tại của chuyên gia hoặc tài khoản đặt lịch, lấy từ
+// profile-service (gRPC GetProfileSummaries). Khác PatientSnapshot: không chụp lại lúc đặt lịch mà
+// luôn phản ánh hồ sơ mới nhất.
+type ParticipantProfile struct {
+	AuthID             string `json:"auth_id"`
+	Role               string `json:"role"`
+	FullName           string `json:"full_name"`
+	AvatarURL          string `json:"avatar_url,omitempty"`
+	Email              string `json:"email,omitempty"`
+	PhoneNumber        string `json:"phone_number,omitempty"`
+	VerificationStatus string `json:"verification_status,omitempty"`
+}
+
+// AttachProfiles gắn hồ sơ chuyên gia và tài khoản đặt lịch từ kết quả tra cứu theo auth id.
+func (a *Appointment) AttachProfiles(profiles map[string]ParticipantProfile) {
+	if profile, ok := profiles[a.ExpertID]; ok {
+		a.Expert = &profile
+	}
+	if profile, ok := profiles[a.PatientID]; ok {
+		a.PatientAccount = &profile
+	}
 }
 
 func (Appointment) TableName() string { return "Booking_Appointments" }

@@ -108,8 +108,12 @@ func main() {
 	appappointment.StartExpiredLockWorker(appointmentRepo)
 
 	// 5.1 Nhận kết quả thanh toán từ payment-service: gRPC (đồng bộ) + RabbitMQ (event payment.*)
+	paymentResultHandler, ok := appointmentUsecase.(bookinggrpc.PaymentResultHandler)
+	if !ok {
+		log.Fatal("appointment usecase does not implement the booking gRPC contract")
+	}
 	grpcServer, err := bookinggrpc.Start(":"+config.AppConfig.GRPCPort,
-		bookinggrpc.NewBookingPaymentServer(appointmentUsecase), middleware.VerifyInternalBearer)
+		bookinggrpc.NewBookingPaymentServer(paymentResultHandler), middleware.VerifyInternalBearer)
 	if err != nil {
 		log.Fatalf("Failed to start booking gRPC server: %v", err)
 	}

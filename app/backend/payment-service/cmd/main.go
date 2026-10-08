@@ -103,6 +103,8 @@ func main() {
 		OrderTTL:       config.AppConfig.PaymentOrderTTL,
 		MinimumWindow:  config.AppConfig.PaymentMinUsableWindow,
 		ManagedExperts: profileClient,
+		Profiles:       profileClient,
+		Appointments:   bookingSvcClient,
 	})
 	withdrawalUsecase := appwithdrawal.NewUsecase(withdrawalRepo, walletUsecase)
 

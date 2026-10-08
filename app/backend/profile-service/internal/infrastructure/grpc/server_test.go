@@ -37,3 +37,21 @@ func TestListManagedExpertIdsRejectsInvalidAdminID(t *testing.T) {
 		t.Fatalf("expected InvalidArgument, got %v", err)
 	}
 }
+
+func TestGetProfileSummariesValidatesInput(t *testing.T) {
+	server := NewProfileQueryServer(nil, nil)
+	if _, err := server.GetProfileSummaries(context.Background(), &profilepb.GetProfileSummariesRequest{AuthIds: []string{"x"}}); status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for bad id, got %v", err)
+	}
+	tooMany := make([]string, maxSummaryIDs+1)
+	for i := range tooMany {
+		tooMany[i] = uuid.NewString()
+	}
+	if _, err := server.GetProfileSummaries(context.Background(), &profilepb.GetProfileSummariesRequest{AuthIds: tooMany}); status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for too many ids, got %v", err)
+	}
+	resp, err := server.GetProfileSummaries(context.Background(), &profilepb.GetProfileSummariesRequest{})
+	if err != nil || len(resp.GetProfiles()) != 0 {
+		t.Fatalf("empty request should return empty list, got %v %v", resp, err)
+	}
+}
