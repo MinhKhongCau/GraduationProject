@@ -22,7 +22,7 @@ name: "dev-booking-local"
 #      (Kèm header:     Authorization: Bearer <JWT lấy ở bước 1>)
 #
 # Swagger Booking (truy cập thẳng, không qua Kong):
-#   http://localhost:8083/swagger/index.html
+#   http://localhost:8083/swagger-ui/index.html
 # =======================================================================
 
 services:
