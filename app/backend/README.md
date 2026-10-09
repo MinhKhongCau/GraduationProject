@@ -72,8 +72,8 @@ Sau khi khởi chạy thành công, bạn không cần phải cắm mặt vào �
 
 Bạn có thể mở trình duyệt và click vào các link sau để test:
 *   **Auth Service API:** [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)
-*   **Booking Service API:** [http://localhost:8083/swagger/index.html](http://localhost:8083/swagger/index.html)
-*   **Payment Service API:** [http://localhost:8082/swagger/index.html](http://localhost:8082/swagger/index.html)
+*   **Booking Service API:** [http://localhost:8083/swagger-ui/index.html](http://localhost:8083/swagger-ui/index.html)
+*   **Payment Service API:** [http://localhost:8082/swagger-ui/index.html](http://localhost:8082/swagger-ui/index.html)
 
 ---
 
