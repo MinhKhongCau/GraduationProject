@@ -22,6 +22,72 @@ services:
               body: '{"message":"Forbidden: /internal paths are not accessible from outside the network"}'
               content_type: "application/json"
 
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Trang chủ gateway ("/" và "/index.html"): liệt kê link Swagger của từng service.
+  # Kong trả HTML trực tiếp bằng request-termination, không forward tới service nào.
+  # Link dùng path tương đối nên chạy được cả ở localhost:8000 lẫn domain production.
+  # ═══════════════════════════════════════════════════════════════════════════
+  - name: gateway-index
+    # Dummy URL — request bị terminate trước khi forward
+    url: http://auth-service:8080
+    routes:
+      - name: gateway-index
+        paths:
+          - "~/$"
+          - "~/index\\.html$"
+        strip_path: false
+        methods:
+          - GET
+          - HEAD
+        plugins:
+          - name: request-termination
+            config:
+              status_code: 200
+              content_type: "text/html; charset=utf-8"
+              body: |
+                <!doctype html>
+                <html lang="vi">
+                <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>MindCare API Gateway</title>
+                <style>
+                  :root { --bg: #f7f8fa; --card: #ffffff; --text: #111827; --muted: #6b7280; --border: #e5e7eb; --accent: #0f766e; }
+                  @media (prefers-color-scheme: dark) {
+                    :root { --bg: #0b0f14; --card: #131a22; --text: #e5e7eb; --muted: #9ca3af; --border: #243041; --accent: #2dd4bf; }
+                  }
+                  * { box-sizing: border-box; }
+                  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+                  main { max-width: 880px; margin: 0 auto; padding: 48px 16px; }
+                  h1 { margin: 0 0 4px; font-size: 26px; }
+                  p.lead { margin: 0 0 32px; color: var(--muted); }
+                  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+                  a.card { display: block; height: 100%; padding: 16px 18px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: inherit; text-decoration: none; transition: border-color .15s; }
+                  a.card:hover, a.card:focus-visible { border-color: var(--accent); outline: none; }
+                  .name { font-weight: 600; }
+                  .desc { margin-top: 4px; font-size: 13px; color: var(--muted); }
+                  code { font-size: 12px; color: var(--accent); }
+                  footer { margin-top: 32px; font-size: 13px; color: var(--muted); }
+                </style>
+                </head>
+                <body>
+                <main>
+                  <h1>MindCare API Gateway</h1>
+                  <p class="lead">Tài liệu API (Swagger / OpenAPI) của từng service. API gọi qua gateway tại <code>/api/v1/...</code>.</p>
+                  <ul>
+                    <li><a class="card" href="/auth/swagger-ui/index.html"><div class="name">Auth Service</div><div class="desc">Đăng ký, đăng nhập, JWT, tài khoản.</div><code>/auth/swagger-ui/index.html</code></a></li>
+                    <li><a class="card" href="/profile/swagger-ui/index.html"><div class="name">Profile Service</div><div class="desc">Hồ sơ bệnh nhân, chuyên gia, chuyên khoa.</div><code>/profile/swagger-ui/index.html</code></a></li>
+                    <li><a class="card" href="/booking/swagger-ui/index.html"><div class="name">Booking Service</div><div class="desc">Lịch làm việc, slot, lịch hẹn, bệnh án.</div><code>/booking/swagger-ui/index.html</code></a></li>
+                    <li><a class="card" href="/payment/swagger-ui/index.html"><div class="name">Payment Service</div><div class="desc">VNPay, ví, giao dịch, rút tiền.</div><code>/payment/swagger-ui/index.html</code></a></li>
+                    <li><a class="card" href="/assessment/swagger-ui"><div class="name">Assessment Service</div><div class="desc">Bài đánh giá tâm lý, câu hỏi, kết quả.</div><code>/assessment/swagger-ui</code></a></li>
+                    <li><a class="card" href="/forum/swagger-ui/index.html"><div class="name">Forum Service</div><div class="desc">Bài viết, bình luận, thẻ cộng đồng.</div><code>/forum/swagger-ui/index.html</code></a></li>
+                    <li><a class="card" href="/chatroom/api-docs"><div class="name">Chatroom Service</div><div class="desc">Tin nhắn trực tiếp (Socket.IO).</div><code>/chatroom/api-docs</code></a></li>
+                  </ul>
+                  <footer>Trang này do Kong trả về trực tiếp (route <code>gateway-index</code> trong <code>kong.yml</code>).</footer>
+                </main>
+                </body>
+                </html>
+
   - name: auth-service
     url: http://auth-upstream
     routes:

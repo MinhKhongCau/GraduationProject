@@ -18,12 +18,12 @@ Toàn bộ các yêu cầu từ Client (hoặc Postman) đều đi qua **API Gat
 
 ### 📄 Swagger / OpenAPI UI
 - **Auth Service**: [https://api.qmcloud.io.vn/auth/swagger-ui/index.html](https://api.qmcloud.io.vn/auth/swagger-ui/index.html)
-- **Profile Service**: [https://api.qmcloud.io.vn/profile/swagger/index.html](https://api.qmcloud.io.vn/profile/swagger/index.html)
-- **Booking Service**: [https://api.qmcloud.io.vn/booking/swagger/index.html](https://api.qmcloud.io.vn/booking/swagger/index.html)
-- **Payment Service**: [https://api.qmcloud.io.vn/payment/swagger/index.html](https://api.qmcloud.io.vn/payment/swagger/index.html)
+- **Profile Service**: [https://api.qmcloud.io.vn/profile/swagger-ui/index.html](https://api.qmcloud.io.vn/profile/swagger-ui/index.html)
+- **Booking Service**: [https://api.qmcloud.io.vn/booking/swagger-ui/index.html](https://api.qmcloud.io.vn/booking/swagger-ui/index.html)
+- **Payment Service**: [https://api.qmcloud.io.vn/payment/swagger-ui/index.html](https://api.qmcloud.io.vn/payment/swagger-ui/index.html)
 - **Assessment Service**: [https://api.qmcloud.io.vn/assessment/swagger-ui](https://api.qmcloud.io.vn/assessment/swagger-ui)
-- **Forum Service**: [https://api.qmcloud.io.vn/forum/swagger/index.html](https://api.qmcloud.io.vn/forum/swagger/index.html)
-- **Chatroom Service**: [https://api.qmcloud.io.vn/chatroom/docs](https://api.qmcloud.io.vn/chatroom/docs)
+- **Forum Service**: [https://api.qmcloud.io.vn/forum/swagger-ui/index.html](https://api.qmcloud.io.vn/forum/swagger-ui/index.html)
+- **Chatroom Service**: [https://api.qmcloud.io.vn/chatroom/api-docs](https://api.qmcloud.io.vn/chatroom/api-docs)
 
 ---
 
