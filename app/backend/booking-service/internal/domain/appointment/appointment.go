@@ -33,9 +33,13 @@ type Appointment struct {
 	StartTime          int64             `json:"start_time"          gorm:"-"`
 	EndTime            int64             `json:"end_time"            gorm:"-"`
 	MeetingLink        string            `json:"meeting_link"        gorm:"column:meeting_link"`
-	SpecializationID   *string           `json:"specialization_id"   gorm:"column:specialization_id;type:uuid"`
-	SpecializationName string            `json:"specialization_name" gorm:"column:specialization_name;type:varchar(255)"`
-	Patient            PatientSnapshot   `json:"patient"             gorm:"embedded;embeddedPrefix:patient_"`
+	// MeetingToken: mã phòng họp sinh khi thanh toán thành công; MeetingLink = <MEETING_BASE_URL>/<token>.
+	MeetingToken *string `json:"-" gorm:"column:meeting_token;type:varchar(64);uniqueIndex"`
+	// SessionCompletedAt: thời điểm chuyên gia kết thúc buổi tư vấn hợp lệ (đủ thời gian có mặt).
+	SessionCompletedAt *int64          `json:"session_completed_at" gorm:"column:session_completed_at"` // Unix ms, nullable
+	SpecializationID   *string         `json:"specialization_id"   gorm:"column:specialization_id;type:uuid"`
+	SpecializationName string          `json:"specialization_name" gorm:"column:specialization_name;type:varchar(255)"`
+	Patient            PatientSnapshot `json:"patient"             gorm:"embedded;embeddedPrefix:patient_"`
 	// Expert / PatientAccount: hồ sơ chuyên gia và tài khoản đã đặt lịch, lấy từ profile-service qua
 	// gRPC mỗi lần đọc lịch hẹn (không lưu DB). nil khi profile-service không trả về.
 	Expert         *ParticipantProfile `json:"expert,omitempty"          gorm:"-"`

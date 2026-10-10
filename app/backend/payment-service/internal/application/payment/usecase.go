@@ -6,6 +6,7 @@ import (
 	"payment-service/internal/application/readquery"
 	"payment-service/internal/domain/money"
 	paymentdomain "payment-service/internal/domain/payment"
+	walletdomain "payment-service/internal/domain/wallet"
 	"time"
 
 	"github.com/google/uuid"
@@ -69,6 +70,8 @@ type Tx interface {
 	SaveOutboxEvent(ctx context.Context, event *paymentdomain.OutboxEvent) error
 	CreditWalletPending(ctx context.Context, userID uuid.UUID, amount money.Money, refID uuid.UUID, idempotencyKey string) error
 	DebitWalletPending(ctx context.Context, userID uuid.UUID, amount money.Money, refID uuid.UUID, idempotencyKey string) error
+	AdjustWallet(ctx context.Context, userID uuid.UUID, availableDelta, pendingDelta money.Money, txType walletdomain.TransactionType, refID uuid.UUID, idempotencyKey string) error
+	HasWalletTransaction(ctx context.Context, idempotencyKey string) (bool, error)
 	SaveCompensationCase(ctx context.Context, compensationCase *paymentdomain.PaymentCompensationCase) error
 }
 
@@ -85,6 +88,8 @@ type paymentUsecase struct {
 	// profiles/appointments ghép tên và giờ khám vào danh sách giao dịch (tuỳ chọn).
 	profiles     ProfileDirectory
 	appointments AppointmentDirectory
+	// systemWalletUserID là ví của hệ thống: giữ tiền bệnh nhân trả cho tới khi buổi tư vấn hoàn tất.
+	systemWalletUserID uuid.UUID
 }
 
 func NewUsecase(repo Repository, uow UnitOfWork, vnpayClient PaymentGateway, bookingClient BookingServiceClient) Usecase {
@@ -98,6 +103,8 @@ type Options struct {
 	ManagedExperts managedscope.Resolver
 	Profiles       ProfileDirectory
 	Appointments   AppointmentDirectory
+	// SystemWalletUserID mặc định là DefaultSystemWalletUserID nếu không cấu hình.
+	SystemWalletUserID uuid.UUID
 }
 
 func NewUsecaseWithOptions(repo Repository, uow UnitOfWork, vnpayClient PaymentGateway, bookingClient BookingServiceClient, options Options) Usecase {
@@ -110,6 +117,9 @@ func NewUsecaseWithOptions(repo Repository, uow UnitOfWork, vnpayClient PaymentG
 	if options.Clock == nil {
 		options.Clock = time.Now
 	}
+	if options.SystemWalletUserID == uuid.Nil {
+		options.SystemWalletUserID = DefaultSystemWalletUserID
+	}
 	return &paymentUsecase{
 		repo:           repo,
 		uow:            uow,
@@ -121,5 +131,7 @@ func NewUsecaseWithOptions(repo Repository, uow UnitOfWork, vnpayClient PaymentG
 		managedExperts: options.ManagedExperts,
 		profiles:       options.Profiles,
 		appointments:   options.Appointments,
+
+		systemWalletUserID: options.SystemWalletUserID,
 	}
 }

@@ -2,6 +2,8 @@
 package main
 
 import (
+	"time"
+
 	"context"
 	"log"
 	"net/http"
@@ -46,7 +48,7 @@ func main() {
 	client.InitPublicKey(config.AppConfig.AuthServiceInternalURL)
 
 	// 0.2 Khởi tạo TokenManager nội bộ — booking có thể gọi payment-service nội bộ
-	_ = client.NewTokenManager(
+	tokenManager := client.NewTokenManager(
 		config.AppConfig.AuthServiceInternalURL,
 		config.AppConfig.InternalClientID,
 		config.AppConfig.InternalClientSecret,
@@ -77,7 +79,11 @@ func main() {
 	}
 	defer profileClient.Close()
 	log.Printf("🛰️  Profile gRPC client target: %s", config.AppConfig.ProfileGRPCAddr)
-	appointmentUsecase := appappointment.NewUsecaseWithProfiles(appointmentRepo, profileClient)
+	appointmentUsecase := appappointment.NewUsecaseWithMeetings(appointmentRepo, profileClient, appappointment.MeetingOptions{
+		BaseURL:         config.AppConfig.MeetingBaseURL,
+		MinimumPresence: time.Duration(config.AppConfig.MinSessionPresenceMinutes) * time.Minute,
+		Settlement:      client.NewPaymentSettlementClient(config.AppConfig.PaymentServiceInternalURL, tokenManager),
+	})
 	generationService := slot.NewGenerationService(slotUsecase, scheduleRepo, timeoffRepo)
 
 	// 3. Khai báo API Endpoints

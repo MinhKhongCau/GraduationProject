@@ -5,6 +5,7 @@ import (
 	"errors"
 	"payment-service/internal/domain/money"
 	paymentdomain "payment-service/internal/domain/payment"
+	walletdomain "payment-service/internal/domain/wallet"
 	vnpayadapter "payment-service/internal/infrastructure/client/vnpay"
 	"sort"
 	"sync"
@@ -252,7 +253,7 @@ func TestExpiredOrderSuccessExpiresReplacementAndSettlesOnce(t *testing.T) {
 	if repo.orders[old.ID].Status != paymentdomain.OrderStatusSuccess || repo.orders[replacement.ID].Status != paymentdomain.OrderStatusExpired {
 		t.Fatalf("unexpected statuses old=%s replacement=%s", repo.orders[old.ID].Status, repo.orders[replacement.ID].Status)
 	}
-	if repo.walletCredits != 1 || repo.walletDebits != 1 || len(repo.outboxEvents) != 1 {
+	if repo.walletCredits != 1 || repo.walletDebits != 0 || len(repo.outboxEvents) != 1 {
 		t.Fatalf("settlement should happen once: credits=%d debits=%d outbox=%d", repo.walletCredits, repo.walletDebits, len(repo.outboxEvents))
 	}
 	already, err = usecase.ProcessIPN(context.Background(), signedSuccessIPNParams(old.ID))
@@ -441,7 +442,7 @@ func TestConcurrentOldAndReplacementSuccessIPNsSettleOnce(t *testing.T) {
 			alreadyCount++
 		}
 	}
-	if alreadyCount != 1 || repo.countStatus(paymentdomain.OrderStatusSuccess) != 1 || repo.walletCredits != 1 || repo.walletDebits != 1 || len(repo.outboxEvents) != 1 {
+	if alreadyCount != 1 || repo.countStatus(paymentdomain.OrderStatusSuccess) != 1 || repo.walletCredits != 1 || repo.walletDebits != 0 || len(repo.outboxEvents) != 1 {
 		t.Fatalf("concurrent success was not exactly once: already=%d success=%d credits=%d debits=%d outbox=%d", alreadyCount, repo.countStatus(paymentdomain.OrderStatusSuccess), repo.walletCredits, repo.walletDebits, len(repo.outboxEvents))
 	}
 }
@@ -773,6 +774,14 @@ func (r *lifecycleRepo) CreditWalletPending(ctx context.Context, userID uuid.UUI
 func (r *lifecycleRepo) DebitWalletPending(ctx context.Context, userID uuid.UUID, amount money.Money, refID uuid.UUID, idempotencyKey string) error {
 	r.walletDebits++
 	return nil
+}
+
+func (r *lifecycleRepo) AdjustWallet(ctx context.Context, userID uuid.UUID, availableDelta, pendingDelta money.Money, txType walletdomain.TransactionType, refID uuid.UUID, idempotencyKey string) error {
+	return nil
+}
+
+func (r *lifecycleRepo) HasWalletTransaction(ctx context.Context, idempotencyKey string) (bool, error) {
+	return false, nil
 }
 
 func (r *lifecycleRepo) get(orderID uuid.UUID) (*paymentdomain.PaymentOrder, error) {

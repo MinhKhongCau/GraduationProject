@@ -11,6 +11,7 @@ import { dmSocketController } from "./controllers/dm.socket.controller.js";
 import { presenceSocketController } from "./controllers/presence.socket.controller.js";
 import { webrtcSocketController } from "./controllers/webrtc.socket.controller.js";
 import { registerCallSocketHandlers } from "./controllers/call.socket.controller.js";
+import { meetSocketController } from "./controllers/meet.socket.controller.js";
 
 export function initSocket(server) {
   const io = new Server(server, {
@@ -45,6 +46,7 @@ export function initSocket(server) {
     presenceSocketController(io, socket);
     webrtcSocketController(io, socket);
     registerCallSocketHandlers(io, socket);
+    meetSocketController(io, socket);
   });
 
   return io;

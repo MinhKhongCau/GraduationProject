@@ -217,7 +217,6 @@ services:
       - OUTBOX_BASE_BACKOFF_SECONDS=${OUTBOX_BASE_BACKOFF_SECONDS:-5}
       - OUTBOX_MAX_BACKOFF_SECONDS=${OUTBOX_MAX_BACKOFF_SECONDS:-300}
       - OUTBOX_BATCH_SIZE=${OUTBOX_BATCH_SIZE:-50}
-      - HOLD_PERIOD_MINUTES=${HOLD_PERIOD_MINUTES:-1}
 
   booking-service:
     build:
@@ -250,6 +249,11 @@ services:
       - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME:-booking-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING}
       - ROLLING_SLOT_DAYS=${ROLLING_SLOT_DAYS:-30}
+      # Phòng họp tư vấn: link gửi cho bệnh nhân/chuyên gia sau khi thanh toán thành công
+      - MEETING_BASE_URL=${MEETING_BASE_URL:-http://localhost:3000/meet}
+      - MIN_SESSION_PRESENCE_MINUTES=${MIN_SESSION_PRESENCE_MINUTES:-30}
+      # Chi trả thù lao chuyên gia khi buổi tư vấn hoàn tất
+      - PAYMENT_SERVICE_INTERNAL_URL=http://payment-service:${PORT_PAYMENT_SERVICE}
       # gRPC tới profile-service (trang xác nhận + tạo cuộc hẹn)
       - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
       # gRPC nội bộ cho payment-service (không publish ra host, không qua Kong)
@@ -349,6 +353,11 @@ services:
       - DB_NAME=${CHATROOM_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
       - CHATBOT_URL=${CHATBOT_URL}
+      # Internal M2M Auth — tra phòng họp + kết thúc buổi tư vấn qua booking-service
+      - AUTH_SERVICE_INTERNAL_URL=http://auth-service:${PORT_AUTH_SERVICE}
+      - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
+      - INTERNAL_CLIENT_ID=${CHATROOM_SERVICE_NAME:-chatroom-service}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_CHATROOM}
 
   # 10. CHATBOT SERVICE (Python FastAPI)
   # chatbot-service:

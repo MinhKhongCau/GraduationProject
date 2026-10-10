@@ -28,6 +28,9 @@ type Usecase interface {
 	DebitAvailable(ctx context.Context, userID uuid.UUID, amount money.Money, refType string, refID uuid.UUID, idempotencyKey string) error
 	DebitPending(ctx context.Context, userID uuid.UUID, amount money.Money, refType string, refID uuid.UUID, idempotencyKey string) error
 	DebitPendingWithTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, amount money.Money, refType string, refID uuid.UUID, idempotencyKey string) error
+	// AdjustWithTx dịch chuyển Available/Pending trong transaction có sẵn và ghi một dòng sổ cái
+	// có amount = availableDelta + pendingDelta (đúng bằng thay đổi tổng số dư).
+	AdjustWithTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, availableDelta, pendingDelta money.Money, txType walletdomain.TransactionType, refType string, refID uuid.UUID, idempotencyKey string) error
 
 	LockFunds(ctx context.Context, userID uuid.UUID, amount money.Money) error
 	UnlockFunds(ctx context.Context, userID uuid.UUID, amount money.Money) error
