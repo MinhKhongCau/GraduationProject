@@ -154,16 +154,12 @@ func (u *paymentUsecase) ProcessIPN(ctx context.Context, params map[string][]str
 				return err
 			}
 
-			creditKey := fmt.Sprintf("credit_order_%s", order.ID.String())
-			err = tx.CreditWalletPending(ctx, order.ExpertID, order.GrossAmount, order.ID, creditKey)
+			// Toàn bộ tiền bệnh nhân trả được giữ ở ví hệ thống (Pending). Chuyên gia chỉ nhận
+			// net_amount khi buổi tư vấn hoàn tất (xem SettleCompletedSession).
+			escrowKey := systemEscrowKey(order.ID)
+			err = tx.CreditWalletPending(ctx, u.systemWalletUserID, order.GrossAmount, order.ID, escrowKey)
 			if err != nil {
-				return fmt.Errorf("wallet credit failed: %w", err)
-			}
-
-			debitKey := fmt.Sprintf("debit_order_%s", order.ID.String())
-			err = tx.DebitWalletPending(ctx, order.ExpertID, order.CommissionAmount, order.ID, debitKey)
-			if err != nil {
-				return fmt.Errorf("wallet commission debit failed: %w", err)
+				return fmt.Errorf("system wallet credit failed: %w", err)
 			}
 
 			// LÆ°u Outbox event: thÃ´ng bÃ¡o Booking Service xÃ¡c nháº­n lá»‹ch háº¹n.

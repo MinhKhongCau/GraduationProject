@@ -36,6 +36,9 @@ type Config struct {
 	BookingGRPCAddr           string // booking-service:9003
 	ProfileGRPCAddr           string // profile-service:9002
 
+	// SystemWalletUserID: chủ ví hệ thống giữ tiền bệnh nhân trả cho tới khi buổi tư vấn hoàn tất.
+	SystemWalletUserID string
+
 	PaymentOrderTTL        time.Duration
 	PaymentMinUsableWindow time.Duration
 	OutboxPollInterval     time.Duration
@@ -94,6 +97,7 @@ func LoadConfig() {
 		BookingServiceInternalURL: getEnvOrDefault("BOOKING_SERVICE_INTERNAL_URL", "http://booking-service:8083"),
 		BookingGRPCAddr:           getEnvOrDefault("BOOKING_GRPC_ADDR", "booking-service:9003"),
 		ProfileGRPCAddr:           getEnvOrDefault("PROFILE_GRPC_ADDR", "profile-service:9002"),
+		SystemWalletUserID:        getEnvOrDefault("SYSTEM_WALLET_USER_ID", "00000000-0000-0000-0000-000000000001"),
 		PaymentOrderTTL:           paymentOrderTTL,
 		PaymentMinUsableWindow:    paymentMinUsableWindow,
 		OutboxPollInterval:        outboxConfig.PollInterval,

@@ -313,11 +313,14 @@ func TestProcessIPNCommitsPaymentWalletAndBookingOutboxAtomically(t *testing.T) 
 	if repo.order.Status != paymentdomain.OrderStatusSuccess {
 		t.Fatalf("expected order status SUCCESS, got %s", repo.order.Status.String())
 	}
-	if walletUsecase.pendingBalance != money.Money(850) {
-		t.Fatalf("expected wallet pending balance 850, got %d", walletUsecase.pendingBalance)
+	if walletUsecase.pendingBalance != money.Money(1000) {
+		t.Fatalf("expected system wallet to hold the gross 1000 in pending, got %d", walletUsecase.pendingBalance)
 	}
-	if len(walletUsecase.transactions) != 2 {
-		t.Fatalf("expected two wallet transactions, got %d", len(walletUsecase.transactions))
+	if len(walletUsecase.transactions) != 1 || walletUsecase.transactions[0].IdempotencyKey != "escrow_order_"+orderID.String() {
+		t.Fatalf("expected one escrow transaction, got %+v", walletUsecase.transactions)
+	}
+	if len(walletUsecase.creditUsers) != 1 || walletUsecase.creditUsers[0] != DefaultSystemWalletUserID {
+		t.Fatalf("expected payment to be credited to the system wallet, got %v", walletUsecase.creditUsers)
 	}
 	assertOnlyBookingConfirmOutbox(t, repo)
 }
@@ -345,36 +348,6 @@ func TestProcessIPNRollsBackWhenWalletCreditFails(t *testing.T) {
 	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), signedSuccessIPNParams(orderID))
 	if err == nil {
 		t.Fatal("expected wallet credit error")
-	}
-	if alreadyProcessed {
-		t.Fatal("expected alreadyProcessed to be false")
-	}
-	assertRolledBackPaymentWalletAndOutbox(t, repo, walletUsecase)
-}
-
-func TestProcessIPNRollsBackCreditWhenWalletDebitFails(t *testing.T) {
-	orderID := uuid.New()
-	appointmentID := uuid.New()
-	repo := newFakePaymentRepo(paymentdomain.PaymentOrder{
-		ID:               orderID,
-		PayerID:          uuid.New(),
-		ExpertID:         uuid.New(),
-		GrossAmount:      money.Money(1000),
-		CommissionRate:   0.15,
-		CommissionAmount: money.Money(150),
-		NetAmount:        money.Money(850),
-		Gateway:          "VNPAY",
-		Status:           paymentdomain.OrderStatusPending,
-		AppointmentID:    &appointmentID,
-	})
-	walletUsecase := &fakeWalletUsecase{debitErr: errors.New("debit failed")}
-	repo.addParticipant(walletUsecase)
-
-	usecase := NewUsecase(repo, repo, gateway.NewVNPayClient("", "", "", ""), &fakeBookingClient{})
-
-	alreadyProcessed, err := usecase.ProcessIPN(context.Background(), signedSuccessIPNParams(orderID))
-	if err == nil {
-		t.Fatal("expected wallet debit error")
 	}
 	if alreadyProcessed {
 		t.Fatal("expected alreadyProcessed to be false")
@@ -860,6 +833,19 @@ func (r *fakePaymentRepo) DebitWalletPending(ctx context.Context, userID uuid.UU
 	return r.walletUsecase.DebitPending(ctx, userID, amount, "PAYMENT_ORDER", refID, idempotencyKey)
 }
 
+func (r *fakePaymentRepo) AdjustWallet(ctx context.Context, userID uuid.UUID, availableDelta, pendingDelta money.Money, txType walletdomain.TransactionType, refID uuid.UUID, idempotencyKey string) error {
+	return r.walletUsecase.adjust(userID, availableDelta, pendingDelta, txType, refID, idempotencyKey)
+}
+
+func (r *fakePaymentRepo) HasWalletTransaction(ctx context.Context, idempotencyKey string) (bool, error) {
+	for _, transaction := range r.walletUsecase.transactions {
+		if transaction.IdempotencyKey == idempotencyKey {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (r *fakePaymentRepo) WithinTx(ctx context.Context, fn func(tx Tx) error) error {
 	r.mu.Lock()
 	orderSnapshot := r.order
@@ -910,6 +896,34 @@ type fakeWalletUsecase struct {
 	transactions         []walletdomain.WalletTransaction
 	pendingBalanceBefore money.Money
 	transactionsBefore   []walletdomain.WalletTransaction
+	creditUsers          []uuid.UUID
+	adjustErr            error
+	// adjustments ghi các lần AdjustWallet theo từng ví (dùng cho test chi trả thù lao).
+	adjustments       []fakeWalletAdjustment
+	adjustmentsBefore []fakeWalletAdjustment
+}
+
+type fakeWalletAdjustment struct {
+	UserID         uuid.UUID
+	Available      money.Money
+	Pending        money.Money
+	Type           walletdomain.TransactionType
+	IdempotencyKey string
+}
+
+func (u *fakeWalletUsecase) adjust(userID uuid.UUID, availableDelta, pendingDelta money.Money, txType walletdomain.TransactionType, refID uuid.UUID, idempotencyKey string) error {
+	if u.adjustErr != nil {
+		return u.adjustErr
+	}
+	u.adjustments = append(u.adjustments, fakeWalletAdjustment{UserID: userID, Available: availableDelta, Pending: pendingDelta, Type: txType, IdempotencyKey: idempotencyKey})
+	u.transactions = append(u.transactions, walletdomain.WalletTransaction{
+		Type:           txType,
+		Amount:         availableDelta.Add(pendingDelta),
+		ReferenceType:  "PAYMENT_ORDER",
+		ReferenceID:    refID,
+		IdempotencyKey: idempotencyKey,
+	})
+	return nil
 }
 
 func (u *fakeWalletUsecase) GetOrCreateWallet(ctx context.Context, userID uuid.UUID) (*walletdomain.Wallet, error) {
@@ -932,6 +946,7 @@ func (u *fakeWalletUsecase) CreditPending(ctx context.Context, userID uuid.UUID,
 		return u.creditErr
 	}
 	u.pendingBalance = u.pendingBalance.Add(amount)
+	u.creditUsers = append(u.creditUsers, userID)
 	u.transactions = append(u.transactions, walletdomain.WalletTransaction{
 		Type:           walletdomain.TxTypePaymentReceived,
 		Amount:         amount,
@@ -976,6 +991,7 @@ func (u *fakeWalletUsecase) UnlockFunds(ctx context.Context, userID uuid.UUID, a
 func (u *fakeWalletUsecase) beginTx() {
 	u.pendingBalanceBefore = u.pendingBalance
 	u.transactionsBefore = append([]walletdomain.WalletTransaction(nil), u.transactions...)
+	u.adjustmentsBefore = append([]fakeWalletAdjustment(nil), u.adjustments...)
 }
 
 func (u *fakeWalletUsecase) commitTx() {
@@ -986,6 +1002,8 @@ func (u *fakeWalletUsecase) rollbackTx() {
 	u.pendingBalance = u.pendingBalanceBefore
 	u.transactions = append([]walletdomain.WalletTransaction(nil), u.transactionsBefore...)
 	u.transactionsBefore = nil
+	u.adjustments = append([]fakeWalletAdjustment(nil), u.adjustmentsBefore...)
+	u.adjustmentsBefore = nil
 }
 
 type fakePaymentGateway struct {

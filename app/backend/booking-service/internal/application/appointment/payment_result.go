@@ -76,6 +76,12 @@ func (u *appointmentUsecase) HandlePaymentResult(command HandlePaymentResultComm
 		if err != nil {
 			return mapPaymentResultDomainError(err)
 		}
+		if command.Status == PaymentResultSuccess && !transition.Noop {
+			// Thanh toán thành công → sinh link phòng họp cho bệnh nhân và chuyên gia.
+			if err := u.addMeetingLink(transition.AppointmentUpdates); err != nil {
+				return err
+			}
+		}
 		if command.Status == PaymentResultFailed && !transition.Noop {
 			covered, err := tx.IsSlotCoveredByTimeOff(context.Background(), *slot)
 			if err != nil {

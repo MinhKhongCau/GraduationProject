@@ -4,6 +4,7 @@ import (
 	paymentHandler "payment-service/internal/infrastructure/http/handlers/payment"
 	walletHandler "payment-service/internal/infrastructure/http/handlers/wallet"
 	withdrawalHandler "payment-service/internal/infrastructure/http/handlers/withdrawal"
+	"payment-service/internal/infrastructure/http/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -58,5 +59,11 @@ func SetupRoutes(
 		api.GET("/admin/withdrawals", wdHandler.ListAdminWithdrawals)
 		api.POST("/withdrawals/:id/approve", wdHandler.ApproveWithdrawal)
 		api.POST("/withdrawals/:id/reject", wdHandler.RejectWithdrawal)
+	}
+
+	// Route nội bộ (Kong không public /internal): booking-service yêu cầu chi trả sau buổi tư vấn.
+	internal := r.Group("/internal/payments", middleware.Middleware())
+	{
+		internal.POST("/appointments/:id/settle", pHandler.SettleSession)
 	}
 }

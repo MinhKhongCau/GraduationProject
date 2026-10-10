@@ -25,6 +25,7 @@ import (
 	_ "payment-service/docs" // Import swagger docs
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -98,6 +99,11 @@ func main() {
 	vnpReturnURL := os.Getenv("VNP_RETURN_URL")
 	vnpayClient := vnpay.NewVNPayClient(vnpTmnCode, vnpHashSecret, vnpPaymentURL, vnpReturnURL)
 
+	systemWalletUserID, err := uuid.Parse(config.AppConfig.SystemWalletUserID)
+	if err != nil {
+		log.Fatalf("Invalid SYSTEM_WALLET_USER_ID: %v", err)
+	}
+
 	paymentUoW := repository.NewUnitOfWork(config.DB, walletUsecase)
 	paymentUsecase := apppayment.NewUsecaseWithOptions(paymentRepo, paymentUoW, vnpayClient, bookingSvcClient, apppayment.Options{
 		OrderTTL:       config.AppConfig.PaymentOrderTTL,
@@ -105,6 +111,8 @@ func main() {
 		ManagedExperts: profileClient,
 		Profiles:       profileClient,
 		Appointments:   bookingSvcClient,
+
+		SystemWalletUserID: systemWalletUserID,
 	})
 	withdrawalUsecase := appwithdrawal.NewUsecase(withdrawalRepo, walletUsecase)
 
@@ -117,18 +125,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Worker 1: Giải phóng tiền hold (Pending -> Available) sau 24h
-	// Để thuận tiện test, mặc định hold 1 phút nếu không cấu hình env
-	holdDuration := 24 * time.Hour
-	if envHold := os.Getenv("HOLD_PERIOD_MINUTES"); envHold != "" {
-		if min, err := time.ParseDuration(envHold + "m"); err == nil {
-			holdDuration = min
-		}
-	} else {
-		holdDuration = 1 * time.Minute // Mặc định dev là 1 phút
-	}
-	walletWorker := appwallet.NewWorker(config.DB, walletRepo, holdDuration)
-	go walletWorker.Start(ctx)
+	// Tiền thanh toán lịch hẹn nằm ở ví hệ thống và chỉ được chi trả cho chuyên gia khi
+	// booking-service báo buổi tư vấn hoàn tất (POST /internal/payments/appointments/:id/settle),
+	// nên không còn worker giải phóng tiền hold theo thời gian.
 
 	// Worker 2: Xử lý timeout của các yêu cầu rút PROCESSING quá 5 phút
 	withdrawalWorker := appwithdrawal.NewWorker(config.DB, withdrawalUsecase, 5*time.Minute)

@@ -71,7 +71,15 @@ func RegisterAppointmentRoutes(publicGroup, privateGroup *gin.RouterGroup, inter
 
 		// POST /internal/appointments/:id/payment-eligibility
 		internalAppt.POST("/:id/payment-eligibility", h.InternalPaymentEligibility)
+
+		// POST /internal/appointments/:id/complete-session (chatroom-service)
+		internalAppt.POST("/:id/complete-session", h.InternalCompleteSession)
 	}
+
+	// GET /internal/meetings/:token — chatroom-service tra phòng họp theo mã trong link.
+	internalMeetings := internalGroup.Group("/meetings")
+	internalMeetings.Use(middleware.InternalAuth())
+	internalMeetings.GET("/:token", h.InternalGetMeeting)
 }
 
 func RegisterTimeOffRoutes(

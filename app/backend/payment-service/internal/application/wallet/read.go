@@ -46,7 +46,7 @@ func ParseTransactionType(value string) (*walletdomain.TransactionType, error) {
 	if value == "" {
 		return nil, nil
 	}
-	values := map[string]walletdomain.TransactionType{"PAYMENT_RECEIVED": walletdomain.TxTypePaymentReceived, "COMMISSION_DEDUCTED": walletdomain.TxTypeCommissionDeducted, "REFUND": walletdomain.TxTypeRefund, "WITHDRAWAL_LOCKED": walletdomain.TxTypeWithdrawalLocked, "WITHDRAWAL_COMPLETED": walletdomain.TxTypeWithdrawalCompleted, "WITHDRAWAL_REJECTED": walletdomain.TxTypeWithdrawalRejected, "ADJUSTMENT": walletdomain.TxTypeAdjustment}
+	values := map[string]walletdomain.TransactionType{"PAYMENT_RECEIVED": walletdomain.TxTypePaymentReceived, "COMMISSION_DEDUCTED": walletdomain.TxTypeCommissionDeducted, "REFUND": walletdomain.TxTypeRefund, "WITHDRAWAL_LOCKED": walletdomain.TxTypeWithdrawalLocked, "WITHDRAWAL_COMPLETED": walletdomain.TxTypeWithdrawalCompleted, "WITHDRAWAL_REJECTED": walletdomain.TxTypeWithdrawalRejected, "ADJUSTMENT": walletdomain.TxTypeAdjustment, "SESSION_PAYOUT": walletdomain.TxTypeSessionPayout}
 	result, ok := values[value]
 	if !ok {
 		return nil, fmt.Errorf("invalid wallet transaction type")

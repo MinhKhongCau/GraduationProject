@@ -7,6 +7,7 @@ import (
 	appwallet "payment-service/internal/application/wallet"
 	"payment-service/internal/domain/money"
 	paymentdomain "payment-service/internal/domain/payment"
+	walletdomain "payment-service/internal/domain/wallet"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -418,6 +419,18 @@ func (tx *paymentTx) CreditWalletPending(ctx context.Context, userID uuid.UUID, 
 
 func (tx *paymentTx) DebitWalletPending(ctx context.Context, userID uuid.UUID, amount money.Money, refID uuid.UUID, idempotencyKey string) error {
 	return tx.walletUsecase.DebitPendingWithTx(ctx, tx.db, userID, amount, "PAYMENT_ORDER", refID, idempotencyKey)
+}
+
+func (tx *paymentTx) AdjustWallet(ctx context.Context, userID uuid.UUID, availableDelta, pendingDelta money.Money, txType walletdomain.TransactionType, refID uuid.UUID, idempotencyKey string) error {
+	return tx.walletUsecase.AdjustWithTx(ctx, tx.db, userID, availableDelta, pendingDelta, txType, "PAYMENT_ORDER", refID, idempotencyKey)
+}
+
+func (tx *paymentTx) HasWalletTransaction(ctx context.Context, idempotencyKey string) (bool, error) {
+	var count int64
+	err := tx.db.WithContext(ctx).Model(&walletdomain.WalletTransaction{}).
+		Where("idempotency_key = ?", idempotencyKey).
+		Count(&count).Error
+	return count > 0, err
 }
 
 func mapTxError(err error) error {
