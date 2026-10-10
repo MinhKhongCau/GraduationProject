@@ -54,3 +54,27 @@ func (u *walletUsecase) applyCreditPending(tx *gorm.DB, wallet *walletdomain.Wal
 
 	return u.repo.CreateTransaction(tx, transaction)
 }
+
+func (u *walletUsecase) AdjustWithTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, availableDelta, pendingDelta money.Money, txType walletdomain.TransactionType, refType string, refID uuid.UUID, idempotencyKey string) error {
+	return u.executeWithExistingTx(ctx, tx, userID, func(wallet *walletdomain.Wallet, tx *gorm.DB) error {
+		available := wallet.AvailableBalance.Add(availableDelta)
+		pending := wallet.PendingBalance.Add(pendingDelta)
+		if available.IsNegative() || pending.IsNegative() {
+			return ErrInsufficientBalance
+		}
+		wallet.AvailableBalance = available
+		wallet.PendingBalance = pending
+
+		transaction := &walletdomain.WalletTransaction{
+			WalletID:       wallet.ID,
+			Type:           txType,
+			Amount:         availableDelta.Add(pendingDelta),
+			BalanceAfter:   wallet.AvailableBalance.Add(wallet.PendingBalance).Add(wallet.LockedBalance),
+			ReferenceType:  refType,
+			ReferenceID:    refID,
+			IdempotencyKey: idempotencyKey,
+		}
+
+		return u.repo.CreateTransaction(tx, transaction)
+	})
+}

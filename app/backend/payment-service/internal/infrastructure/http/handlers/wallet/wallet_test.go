@@ -65,6 +65,10 @@ func (m *mockWalletUsecase) DebitPending(ctx context.Context, userID uuid.UUID, 
 	return nil
 }
 
+func (m *mockWalletUsecase) AdjustWithTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, availableDelta, pendingDelta money.Money, txType walletdomain.TransactionType, refType string, refID uuid.UUID, idempotencyKey string) error {
+	return nil
+}
+
 func (m *mockWalletUsecase) DebitPendingWithTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID, amount money.Money, refType string, refID uuid.UUID, idempotencyKey string) error {
 	return nil
 }

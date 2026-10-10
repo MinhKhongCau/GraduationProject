@@ -18,6 +18,7 @@ const (
 	TxTypeWithdrawalCompleted TransactionType = 5 // WITHDRAWAL_COMPLETED
 	TxTypeWithdrawalRejected  TransactionType = 6 // WITHDRAWAL_REJECTED
 	TxTypeAdjustment          TransactionType = 7 // ADJUSTMENT
+	TxTypeSessionPayout       TransactionType = 8 // SESSION_PAYOUT
 )
 
 func (t TransactionType) String() string {
@@ -36,6 +37,8 @@ func (t TransactionType) String() string {
 		return "WITHDRAWAL_REJECTED"
 	case TxTypeAdjustment:
 		return "ADJUSTMENT"
+	case TxTypeSessionPayout:
+		return "SESSION_PAYOUT"
 	default:
 		return "UNKNOWN"
 	}

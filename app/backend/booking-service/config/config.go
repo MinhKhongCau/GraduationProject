@@ -25,6 +25,11 @@ type Config struct {
 	InternalClientID       string // "booking-service"
 	InternalClientSecret   string // plain text secret (chỉ trong ENV, không commit)
 
+	// Phòng họp tư vấn: link = MeetingBaseURL/<token>; payment-service chi trả sau buổi tư vấn.
+	MeetingBaseURL            string // http://localhost:3000/meet
+	MinSessionPresenceMinutes int    // 30
+	PaymentServiceInternalURL string // http://payment-service:8082
+
 	// gRPC tới profile-service (truy vấn chuyên gia + hồ sơ người khám khi đặt lịch)
 	ProfileGRPCAddr string // profile-service:9002
 
@@ -49,6 +54,10 @@ func LoadConfig() {
 	if err != nil {
 		log.Fatalf("invalid ROLLING_SLOT_DAYS: %v", err)
 	}
+	minPresence, err := strconv.Atoi(getEnvOrDefault("MIN_SESSION_PRESENCE_MINUTES", "30"))
+	if err != nil || minPresence < 1 || minPresence > 600 {
+		log.Fatalf("invalid MIN_SESSION_PRESENCE_MINUTES: must be an integer between 1 and 600")
+	}
 	AppConfig = &Config{
 		DBHost:          getEnvOrDefault("DB_HOST", "localhost"),
 		DBPort:          getEnvOrDefault("DB_PORT", "5432"),
@@ -63,6 +72,10 @@ func LoadConfig() {
 		AuthServiceInternalURL: getEnvOrDefault("AUTH_SERVICE_INTERNAL_URL", "http://auth-service:8080"),
 		InternalClientID:       getEnvOrDefault("INTERNAL_CLIENT_ID", "booking-service"),
 		InternalClientSecret:   getEnvOrDefault("INTERNAL_CLIENT_SECRET", ""),
+
+		MeetingBaseURL:            getEnvOrDefault("MEETING_BASE_URL", "http://localhost:3000/meet"),
+		MinSessionPresenceMinutes: minPresence,
+		PaymentServiceInternalURL: getEnvOrDefault("PAYMENT_SERVICE_INTERNAL_URL", "http://payment-service:8082"),
 
 		ProfileGRPCAddr: getEnvOrDefault("PROFILE_GRPC_ADDR", "profile-service:9002"),
 		GRPCPort:        getEnvOrDefault("GRPC_PORT", "9003"),

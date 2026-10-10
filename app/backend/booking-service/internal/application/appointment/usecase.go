@@ -39,6 +39,8 @@ type appointmentUsecase struct {
 	profiles ProfileGateway
 	// directory tra hồ sơ hàng loạt + phạm vi Admin; nil khi profile client không hỗ trợ.
 	directory ProfileDirectory
+	// meetings: link phòng họp sinh khi thanh toán thành công + chi trả sau buổi tư vấn.
+	meetings MeetingOptions
 }
 
 func NewUsecase(repo Repository) Usecase {
@@ -47,7 +49,7 @@ func NewUsecase(repo Repository) Usecase {
 
 // NewUsecaseWithProfiles cho phép tạo cuộc hẹn/trang xác nhận, cần đọc hồ sơ từ profile-service.
 func NewUsecaseWithProfiles(repo Repository, profiles ProfileGateway) Usecase {
-	usecase := &appointmentUsecase{repo: repo, profiles: profiles}
+	usecase := &appointmentUsecase{repo: repo, profiles: profiles, meetings: normalizeMeetingOptions(MeetingOptions{})}
 	if directory, ok := profiles.(ProfileDirectory); ok {
 		usecase.directory = directory
 	}
