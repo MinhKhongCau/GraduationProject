@@ -45,6 +45,7 @@ export default function LoginPage() {
     
     if (redirect) {
       const isAllowed = 
+        redirect.startsWith("/meet/") ||
         (role === "ADMIN" && redirect.startsWith("/admin")) ||
         (role === "EXPERT" && redirect.startsWith("/expert")) ||
         (role === "PATIENT" && redirect.startsWith("/patient"));

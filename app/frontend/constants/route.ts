@@ -1,6 +1,7 @@
 export const ROUTES = {
   HOME: "/",
   FORBIDDEN: "/forbidden",
+  MEET: (meetingToken: string) => `/meet/${meetingToken}`,
 
   AUTH: {
     LOGIN: "/auth/login",

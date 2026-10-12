@@ -16,6 +16,14 @@ export function proxy(request: NextRequest) {
   const role = request.cookies.get(ROLE_COOKIE)?.value as UserRole | undefined;
 
   const requiredRole = resolveRequiredRole(pathname);
+  // Meeting links are open to any signed-in role; the meet room itself checks participants.
+  const isMeetRoute = pathname.startsWith("/meet/");
+
+  if (isMeetRoute && !hasSession) {
+    const loginUrl = new URL(ROUTES.AUTH.LOGIN, request.url);
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
   if (requiredRole) {
     if (!hasSession) {
@@ -36,5 +44,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/patient/:path*", "/expert/:path*", "/admin/:path*", "/auth/:path*"],
+  matcher: ["/meet/:path*", "/patient/:path*", "/expert/:path*", "/admin/:path*", "/auth/:path*"],
 };
