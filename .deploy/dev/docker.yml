@@ -28,6 +28,7 @@ services:
       ASSESSMENT_DB_NAME: ${ASSESSMENT_DB_NAME}
       FORUM_DB_NAME: ${FORUM_DB_NAME}
       CHATROOM_DB_NAME: ${CHATROOM_DB_NAME}
+      CHATBOT_DB_NAME: ${CHATBOT_DB_NAME}
       # Internal M2M Auth
       AUTH_SERVICE_INTERNAL_URL: ${AUTH_SERVICE_INTERNAL_URL}
       INTERNAL_CLIENT_ID: ${INTERNAL_CLIENT_ID_BOOKING:-booking_internal_client_id_2024}
@@ -142,6 +143,8 @@ services:
       - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
       - INTERNAL_CLIENT_ID=${PROFILE_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PROFILE}
+      # Internal gRPC for booking-service (not published, not via Kong)
+      - GRPC_PORT=${PROFILE_GRPC_PORT:-9002}
 
   payment-service:
     image: ${DOCKERHUB_USERNAME}/payment-service-dev:latest
@@ -161,9 +164,12 @@ services:
       - DB_HOST=${DB_HOST}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_NAME=${PAYMENT_DB_NAME}
+      - PAYMENT_DB_NAME=${PAYMENT_DB_NAME}
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_PAYMENT_SERVICE}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT}
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
@@ -173,11 +179,23 @@ services:
       - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
       - INTERNAL_CLIENT_ID=${PAYMENT_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PAYMENT}
+      - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
+      # Internal gRPC to booking-service / profile-service
+      - BOOKING_GRPC_ADDR=booking-service:${BOOKING_GRPC_PORT:-9003}
+      - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
       # VNPay Sandbox
       - VNP_TMN_CODE=${VNP_TMN_CODE}
       - VNP_HASH_SECRET=${VNP_HASH_SECRET}
       - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
       - VNP_RETURN_URL=${VNP_RETURN_URL}
+      # Payment order lifecycle + outbox
+      - PAYMENT_ORDER_TTL_MINUTES=${PAYMENT_ORDER_TTL_MINUTES:-15}
+      - PAYMENT_MIN_USABLE_WINDOW_SECONDS=${PAYMENT_MIN_USABLE_WINDOW_SECONDS:-60}
+      - OUTBOX_POLL_INTERVAL_SECONDS=${OUTBOX_POLL_INTERVAL_SECONDS:-5}
+      - OUTBOX_MAX_ATTEMPTS=${OUTBOX_MAX_ATTEMPTS:-10}
+      - OUTBOX_BASE_BACKOFF_SECONDS=${OUTBOX_BASE_BACKOFF_SECONDS:-5}
+      - OUTBOX_MAX_BACKOFF_SECONDS=${OUTBOX_MAX_BACKOFF_SECONDS:-300}
+      - OUTBOX_BATCH_SIZE=${OUTBOX_BATCH_SIZE:-50}
 
   booking-service:
     image: ${DOCKERHUB_USERNAME}/booking-service-dev:latest
@@ -208,6 +226,15 @@ services:
       - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
       - INTERNAL_CLIENT_ID=${BOOKING_SERVICE_NAME}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_BOOKING}
+      - ROLLING_SLOT_DAYS=${ROLLING_SLOT_DAYS:-30}
+      # Consultation room link sent to patient/expert after successful payment
+      - MEETING_BASE_URL=${MEETING_BASE_URL}
+      - MIN_SESSION_PRESENCE_MINUTES=${MIN_SESSION_PRESENCE_MINUTES:-30}
+      # Expert payout when a session completes
+      - PAYMENT_SERVICE_INTERNAL_URL=http://payment-service:${PORT_PAYMENT_SERVICE}
+      # gRPC to profile-service; internal gRPC server for payment-service
+      - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
+      - GRPC_PORT=${BOOKING_GRPC_PORT:-9003}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:
@@ -258,6 +285,7 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
       - FORUM_DB_NAME=${FORUM_DB_NAME}
+      - DB_NAME=${FORUM_DB_NAME:-forum_db}
       - DB_SSLMODE=${DB_SSLMODE}
       - DB_PORT=${DB_PORT}
       - PORT=${PORT_FORUM_SERVICE}
@@ -307,6 +335,11 @@ services:
       # Go services above).
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}
       - CHATBOT_URL=${CHATBOT_URL}
+      # Internal M2M Auth — meeting room lookup + ending sessions via booking-service
+      - AUTH_SERVICE_INTERNAL_URL=${AUTH_SERVICE_INTERNAL_URL}
+      - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
+      - INTERNAL_CLIENT_ID=${CHATROOM_SERVICE_NAME:-chatroom-service}
+      - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_CHATROOM}
 
   # 9. API GATEWAY (Kong)
   api-gateway:
@@ -318,6 +351,7 @@ services:
       - KONG_DECLARATIVE_CONFIG=/usr/local/kong/declarative/kong.yml
       - KONG_PROXY_LISTEN=0.0.0.0:8000
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS}
     ports:
       - "${PORT_API_GATEWAY}:8000"
     depends_on:
