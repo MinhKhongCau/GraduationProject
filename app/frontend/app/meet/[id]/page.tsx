@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { CalendarCheck, Mic, MicOff, PhoneOff, Video, VideoOff, VideoIcon, XCircle } from "lucide-react";
+import { CalendarCheck, Mic, MicOff, PhoneOff, Users, Video, VideoOff, VideoIcon, XCircle } from "lucide-react";
 import { ProtectedRoute } from "@/router";
 import { useAuthContext } from "@/context/AuthContext";
 import { Button, buttonClasses, Card, Spinner } from "@/components/ui";
 import { ROUTES } from "@/constants";
-import { useMeetRoom, type MeetStatus } from "@/hooks/useMeetRoom";
+import { useMeetRoom, type MeetPeer, type MeetRole, type MeetStatus } from "@/hooks/useMeetRoom";
 
 const STATUS_LABEL: Record<MeetStatus, string> = {
   preparing: "Starting camera and microphone…",
   joining: "Joining the meeting…",
-  waiting: "Waiting for the other participant to join…",
+  waiting: "You're the only one here",
   connecting: "Connecting…",
   connected: "Connected",
   ended: "The session has ended",
@@ -78,24 +78,57 @@ function formatTime(ms: number | null) {
   return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+const ROLE_LABEL: Record<MeetRole, string> = { EXPERT: "Expert", PATIENT: "Patient" };
+
+function gridClass(tiles: number) {
+  if (tiles <= 1) return "grid-cols-1";
+  if (tiles === 2) return "grid-cols-1 sm:grid-cols-2";
+  if (tiles <= 4) return "grid-cols-2";
+  return "grid-cols-2 lg:grid-cols-3";
+}
+
+/** One remote participant's video, fed by the stream from their RTCPeerConnection's ontrack. */
+function RemoteTile({ peer }: { peer: MeetPeer }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.srcObject = peer.stream;
+  }, [peer.stream]);
+
+  const label = peer.role ? ROLE_LABEL[peer.role] : "Participant";
+  return (
+    <div className="relative min-h-0 overflow-hidden rounded-2xl border border-neutral-800 bg-black">
+      <video ref={videoRef} autoPlay playsInline className={peer.stream ? "h-full w-full object-cover" : "hidden"} />
+      {!peer.stream && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+          <Spinner className="h-8 w-8" />
+          <p className="text-sm text-neutral-300">Connecting to {label.toLowerCase()}…</p>
+        </div>
+      )}
+      <div className="absolute left-4 top-4 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+        {label}
+      </div>
+    </div>
+  );
+}
+
 function MeetCall({ meet }: { meet: ReturnType<typeof useMeetRoom> }) {
   const router = useRouter();
   const { user } = useAuthContext();
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (localVideoRef.current) localVideoRef.current.srcObject = meet.localStream;
-  }, [meet.localStream]);
-
-  useEffect(() => {
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = meet.remoteStream;
-  }, [meet.remoteStream]);
+  // Callback ref: the self view remounts when it moves between the stage and the corner.
+  const { localStream } = meet;
+  const localVideoRef = useCallback(
+    (el: HTMLVideoElement | null) => {
+      if (el && el.srcObject !== localStream) el.srcObject = localStream;
+    },
+    [localStream]
+  );
 
   const isExpert = meet.role === "EXPERT";
-  const peerLabel = isExpert ? "Patient" : "Expert";
-  const showRemote = meet.remoteStream !== null;
+  const alone = meet.peers.length === 0;
+  const inRoom = meet.status === "waiting" || meet.status === "connecting" || meet.status === "connected";
 
   const handleLeave = () => {
     meet.leave();
@@ -114,6 +147,45 @@ function MeetCall({ meet }: { meet: ReturnType<typeof useMeetRoom> }) {
     }
   };
 
+  // Alone: our own camera fills the stage. With others: their tiles fill it and we float in the corner.
+  const selfView = (
+    <div
+      className={
+        alone
+          ? "relative h-full min-h-[60vh] w-full overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900"
+          : "absolute bottom-4 right-4 z-10 h-36 w-28 overflow-hidden rounded-xl border border-neutral-700 bg-neutral-800 shadow-card sm:h-44 sm:w-36"
+      }
+    >
+      <video
+        ref={localVideoRef}
+        autoPlay
+        playsInline
+        muted
+        className={meet.isVideoOff ? "hidden" : "h-full w-full -scale-x-100 object-cover"}
+      />
+      {meet.isVideoOff && (
+        <div className="flex h-full w-full items-center justify-center text-neutral-400">
+          <VideoOff className={alone ? "h-10 w-10" : "h-6 w-6"} aria-hidden />
+        </div>
+      )}
+      <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-xs font-semibold backdrop-blur-sm">
+        {meet.isMuted ? <MicOff className="h-3 w-3 text-danger" aria-hidden /> : <Mic className="h-3 w-3" aria-hidden />}
+        You
+      </div>
+      {alone && (
+        <div className="absolute inset-x-0 top-4 flex justify-center px-4">
+          <div
+            role="status"
+            className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-neutral-200 backdrop-blur-sm"
+          >
+            {inRoom ? <Users className="h-4 w-4" aria-hidden /> : <Spinner className="h-4 w-4" />}
+            {inRoom ? "You're the only one here — others will appear when they join" : STATUS_LABEL[meet.status]}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-neutral-950 text-white">
       <header className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-6">
@@ -126,6 +198,12 @@ function MeetCall({ meet }: { meet: ReturnType<typeof useMeetRoom> }) {
             }
           />
           <span className="text-sm font-semibold">{STATUS_LABEL[meet.status]}</span>
+          {inRoom && (
+            <span className="flex items-center gap-1 text-xs text-neutral-400">
+              <Users className="h-3.5 w-3.5" aria-hidden />
+              {meet.peers.length + 1}
+            </span>
+          )}
         </div>
         {meet.startTime && meet.endTime && (
           <span className="text-xs text-neutral-400">
@@ -135,41 +213,19 @@ function MeetCall({ meet }: { meet: ReturnType<typeof useMeetRoom> }) {
       </header>
 
       <main className="relative flex flex-1 items-center justify-center overflow-hidden px-4 pb-4 sm:px-6">
-        <div className="relative h-full min-h-[60vh] w-full max-w-5xl overflow-hidden rounded-2xl border border-neutral-800 bg-black">
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className={showRemote ? "h-full w-full object-cover" : "hidden"}
-          />
-          {!showRemote && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
-              <Spinner className="h-8 w-8" />
-              <p role="status" className="text-sm text-neutral-300">
-                {STATUS_LABEL[meet.status]}
-              </p>
-            </div>
-          )}
-          {showRemote && (
-            <div className="absolute left-4 top-4 rounded-full bg-black/50 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
-              {peerLabel}
-            </div>
-          )}
-
-          <div className="absolute bottom-4 right-4 h-36 w-28 overflow-hidden rounded-xl border border-neutral-700 bg-neutral-800 shadow-card sm:h-44 sm:w-36">
-            <video
-              ref={localVideoRef}
-              autoPlay
-              playsInline
-              muted
-              className={meet.isVideoOff ? "hidden" : "h-full w-full -scale-x-100 object-cover"}
-            />
-            {meet.isVideoOff && (
-              <div className="flex h-full w-full items-center justify-center text-neutral-400">
-                <VideoOff className="h-6 w-6" aria-hidden />
+        <div className="relative h-full min-h-[60vh] w-full max-w-5xl">
+          {alone ? (
+            selfView
+          ) : (
+            <>
+              <div className={`grid h-full min-h-[60vh] auto-rows-fr gap-3 ${gridClass(meet.peers.length)}`}>
+                {meet.peers.map((peer) => (
+                  <RemoteTile key={peer.id} peer={peer} />
+                ))}
               </div>
-            )}
-          </div>
+              {selfView}
+            </>
+          )}
         </div>
       </main>
 

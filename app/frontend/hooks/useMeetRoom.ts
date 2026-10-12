@@ -48,9 +48,31 @@ interface EndAck {
 
 interface SignalMessage {
   from: string;
+  /** Sender's socket id; signals are addressed back to it with `to`. */
+  fromSocketId?: string;
   role: MeetRole;
   type: "offer" | "answer" | "ice";
   payload: unknown;
+}
+
+interface ParticipantEvent {
+  socketId?: string;
+  userId?: string;
+  role?: MeetRole;
+}
+
+/** One remote participant: their own RTCPeerConnection and the stream it delivers. */
+export interface MeetPeer {
+  id: string; // remote socket id
+  userId: string | null;
+  role: MeetRole | null;
+  stream: MediaStream | null;
+  connectionState: RTCPeerConnectionState;
+}
+
+interface PeerEntry {
+  pc: RTCPeerConnection;
+  pendingIce: RTCIceCandidateInit[];
 }
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -58,20 +80,27 @@ const ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun1.l.google.com:19302" },
 ];
 
+/** Older chatroom-service builds don't send socket ids; all signals then share one peer. */
+const FALLBACK_PEER_ID = "peer";
+
 /**
- * Peer-to-peer call for a paid appointment, joined through the meeting link
+ * Video call for a paid appointment, joined through the meeting link
  * booking-service generates (…/meet/<meetingToken>). chatroom-service's
  * meet.socket.controller.js only authorizes the participants and relays
- * `meet:signal`; media flows directly between the two browsers.
+ * `meet:signal`; media flows directly between the browsers.
  *
- * Negotiation: whoever is already in the room makes the offer when the other
- * participant joins (meet:participant-joined), so a late/rejoining peer always
- * gets a fresh connection.
+ * Mesh topology (like Google Meet's small calls): every remote participant gets
+ * its own RTCPeerConnection, the local tracks are forwarded into each of them
+ * (`addTrack`), and each connection's `ontrack` yields that participant's stream.
+ * Whoever is already in the room makes the offer when someone joins
+ * (meet:participant-joined), addressing it to the newcomer's socket. A user who
+ * is alone stays in the room with their own camera and microphone live.
  */
 export function useMeetRoom(meetingToken: string) {
   const socket = useMemo(() => getChatSocket(), []);
 
-  const [status, setStatus] = useState<MeetStatus>("preparing");
+  // preparing | joining | waiting | ended | error; connecting/connected are derived from the peers.
+  const [baseStatus, setBaseStatus] = useState<MeetStatus>("preparing");
   const [error, setError] = useState<MeetError | null>(null);
   const [role, setRole] = useState<MeetRole | null>(null);
   const [startTime, setStartTime] = useState<number | null>(null);
@@ -79,71 +108,92 @@ export function useMeetRoom(meetingToken: string) {
   const [presence, setPresence] = useState<MeetPresence | null>(null);
   const [canComplete, setCanComplete] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [peers, setPeers] = useState<MeetPeer[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
 
   const localStreamRef = useRef<MediaStream | null>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
+  const peersRef = useRef<Map<string, PeerEntry>>(new Map());
   const joinedRef = useRef(false);
   const endedRef = useRef(false);
 
-  const closePeer = useCallback(() => {
-    const pc = pcRef.current;
-    pcRef.current = null;
-    pendingIceRef.current = [];
-    if (pc) {
-      pc.onicecandidate = null;
-      pc.ontrack = null;
-      pc.onconnectionstatechange = null;
-      pc.close();
-    }
-    setRemoteStream(null);
+  const patchPeer = useCallback((id: string, patch: Partial<MeetPeer>) => {
+    setPeers((list) => list.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }, []);
 
-  const createPeer = useCallback(() => {
-    closePeer();
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
-    pcRef.current = pc;
+  const closePeer = useCallback((id: string) => {
+    const entry = peersRef.current.get(id);
+    peersRef.current.delete(id);
+    if (entry) {
+      entry.pc.onicecandidate = null;
+      entry.pc.ontrack = null;
+      entry.pc.onconnectionstatechange = null;
+      entry.pc.close();
+    }
+    setPeers((list) => list.filter((p) => p.id !== id));
+  }, []);
 
-    localStreamRef.current?.getTracks().forEach((track) => pc.addTrack(track, localStreamRef.current!));
+  const closeAllPeers = useCallback(() => {
+    [...peersRef.current.keys()].forEach(closePeer);
+    setPeers([]);
+  }, [closePeer]);
 
-    pc.onicecandidate = (event) => {
-      if (event.candidate) socket.emit("meet:signal", { type: "ice", payload: event.candidate.toJSON() });
-    };
-    pc.ontrack = (event) => {
-      const [stream] = event.streams;
-      if (stream) setRemoteStream(stream);
-    };
-    pc.onconnectionstatechange = () => {
-      if (pcRef.current !== pc || endedRef.current) return;
-      if (pc.connectionState === "connected") setStatus("connected");
-      else if (pc.connectionState === "failed" || pc.connectionState === "disconnected") setStatus("connecting");
-    };
-    return pc;
-  }, [socket, closePeer]);
+  /** New RTCPeerConnection for one remote participant, carrying our local tracks. */
+  const createPeer = useCallback(
+    (id: string, info: { userId?: string; role?: MeetRole }) => {
+      closePeer(id);
+      const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+      peersRef.current.set(id, { pc, pendingIce: [] });
+      setPeers((list) => [
+        ...list,
+        { id, userId: info.userId ?? null, role: info.role ?? null, stream: null, connectionState: pc.connectionState },
+      ]);
 
-  const flushPendingIce = useCallback(async (pc: RTCPeerConnection) => {
-    const queued = pendingIceRef.current;
-    pendingIceRef.current = [];
+      const local = localStreamRef.current;
+      local?.getTracks().forEach((track) => pc.addTrack(track, local));
+
+      const to = id === FALLBACK_PEER_ID ? undefined : id;
+      pc.onicecandidate = (event) => {
+        if (event.candidate) socket.emit("meet:signal", { to, type: "ice", payload: event.candidate.toJSON() });
+      };
+      pc.ontrack = (event) => {
+        // event.streams[0] is the remote participant's stream for this track.
+        const [stream] = event.streams;
+        if (stream) patchPeer(id, { stream });
+      };
+      pc.onconnectionstatechange = () => {
+        if (peersRef.current.get(id)?.pc !== pc || endedRef.current) return;
+        patchPeer(id, { connectionState: pc.connectionState });
+      };
+      return pc;
+    },
+    [socket, closePeer, patchPeer]
+  );
+
+  const flushPendingIce = useCallback(async (id: string) => {
+    const entry = peersRef.current.get(id);
+    if (!entry) return;
+    const queued = entry.pendingIce;
+    entry.pendingIce = [];
     for (const candidate of queued) {
       try {
-        await pc.addIceCandidate(candidate);
+        await entry.pc.addIceCandidate(candidate);
       } catch (err) {
         console.warn("meet: dropped ICE candidate", err);
       }
     }
   }, []);
 
-  const makeOffer = useCallback(async () => {
-    const pc = createPeer();
-    setStatus("connecting");
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    socket.emit("meet:signal", { type: "offer", payload: offer });
-  }, [createPeer, socket]);
+  const makeOffer = useCallback(
+    async (id: string, info: { userId?: string; role?: MeetRole }) => {
+      const pc = createPeer(id, info);
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      socket.emit("meet:signal", { to: id === FALLBACK_PEER_ID ? undefined : id, type: "offer", payload: offer });
+    },
+    [createPeer, socket]
+  );
 
   // 1) Camera + microphone (falls back to audio-only when there is no camera).
   useEffect(() => {
@@ -166,12 +216,14 @@ export function useMeetRoom(meetingToken: string) {
       }
       if (!stream) {
         setError({ code: "no_media", message: "Allow camera or microphone access to join the meeting." });
-        setStatus("error");
+        setBaseStatus("error");
         return;
       }
+      // Microphone starts live, even while alone in the room.
+      stream.getAudioTracks().forEach((t) => (t.enabled = true));
       localStreamRef.current = stream;
       setLocalStream(stream);
-      setStatus("joining");
+      setBaseStatus("joining");
     })();
     return () => {
       cancelled = true;
@@ -188,12 +240,12 @@ export function useMeetRoom(meetingToken: string) {
 
     const join = () => {
       if (endedRef.current) return;
-      setStatus((s) => (s === "connected" ? s : "joining"));
+      setBaseStatus("joining");
       socket.emit("meet:join", { meetingToken }, (ack: JoinAck) => {
         if (!ack?.ok) {
           joinedRef.current = false;
           setError({ code: ack?.code ?? "unavailable", message: ack?.message ?? "Could not join the meeting." });
-          setStatus(ack?.code === "ended" ? "ended" : "error");
+          setBaseStatus(ack?.code === "ended" ? "ended" : "error");
           if (ack?.code === "ended") endedRef.current = true;
           return;
         }
@@ -206,46 +258,48 @@ export function useMeetRoom(meetingToken: string) {
           setPresence(ack.presence);
           setCanComplete(ack.presence.canComplete);
         }
-        // Wait here: the participant already in the room sends the offer.
-        if (!pcRef.current) setStatus("waiting");
+        // In the room — participants already here will send us their offers.
+        setBaseStatus("waiting");
       });
     };
 
     const onConnect = () => join();
     const onDisconnect = () => {
       joinedRef.current = false;
-      closePeer();
-      if (!endedRef.current) setStatus("joining");
+      closeAllPeers();
+      if (!endedRef.current) setBaseStatus("joining");
     };
 
-    const onParticipantJoined = () => {
-      makeOffer().catch((err) => console.error("meet: offer failed", err));
+    const onParticipantJoined = (data: ParticipantEvent) => {
+      const id = data?.socketId ?? FALLBACK_PEER_ID;
+      makeOffer(id, { userId: data?.userId, role: data?.role }).catch((err) => console.error("meet: offer failed", err));
     };
-    const onParticipantLeft = () => {
-      closePeer();
-      if (!endedRef.current) setStatus("waiting");
+    const onParticipantLeft = (data: ParticipantEvent) => {
+      if (data?.socketId) closePeer(data.socketId);
+      else closeAllPeers();
     };
 
     const onSignal = async (msg: SignalMessage) => {
+      const id = msg.fromSocketId ?? FALLBACK_PEER_ID;
       try {
         if (msg.type === "offer") {
-          const pc = createPeer();
-          setStatus("connecting");
+          const pc = createPeer(id, { userId: msg.from, role: msg.role });
           await pc.setRemoteDescription(msg.payload as RTCSessionDescriptionInit);
-          await flushPendingIce(pc);
+          await flushPendingIce(id);
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
-          socket.emit("meet:signal", { type: "answer", payload: answer });
+          socket.emit("meet:signal", { to: msg.fromSocketId, type: "answer", payload: answer });
         } else if (msg.type === "answer") {
-          const pc = pcRef.current;
+          const pc = peersRef.current.get(id)?.pc;
           if (!pc || pc.signalingState !== "have-local-offer") return;
           await pc.setRemoteDescription(msg.payload as RTCSessionDescriptionInit);
-          await flushPendingIce(pc);
+          await flushPendingIce(id);
         } else if (msg.type === "ice") {
-          const pc = pcRef.current;
+          const entry = peersRef.current.get(id);
           const candidate = msg.payload as RTCIceCandidateInit;
-          if (pc?.remoteDescription) await pc.addIceCandidate(candidate);
-          else pendingIceRef.current.push(candidate);
+          if (!entry) return;
+          if (entry.pc.remoteDescription) await entry.pc.addIceCandidate(candidate);
+          else entry.pendingIce.push(candidate);
         }
       } catch (err) {
         console.error("meet: signal handling failed", err);
@@ -259,8 +313,8 @@ export function useMeetRoom(meetingToken: string) {
     const onEnded = () => {
       endedRef.current = true;
       joinedRef.current = false;
-      closePeer();
-      setStatus("ended");
+      closeAllPeers();
+      setBaseStatus("ended");
     };
 
     socket.on("connect", onConnect);
@@ -285,9 +339,14 @@ export function useMeetRoom(meetingToken: string) {
       socket.off("meet:ended", onEnded);
       if (joinedRef.current) socket.emit("meet:leave");
       joinedRef.current = false;
-      closePeer();
+      closeAllPeers();
     };
-  }, [mediaReady, meetingToken, socket, closePeer, createPeer, flushPendingIce, makeOffer]);
+  }, [mediaReady, meetingToken, socket, closePeer, closeAllPeers, createPeer, flushPendingIce, makeOffer]);
+
+  const status: MeetStatus = useMemo(() => {
+    if (baseStatus !== "waiting" || peers.length === 0) return baseStatus;
+    return peers.some((p) => p.connectionState === "connected") ? "connected" : "connecting";
+  }, [baseStatus, peers]);
 
   // Expert only: refresh the presence counter while waiting for the minimum.
   useEffect(() => {
@@ -322,9 +381,9 @@ export function useMeetRoom(meetingToken: string) {
   const leave = useCallback(() => {
     if (joinedRef.current) socket.emit("meet:leave");
     joinedRef.current = false;
-    closePeer();
+    closeAllPeers();
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
-  }, [socket, closePeer]);
+  }, [socket, closeAllPeers]);
 
   /** Expert only: completes the session (and triggers the payout) once presence ≥ minimum. */
   const endSession = useCallback(
@@ -349,7 +408,7 @@ export function useMeetRoom(meetingToken: string) {
     presence,
     canComplete,
     localStream,
-    remoteStream,
+    peers,
     isMuted,
     isVideoOff,
     hasCamera: (localStream?.getVideoTracks().length ?? 0) > 0,
