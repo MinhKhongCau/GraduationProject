@@ -76,7 +76,7 @@ describe("Meet room (paid appointment link)", () => {
     expect(reply).toMatchObject({ ok: true, appointmentId: "appt-1", role: "PATIENT" });
     expect(socket.join).toHaveBeenCalledWith("meet:appt-1");
     expect(deps.store.expertJoined).not.toHaveBeenCalled();
-    expect(peerEmit).toHaveBeenCalledWith("meet:participant-joined", { userId: "patient-1", role: "PATIENT" });
+    expect(peerEmit).toHaveBeenCalledWith("meet:participant-joined", { socketId: "socket-patient-1", userId: "patient-1", role: "PATIENT" });
   });
 
   test("expert join starts presence tracking from the slot start", async () => {
@@ -159,7 +159,27 @@ describe("Meet room (paid appointment link)", () => {
     await call("meet:join", { meetingToken: "tok-1" });
     handlers["meet:signal"]({ type: "offer", payload: { sdp: "x" } });
     expect(socket.to).toHaveBeenLastCalledWith("meet:appt-1");
-    expect(peerEmit).toHaveBeenLastCalledWith("meet:signal", { from: "patient-1", role: "PATIENT", type: "offer", payload: { sdp: "x" } });
+    expect(peerEmit).toHaveBeenLastCalledWith("meet:signal", {
+      from: "patient-1",
+      fromSocketId: "socket-patient-1",
+      role: "PATIENT",
+      type: "offer",
+      payload: { sdp: "x" },
+    });
+  });
+
+  test("WebRTC signals addressed to a peer go only to that socket in the room", async () => {
+    const { call, handlers, io, socket, peerEmit } = setup({ user: patient });
+    io.sockets = { adapter: { rooms: new Map([["meet:appt-1", new Set(["socket-patient-1", "socket-expert-1"])]]) } };
+    await call("meet:join", { meetingToken: "tok-1" });
+    peerEmit.mockClear();
+
+    handlers["meet:signal"]({ to: "socket-outsider", type: "offer", payload: { sdp: "x" } });
+    expect(peerEmit).not.toHaveBeenCalled();
+
+    handlers["meet:signal"]({ to: "socket-expert-1", type: "answer", payload: { sdp: "y" } });
+    expect(socket.to).toHaveBeenLastCalledWith("socket-expert-1");
+    expect(peerEmit).toHaveBeenLastCalledWith("meet:signal", expect.objectContaining({ fromSocketId: "socket-patient-1", type: "answer" }));
   });
 
   test("expert disconnect stops presence tracking", async () => {
@@ -170,7 +190,7 @@ describe("Meet room (paid appointment link)", () => {
     await Promise.resolve();
 
     expect(deps.store.expertLeft).toHaveBeenCalledWith("appt-1", socket.id, NOW, NOW - 40 * MIN);
-    expect(roomEmit).toHaveBeenCalledWith("meet:participant-left", { userId: "expert-1", role: "EXPERT" });
+    expect(roomEmit).toHaveBeenCalledWith("meet:participant-left", { socketId: "socket-expert-1", userId: "expert-1", role: "EXPERT" });
     expect(socket.data.meet).toBeNull();
   });
 });

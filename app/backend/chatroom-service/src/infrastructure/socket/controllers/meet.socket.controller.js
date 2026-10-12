@@ -38,11 +38,12 @@ function toReply(err) {
 // Meet room for a paid appointment, joined through the link booking-service
 // generates on payment (…/meet/<meetingToken>):
 //   meet:join     { meetingToken }        → ack { ok, appointmentId, role, presence }
-//   meet:signal   { type, payload }       → relayed to the other participant (WebRTC)
+//   meet:signal   { to?, type, payload }  → relayed to socket `to` in the room, or the whole room (WebRTC mesh)
 //   meet:presence                         → ack { ok, presence }
 //   meet:end      (expert only)           → ack { ok, settled } once presence ≥ minimum
 //   meet:leave
-// Server → client: meet:participant-joined, meet:participant-left,
+// Server → client: meet:participant-joined, meet:participant-left (both carry socketId,
+// the id peers address signals to),
 // meet:can-complete (expert reached the minimum presence), meet:ended.
 export function meetSocketController(io, socket, deps = defaultDeps()) {
   const user = () => socket.data.user;
@@ -84,7 +85,7 @@ export function meetSocketController(io, socket, deps = defaultDeps()) {
     if (meet.role === "EXPERT") {
       await deps.store.expertLeft(meet.appointmentId, socket.id, deps.now(), meet.startTime);
     }
-    io.to(room).emit(EVENTS.MEET_PARTICIPANT_LEFT, { userId: user()?.id, role: meet.role });
+    io.to(room).emit(EVENTS.MEET_PARTICIPANT_LEFT, { socketId: socket.id, userId: user()?.id, role: meet.role });
   }
 
   socket.on(EVENTS.MEET_JOIN, async (payload, ack) => {
@@ -114,7 +115,7 @@ export function meetSocketController(io, socket, deps = defaultDeps()) {
         await deps.store.expertJoined(meet.appointmentId, socket.id, deps.now(), meet.startTime);
         await scheduleCompletionNotice(meet);
       }
-      socket.to(room).emit(EVENTS.MEET_PARTICIPANT_JOINED, { userId: user().id, role });
+      socket.to(room).emit(EVENTS.MEET_PARTICIPANT_JOINED, { socketId: socket.id, userId: user().id, role });
 
       reply({
         ok: true,
@@ -132,8 +133,13 @@ export function meetSocketController(io, socket, deps = defaultDeps()) {
   socket.on(EVENTS.MEET_SIGNAL, (payload) => {
     const meet = socket.data.meet;
     if (!meet || !SIGNAL_TYPES.has(payload?.type)) return;
-    socket.to(meetRoom(meet.appointmentId)).emit(EVENTS.MEET_SIGNAL, {
+    const room = meetRoom(meet.appointmentId);
+    const to = typeof payload.to === "string" ? payload.to : null;
+    // A peer may only address sockets that are in the same meeting room.
+    if (to && !io.sockets?.adapter?.rooms?.get(room)?.has(to)) return;
+    socket.to(to ?? room).emit(EVENTS.MEET_SIGNAL, {
       from: user().id,
+      fromSocketId: socket.id,
       role: meet.role,
       type: payload.type,
       payload: payload.payload,
