@@ -5,13 +5,14 @@ import { Modal, Button, Label, Textarea, FieldError } from "@/components/ui";
 import type { AppointmentWithExpert } from "@/hooks";
 
 export interface CancelBookingDialogProps {
-  appointment: AppointmentWithExpert | null;
+  /** Bookings to cancel; empty closes the dialog. */
+  appointments: AppointmentWithExpert[];
   onOpenChange: (open: boolean) => void;
   onConfirm: (reason: string) => void;
   isSubmitting: boolean;
 }
 
-export function CancelBookingDialog({ appointment, onOpenChange, onConfirm, isSubmitting }: CancelBookingDialogProps) {
+export function CancelBookingDialog({ appointments, onOpenChange, onConfirm, isSubmitting }: CancelBookingDialogProps) {
   const [reason, setReason] = useState("");
   const [touched, setTouched] = useState(false);
   const trimmedReason = reason.trim();
@@ -34,11 +35,15 @@ export function CancelBookingDialog({ appointment, onOpenChange, onConfirm, isSu
 
   return (
     <Modal
-      open={!!appointment}
+      open={appointments.length > 0}
       onOpenChange={handleOpenChange}
-      title="Cancel this booking?"
+      title={appointments.length > 1 ? `Cancel ${appointments.length} bookings?` : "Cancel this booking?"}
       description={
-        appointment ? `Your session with ${appointment.expertName ?? "the expert"} will be canceled.` : undefined
+        appointments.length > 1
+          ? `${appointments.length} sessions will be canceled with the same reason.`
+          : appointments[0]
+            ? `Your session with ${appointments[0].expertName ?? "the expert"} will be canceled.`
+            : undefined
       }
     >
       <div className="space-y-4">
@@ -60,7 +65,7 @@ export function CancelBookingDialog({ appointment, onOpenChange, onConfirm, isSu
             Keep booking
           </Button>
           <Button variant="danger" onClick={handleConfirm} disabled={isSubmitting}>
-            {isSubmitting ? "Canceling..." : "Cancel booking"}
+            {isSubmitting ? "Canceling..." : appointments.length > 1 ? "Cancel bookings" : "Cancel booking"}
           </Button>
         </div>
       </div>

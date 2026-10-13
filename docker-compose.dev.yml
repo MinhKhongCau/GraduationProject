@@ -200,6 +200,8 @@ services:
       - BOOKING_GRPC_ADDR=booking-service:${BOOKING_GRPC_PORT:-9003}
       # gRPC nội bộ tới profile-service (danh sách chuyên gia Admin quản lý)
       - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
+      # gRPC server nội bộ cho booking-service (tra số tiền thanh toán của lịch hẹn)
+      - GRPC_PORT=${PAYMENT_GRPC_PORT:-9004}
       - VNP_TMN_CODE=${VNP_TMN_CODE}
       - VNP_HASH_SECRET=${VNP_HASH_SECRET}
       - VNP_PAYMENT_URL=${VNP_PAYMENT_URL}
@@ -258,6 +260,8 @@ services:
       - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
       # gRPC nội bộ cho payment-service (không publish ra host, không qua Kong)
       - GRPC_PORT=${BOOKING_GRPC_PORT:-9003}
+      # gRPC tới payment-service (số tiền thanh toán trong danh sách lịch hẹn)
+      - PAYMENT_GRPC_ADDR=payment-service:${PAYMENT_GRPC_PORT:-9004}
       # Consume event payment.succeeded / payment.failed (queue booking.queue)
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
