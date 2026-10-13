@@ -29,6 +29,16 @@ export interface AvailableTimeSlot {
 export type AppointmentStatusCode = 0 | 1 | 2 | 3;
 export type AppointmentStatus = "PENDING_PAYMENT" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
 
+/** Representative payment order of an appointment (SUCCESS if any, else latest), from payment-service via booking-service. */
+export interface AppointmentPayment {
+  orderId: string;
+  amountVnd: number;
+  status: "PENDING" | "SUCCESS" | "FAILED" | "EXPIRED";
+  gateway: string;
+  /** Unix ms; null until paid. */
+  paidAt: number | null;
+}
+
 export interface Appointment {
   appointmentId: string;
   slotId: string;
@@ -54,6 +64,8 @@ export interface Appointment {
   createdAt: number;
   updatedAt: number;
   confirmedAt: number | null;
+  /** Absent when no payment order exists yet or payment-service could not be reached. */
+  payment?: AppointmentPayment;
 }
 
 /** Display profile of an appointment participant (profile-service ProfileSummary). */
@@ -74,19 +86,17 @@ export interface AppointmentListParams {
   status?: AppointmentStatus;
   expertId?: string;
   patientId?: string;
+  /** Sort column; booking-service defaults to `start_time`. */
+  orderBy?: "start_time" | "created_at";
+  /** Booking-service defaults to `desc` (newest first). */
+  sort?: "asc" | "desc";
   /** Zero-based. */
   page?: number;
   size?: number;
 }
 
-export interface AppointmentPage {
+export interface AppointmentPage extends BookingPagination {
   items: Appointment[];
-  page: number;
-  size: number;
-  totalItems: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrevious: boolean;
 }
 
 export interface AvailableDatesResponse {
@@ -174,9 +184,20 @@ export interface BookingConfirmation {
   specialization: BookingSpecializationInfo | null;
 }
 
+/** Page metadata booking-service nests under `pagination` (camelCased by the http client). */
+export interface BookingPagination {
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+/** Raw appointment list body: `{ items, pagination }`. */
 export interface BookingListResponse {
-  appointments: Appointment[];
-  total: number;
+  items: Appointment[];
+  pagination: BookingPagination;
 }
 
 export interface GetExpertAppointmentsParams {

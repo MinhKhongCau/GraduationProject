@@ -84,6 +84,20 @@ func TestAppointmentManagement(t *testing.T) {
 		if resp["success"] != true {
 			t.Fatalf("expected success = true, got %v", resp["success"])
 		}
+
+		data, _ := resp["data"].(map[string]interface{})
+		items, _ := data["items"].([]interface{})
+		pagination, _ := data["pagination"].(map[string]interface{})
+		if len(items) != 1 || pagination == nil {
+			t.Fatalf("expected items + pagination, got %v", data)
+		}
+		if pagination["page"] != float64(0) || pagination["size"] != float64(10) || pagination["total_items"] != float64(1) ||
+			pagination["total_pages"] != float64(1) || pagination["has_next"] != false || pagination["has_previous"] != false {
+			t.Fatalf("unexpected pagination: %v", pagination)
+		}
+		if _, flat := data["total_items"]; flat {
+			t.Fatalf("pagination fields must not be duplicated at the top level: %v", data)
+		}
 	})
 
 	t.Run("TC-BOOK-MNG-02 - Chuyên gia xem danh sách lịch hẹn thành công", func(t *testing.T) {

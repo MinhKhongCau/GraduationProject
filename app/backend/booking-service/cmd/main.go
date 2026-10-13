@@ -79,10 +79,17 @@ func main() {
 	}
 	defer profileClient.Close()
 	log.Printf("🛰️  Profile gRPC client target: %s", config.AppConfig.ProfileGRPCAddr)
+	paymentClient, err := client.NewPaymentGRPCClient(config.AppConfig.PaymentGRPCAddr, tokenManager)
+	if err != nil {
+		log.Fatalf("Failed to init payment gRPC client: %v", err)
+	}
+	defer paymentClient.Close()
+	log.Printf("🛰️  Payment gRPC client target: %s", config.AppConfig.PaymentGRPCAddr)
 	appointmentUsecase := appappointment.NewUsecaseWithMeetings(appointmentRepo, profileClient, appappointment.MeetingOptions{
 		BaseURL:         config.AppConfig.MeetingBaseURL,
 		MinimumPresence: time.Duration(config.AppConfig.MinSessionPresenceMinutes) * time.Minute,
 		Settlement:      client.NewPaymentSettlementClient(config.AppConfig.PaymentServiceInternalURL, tokenManager),
+		Payments:        paymentClient,
 	})
 	generationService := slot.NewGenerationService(slotUsecase, scheduleRepo, timeoffRepo)
 

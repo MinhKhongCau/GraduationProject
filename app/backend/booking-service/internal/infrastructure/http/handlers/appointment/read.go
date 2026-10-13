@@ -22,7 +22,11 @@ func appointmentQuery(c *gin.Context, actorID, actorRole string) (appointment.Ap
 	if err != nil {
 		return appointment.AppointmentListQuery{}, err
 	}
-	filter := appointment.AppointmentListQuery{ActorID: actorID, ActorRole: actorRole, Status: status, Page: page}
+	sort, err := appointment.ParseAppointmentSort(c.Query("order_by"), c.Query("sort"))
+	if err != nil {
+		return appointment.AppointmentListQuery{}, err
+	}
+	filter := appointment.AppointmentListQuery{ActorID: actorID, ActorRole: actorRole, Status: status, Page: page, Sort: sort}
 	legacyFrom, legacyTo := strings.TrimSpace(c.Query("from_date")), strings.TrimSpace(c.Query("to_date"))
 	if c.Query("from") == "" && c.Query("to") == "" && (legacyFrom != "" || legacyTo != "") {
 		if legacyFrom != "" {
@@ -85,6 +89,8 @@ func (h *Handler) GetDetail(c *gin.Context) {
 // @Param status query string false "PENDING_PAYMENT, CONFIRMED, CANCELLED, COMPLETED"
 // @Param expert_id query string false "Expert auth ID (must be managed by me)"
 // @Param patient_id query string false "Patient auth ID"
+// @Param order_by query string false "start_time (default) or created_at"
+// @Param sort query string false "desc (default) or asc"
 // @Param page query int false "Zero-based page"
 // @Param size query int false "Page size, 1-100"
 // @Success 200 {object} map[string]interface{}

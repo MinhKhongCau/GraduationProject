@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { ClientShell } from "@/components/layout/client-shell";
 import { ProtectedRoute } from "@/router";
-import { EXPERT_HEADER_NAV_ITEMS, EXPERT_BOTTOM_NAV_ITEMS, SETTINGS_NAV_ITEM } from "@/constants";
+import { EXPERT_HEADER_NAV_ITEMS, EXPERT_BOTTOM_NAV_ITEMS, EXPERT_SIDE_NAV_ITEMS, SETTINGS_NAV_ITEM } from "@/constants";
 
 export default function ExpertLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,6 +11,7 @@ export default function ExpertLayout({ children }: { children: ReactNode }) {
       <ClientShell
         navItems={EXPERT_HEADER_NAV_ITEMS}
         bottomNavItems={EXPERT_BOTTOM_NAV_ITEMS}
+        sideNavItems={EXPERT_SIDE_NAV_ITEMS}
         settingsItem={SETTINGS_NAV_ITEM.expert}
       >
         {children}

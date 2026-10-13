@@ -85,6 +85,8 @@ export const PATIENT_NAV_ITEMS: NavItem[] = [
 
 export const PATIENT_HEADER_NAV_ITEMS = pick(PATIENT_NAV_ITEMS, ["dashboard", "find-experts", "my-bookings", "messages", "forum"]);
 export const PATIENT_BOTTOM_NAV_ITEMS = PATIENT_HEADER_NAV_ITEMS;
+/** Desktop side rail: every patient page. */
+export const PATIENT_SIDE_NAV_ITEMS = PATIENT_NAV_ITEMS;
 
 export const PATIENT_DASHBOARD_FEATURES: FeatureGroup[] = [
   { id: "care", labelKey: "nav.group.care", label: "Care", items: pick(PATIENT_NAV_ITEMS, ["book-appointment", "assessment", "medical-history"]) },
@@ -120,6 +122,8 @@ export const EXPERT_NAV_ITEMS: NavItem[] = [
 
 export const EXPERT_HEADER_NAV_ITEMS = pick(EXPERT_NAV_ITEMS, ["dashboard", "schedule", "appointments", "messages"]);
 export const EXPERT_BOTTOM_NAV_ITEMS = EXPERT_HEADER_NAV_ITEMS;
+/** Desktop side rail: every expert page. */
+export const EXPERT_SIDE_NAV_ITEMS = EXPERT_NAV_ITEMS;
 
 export const EXPERT_DASHBOARD_FEATURES: FeatureGroup[] = [
   { id: "care", labelKey: "nav.group.patientCare", label: "Patient care", items: pick(EXPERT_NAV_ITEMS, ["clinical-records", "patients"]) },

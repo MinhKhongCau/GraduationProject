@@ -45,4 +45,6 @@ docker run --rm \
     gen booking/v1/booking_payment.proto bookingpb booking-service payment-service
     # payment/v1/payment_events.proto: payment-service (publisher) + booking-service (consumer)
     gen payment/v1/payment_events.proto paymentpb payment-service booking-service
+    # payment/v1/payment_query.proto: payment-service (server) + booking-service (client)
+    gen payment/v1/payment_query.proto paymentpb payment-service booking-service
   "

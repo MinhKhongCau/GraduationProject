@@ -110,6 +110,20 @@ type Page[T any] struct {
 	HasPrevious bool  `json:"has_previous"`
 }
 
+// Pagination is the page metadata returned beside a list, e.g. {"items": [...], "pagination": {...}}.
+type Pagination struct {
+	Page        int   `json:"page"`
+	Size        int   `json:"size"`
+	TotalItems  int64 `json:"total_items"`
+	TotalPages  int   `json:"total_pages"`
+	HasNext     bool  `json:"has_next"`
+	HasPrevious bool  `json:"has_previous"`
+}
+
+func (p Page[T]) Pagination() Pagination {
+	return Pagination{Page: p.Page, Size: p.Size, TotalItems: p.TotalItems, TotalPages: p.TotalPages, HasNext: p.HasNext, HasPrevious: p.HasPrevious}
+}
+
 func NewPage[T any](items []T, request PageRequest, total int64) Page[T] {
 	if items == nil {
 		items = []T{}
