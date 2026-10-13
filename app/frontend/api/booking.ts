@@ -119,6 +119,16 @@ export async function listAdminAppointments(params: AppointmentListParams = {}):
   return { items: items ?? [], ...pagination };
 }
 
+/** [EXPERT] GET /booking/appointments/expert, one page — each item carries `patient`/`patientAccount`. */
+export async function listExpertAppointments(params: AppointmentListParams = {}): Promise<AppointmentPage> {
+  const response = await bookingClient.get<ServiceEnvelope<BookingListResponse>>(
+    BOOKING_ENDPOINTS.EXPERT_APPOINTMENTS,
+    { params: { ...defaultAppointmentWindow(), ...params } }
+  );
+  const { items, pagination } = response.data.data;
+  return { items: items ?? [], ...pagination };
+}
+
 /** [EXPERT] GET /booking/appointments/expert */
 export async function getExpertAppointments(
   params: GetExpertAppointmentsParams = {}

@@ -2,17 +2,28 @@
 
 import { useState } from "react";
 import { Modal, Button, Label, Textarea, FieldError } from "@/components/ui";
-import type { AppointmentWithExpert } from "@/hooks";
+import type { Appointment } from "@/types";
 
-export interface CancelBookingDialogProps {
-  /** Bookings to cancel; empty closes the dialog. */
-  appointments: AppointmentWithExpert[];
+export interface CancelAppointmentsDialogProps<T extends Appointment> {
+  /** Appointments to cancel; empty closes the dialog. */
+  appointments: T[];
+  /** Name of the other party shown in the single-appointment description (expert for patients, patient for experts). */
+  counterpartName: (appointment: T) => string | undefined;
+  /** Used when `counterpartName` returns nothing, e.g. "the expert". */
+  counterpartFallback: string;
   onOpenChange: (open: boolean) => void;
   onConfirm: (reason: string) => void;
   isSubmitting: boolean;
 }
 
-export function CancelBookingDialog({ appointments, onOpenChange, onConfirm, isSubmitting }: CancelBookingDialogProps) {
+export function CancelAppointmentsDialog<T extends Appointment>({
+  appointments,
+  counterpartName,
+  counterpartFallback,
+  onOpenChange,
+  onConfirm,
+  isSubmitting,
+}: CancelAppointmentsDialogProps<T>) {
   const [reason, setReason] = useState("");
   const [touched, setTouched] = useState(false);
   const trimmedReason = reason.trim();
@@ -42,7 +53,7 @@ export function CancelBookingDialog({ appointments, onOpenChange, onConfirm, isS
         appointments.length > 1
           ? `${appointments.length} sessions will be canceled with the same reason.`
           : appointments[0]
-            ? `Your session with ${appointments[0].expertName ?? "the expert"} will be canceled.`
+            ? `Your session with ${counterpartName(appointments[0]) ?? counterpartFallback} will be canceled.`
             : undefined
       }
     >
