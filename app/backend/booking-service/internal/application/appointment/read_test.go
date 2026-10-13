@@ -140,3 +140,60 @@ func TestAdminSeesOnlyManagedExpertAppointments(t *testing.T) {
 		t.Fatalf("admin read without profile directory must be unavailable, got %v", err)
 	}
 }
+
+func TestParseAppointmentSortDefaultsToStartTimeDescending(t *testing.T) {
+	sort, err := ParseAppointmentSort("", "")
+	if err != nil || sort.By != AppointmentSortByStartTime || sort.Ascending {
+		t.Fatalf("expected start_time desc, got %+v %v", sort, err)
+	}
+	sort, err = ParseAppointmentSort("CREATED_AT", "asc")
+	if err != nil || sort.By != AppointmentSortByCreatedAt || !sort.Ascending {
+		t.Fatalf("expected created_at asc, got %+v %v", sort, err)
+	}
+	for _, input := range [][2]string{{"price", ""}, {"", "sideways"}} {
+		if _, err := ParseAppointmentSort(input[0], input[1]); !errors.Is(err, bookingquery.ErrInvalidQuery) {
+			t.Fatalf("expected invalid query for %v, got %v", input, err)
+		}
+	}
+}
+
+// fakePayments giả lập payment-service: số tiền thanh toán theo appointment id.
+type fakePayments struct {
+	payments map[string]appointmentdomain.PaymentSummary
+	err      error
+	asked    []string
+}
+
+func (p *fakePayments) GetAppointmentPayments(_ context.Context, ids []string) (map[string]appointmentdomain.PaymentSummary, error) {
+	p.asked = ids
+	return p.payments, p.err
+}
+
+func TestListAppointmentsAttachesPayments(t *testing.T) {
+	repo := newUOWTestRepo(appointmentdomain.Appointment{}, slotdomain.ExpertSlot{})
+	repo.readItems = []appointmentdomain.Appointment{{AppointmentID: "a1", PatientID: "patient-1"}, {AppointmentID: "a2", PatientID: "patient-1"}}
+	payments := &fakePayments{payments: map[string]appointmentdomain.PaymentSummary{
+		"a1": {OrderID: "order-1", AmountVND: 350000, Status: "SUCCESS"},
+	}}
+	usecase := NewUsecaseWithMeetings(repo, nil, MeetingOptions{Payments: payments}).(ReadUsecase)
+	page, err := usecase.ListAppointments(context.Background(), AppointmentListQuery{ActorID: "patient-1", ActorRole: "PATIENT"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(payments.asked) != 2 {
+		t.Fatalf("expected one batched lookup for both appointments, got %v", payments.asked)
+	}
+	if page.Items[0].Payment == nil || page.Items[0].Payment.AmountVND != 350000 || page.Items[1].Payment != nil {
+		t.Fatalf("payments not attached by id: %+v %+v", page.Items[0].Payment, page.Items[1].Payment)
+	}
+}
+
+func TestListAppointmentsSurvivesPaymentLookupFailure(t *testing.T) {
+	repo := newUOWTestRepo(appointmentdomain.Appointment{}, slotdomain.ExpertSlot{})
+	repo.readItems = []appointmentdomain.Appointment{{AppointmentID: "a1", PatientID: "patient-1"}}
+	usecase := NewUsecaseWithMeetings(repo, nil, MeetingOptions{Payments: &fakePayments{err: errors.New("payment-service down")}}).(ReadUsecase)
+	page, err := usecase.ListAppointments(context.Background(), AppointmentListQuery{ActorID: "patient-1", ActorRole: "PATIENT"})
+	if err != nil || len(page.Items) != 1 || page.Items[0].Payment != nil {
+		t.Fatalf("list must still succeed without payments: %+v %v", page, err)
+	}
+}

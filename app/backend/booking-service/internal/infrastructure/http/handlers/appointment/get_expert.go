@@ -16,6 +16,8 @@ import (
 // @Param to query string false "End date YYYY-MM-DD"
 // @Param status query string false "PENDING_PAYMENT, CONFIRMED, or CANCELLED"
 // @Param patient_id query string false "Patient ID"
+// @Param order_by query string false "start_time (default) or created_at"
+// @Param sort query string false "desc (default) or asc"
 // @Param page query int false "Zero-based page"
 // @Param size query int false "Page size, 1-100"
 // @Success 200 {object} map[string]interface{}

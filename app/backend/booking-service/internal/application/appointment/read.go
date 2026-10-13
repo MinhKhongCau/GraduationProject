@@ -22,6 +22,43 @@ type AppointmentListQuery struct {
 	ScopeExperts bool
 	ExpertIDs    []string
 	Page         bookingquery.PageRequest
+	Sort         AppointmentSort
+}
+
+// AppointmentSort chọn cột và chiều sắp xếp danh sách lịch hẹn (mặc định: giờ khám giảm dần).
+type AppointmentSort struct {
+	By        string // AppointmentSortByStartTime | AppointmentSortByCreatedAt
+	Ascending bool
+}
+
+const (
+	AppointmentSortByStartTime = "start_time"
+	AppointmentSortByCreatedAt = "created_at"
+)
+
+// ParseAppointmentSort đọc `order_by` (start_time|created_at) và `sort` (asc|desc); để trống = start_time desc.
+func ParseAppointmentSort(orderBy, direction string) (AppointmentSort, error) {
+	result := AppointmentSort{By: AppointmentSortByStartTime}
+	switch value := strings.ToLower(strings.TrimSpace(orderBy)); value {
+	case "", AppointmentSortByStartTime:
+	case AppointmentSortByCreatedAt:
+		result.By = value
+	default:
+		return result, fmt.Errorf("%w: order_by must be start_time or created_at", bookingquery.ErrInvalidQuery)
+	}
+	switch strings.ToLower(strings.TrimSpace(direction)) {
+	case "", "desc":
+	case "asc":
+		result.Ascending = true
+	default:
+		return result, fmt.Errorf("%w: sort must be asc or desc", bookingquery.ErrInvalidQuery)
+	}
+	return result, nil
+}
+
+// PaymentDirectory tra số tiền thanh toán của nhiều lịch hẹn (payment-service gRPC), theo appointment id.
+type PaymentDirectory interface {
+	GetAppointmentPayments(ctx context.Context, appointmentIDs []string) (map[string]appointmentdomain.PaymentSummary, error)
 }
 
 type AppointmentReader interface {
@@ -114,6 +151,7 @@ func (u *appointmentUsecase) GetAppointmentDetail(ctx context.Context, actorID, 
 		}
 	}
 	u.attachProfiles(ctx, []*appointmentdomain.Appointment{result})
+	u.attachPayments(ctx, []*appointmentdomain.Appointment{result})
 	return result, nil
 }
 
@@ -148,6 +186,7 @@ func (u *appointmentUsecase) listDetails(ctx context.Context, filter Appointment
 		refs[i] = &items[i]
 	}
 	u.attachProfiles(ctx, refs)
+	u.attachPayments(ctx, refs)
 	return bookingquery.NewPage(items, filter.Page, total), nil
 }
 
@@ -180,6 +219,28 @@ func (u *appointmentUsecase) attachProfiles(ctx context.Context, appointments []
 	}
 	for _, a := range appointments {
 		a.AttachProfiles(profiles)
+	}
+}
+
+// attachPayments gắn số tiền thanh toán bằng một lần gọi payment-service.
+// Lỗi tra cứu chỉ được log: lịch hẹn vẫn trả về, chỉ thiếu payment.
+func (u *appointmentUsecase) attachPayments(ctx context.Context, appointments []*appointmentdomain.Appointment) {
+	if u.meetings.Payments == nil || len(appointments) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(appointments))
+	for _, a := range appointments {
+		ids = appendUnique(ids, a.AppointmentID)
+	}
+	payments, err := u.meetings.Payments.GetAppointmentPayments(ctx, ids)
+	if err != nil {
+		log.Printf("⚠️  appointment payments lookup failed: %v", err)
+		return
+	}
+	for _, a := range appointments {
+		if payment, ok := payments[a.AppointmentID]; ok {
+			a.Payment = &payment
+		}
 	}
 }
 

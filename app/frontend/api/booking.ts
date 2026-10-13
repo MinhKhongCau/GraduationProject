@@ -86,13 +86,19 @@ function defaultAppointmentWindow(): { from: string; to: string } {
   return { from: toDateParam(from), to: toDateParam(to) };
 }
 
-/** [PATIENT] GET /booking/appointments — each item carries `expert` from profile-service. */
-export async function getMyBookings(): Promise<Appointment[]> {
+/** [PATIENT] GET /booking/appointments, one page — each item carries `expert` from profile-service. */
+export async function listMyBookings(params: AppointmentListParams = {}): Promise<AppointmentPage> {
   const response = await bookingClient.get<ServiceEnvelope<BookingListResponse>>(
     BOOKING_ENDPOINTS.APPOINTMENTS,
-    { params: { ...defaultAppointmentWindow(), size: 100 } }
+    { params: { ...defaultAppointmentWindow(), ...params } }
   );
-  return response.data.data.appointments ?? [];
+  const { items, pagination } = response.data.data;
+  return { items: items ?? [], ...pagination };
+}
+
+/** [PATIENT] First 100 bookings, for callers that need a flat list (e.g. chat contacts). */
+export async function getMyBookings(): Promise<Appointment[]> {
+  return (await listMyBookings({ size: 100 })).items;
 }
 
 /** [PATIENT/EXPERT/ADMIN] Detail with expert + booking account profiles. Admin: managed experts only (403 otherwise). */
@@ -105,11 +111,12 @@ export async function getAppointmentDetail(appointmentId: string): Promise<Appoi
 
 /** [ADMIN] Appointments of experts the admin approved (manages). */
 export async function listAdminAppointments(params: AppointmentListParams = {}): Promise<AppointmentPage> {
-  const response = await bookingClient.get<ServiceEnvelope<AppointmentPage>>(
+  const response = await bookingClient.get<ServiceEnvelope<BookingListResponse>>(
     BOOKING_ENDPOINTS.ADMIN_APPOINTMENTS,
     { params }
   );
-  return response.data.data;
+  const { items, pagination } = response.data.data;
+  return { items: items ?? [], ...pagination };
 }
 
 /** [EXPERT] GET /booking/appointments/expert */
@@ -121,7 +128,7 @@ export async function getExpertAppointments(
     BOOKING_ENDPOINTS.EXPERT_APPOINTMENTS,
     { params: hasLegacyRange ? params : { ...defaultAppointmentWindow(), size: 100, ...params } }
   );
-  return response.data.data.appointments ?? [];
+  return response.data.data.items ?? [];
 }
 
 /** [PATIENT/EXPERT] `reason` is required by the backend. */

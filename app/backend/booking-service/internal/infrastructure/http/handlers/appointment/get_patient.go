@@ -18,6 +18,8 @@ import (
 // @Param to query string false "End date YYYY-MM-DD"
 // @Param status query string false "PENDING_PAYMENT, CONFIRMED, or CANCELLED"
 // @Param expert_id query string false "Expert ID"
+// @Param order_by query string false "start_time (default) or created_at"
+// @Param sort query string false "desc (default) or asc"
 // @Param page query int false "Zero-based page"
 // @Param size query int false "Page size, 1-100"
 // @Success 200 {object} map[string]interface{}
@@ -53,6 +55,11 @@ func (h *Handler) GetPatient(c *gin.Context) {
 	response.Success(c, "Get appointments successfully", appointmentPageData(page))
 }
 
+// appointmentPageData shapes appointment lists as {"items": [...], "pagination": {...}}.
 func appointmentPageData(page bookingquery.Page[appointmentdomain.Appointment]) gin.H {
-	return gin.H{"items": page.Items, "appointments": page.Items, "page": page.Page, "size": page.Size, "total_items": page.TotalItems, "total": page.TotalItems, "total_pages": page.TotalPages, "has_next": page.HasNext, "has_previous": page.HasPrevious}
+	items := page.Items
+	if items == nil {
+		items = []appointmentdomain.Appointment{}
+	}
+	return gin.H{"items": items, "pagination": page.Pagination()}
 }
