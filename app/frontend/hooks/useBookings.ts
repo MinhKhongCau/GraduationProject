@@ -5,7 +5,16 @@ import { useApiQuery } from "./useApiQuery";
 import { useApiMutation } from "./useApiMutation";
 import { bookingApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
-import type { Appointment, AppointmentListParams, AppointmentStatus, GetExpertAppointmentsParams } from "@/types";
+import type {
+  Appointment,
+  AppointmentListParams,
+  AppointmentPage,
+  AppointmentStatus,
+  GetExpertAppointmentsParams,
+} from "@/types";
+
+/** Shares the prefix useCancelBooking invalidates, so cancelling refreshes the paged list and counts. */
+const EXPERT_APPOINTMENTS_PREFIX = ["booking", "expert-appointments"] as const;
 
 export interface AppointmentWithExpert extends Appointment {
   expertName?: string;
@@ -51,14 +60,19 @@ export function useMyBookingsPage(params: AppointmentListParams) {
 }
 
 /**
- * [PATIENT] Booking totals per status within the same date range as the list (size=1 pages,
- * only `totalItems` is read). Missing while loading/failed.
+ * Totals per status (plus "ALL") within the list's date range: size=1 pages where only
+ * `totalItems` is read. A status is missing while loading or if its request failed.
  */
-export function useMyBookingCounts(statuses: readonly AppointmentStatus[], range: Pick<AppointmentListParams, "from" | "to"> = {}) {
+function useAppointmentCounts(
+  keyPrefix: readonly unknown[],
+  fetchPage: (params: AppointmentListParams) => Promise<AppointmentPage>,
+  statuses: readonly AppointmentStatus[],
+  range: Pick<AppointmentListParams, "from" | "to">
+) {
   const results = useQueries({
     queries: [undefined, ...statuses].map((status) => ({
-      queryKey: [...QUERY_KEYS.myBookings(), "count", status ?? "ALL", range],
-      queryFn: () => bookingApi.listMyBookings({ ...range, status, size: 1 }),
+      queryKey: [...keyPrefix, "count", status ?? "ALL", range],
+      queryFn: () => fetchPage({ ...range, status, size: 1 }),
     })),
   });
   const counts: Partial<Record<AppointmentStatus | "ALL", number>> = {};
@@ -66,6 +80,34 @@ export function useMyBookingCounts(statuses: readonly AppointmentStatus[], range
     if (result.data) counts[index === 0 ? "ALL" : statuses[index - 1]] = result.data.totalItems;
   });
   return counts;
+}
+
+/** [PATIENT] Booking totals per status for the My Bookings filter links. */
+export function useMyBookingCounts(
+  statuses: readonly AppointmentStatus[],
+  range: Pick<AppointmentListParams, "from" | "to"> = {}
+) {
+  return useAppointmentCounts(QUERY_KEYS.myBookings(), bookingApi.listMyBookings, statuses, range);
+}
+
+/** [EXPERT] One server page of the expert's appointments; keeps the previous page on screen while the next loads. */
+export function useExpertAppointmentsPage(params: AppointmentListParams) {
+  return useApiQuery({
+    queryKey: [...EXPERT_APPOINTMENTS_PREFIX, "page", params],
+    queryFn: async () => {
+      const page = await bookingApi.listExpertAppointments(params);
+      return { ...page, items: withPatientNames(page.items) };
+    },
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** [EXPERT] Appointment totals per status for the Appointments filter links. */
+export function useExpertAppointmentCounts(
+  statuses: readonly AppointmentStatus[],
+  range: Pick<AppointmentListParams, "from" | "to"> = {}
+) {
+  return useAppointmentCounts(EXPERT_APPOINTMENTS_PREFIX, bookingApi.listExpertAppointments, statuses, range);
 }
 
 /** [EXPERT] GET /booking/appointments/expert. */

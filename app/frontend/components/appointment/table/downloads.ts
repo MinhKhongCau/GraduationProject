@@ -1,8 +1,15 @@
-import { APPOINTMENT_STATUS_TEXT } from "@/components/appointment";
-import type { AppointmentWithExpert } from "@/hooks";
+import { APPOINTMENT_STATUS_TEXT } from "../status";
+import type { Appointment } from "@/types";
 
 export function shortBookingId(appointmentId: string): string {
   return `#${appointmentId.slice(0, 8).toUpperCase()}`;
+}
+
+/** The other party of a booking: the expert for patients, the patient for experts. */
+export interface Counterpart<T extends Appointment> {
+  /** CSV column header, e.g. "Expert". */
+  label: string;
+  name: (appointment: T) => string | undefined;
 }
 
 function saveFile(filename: string, content: string, type: string) {
@@ -22,10 +29,10 @@ function csvCell(value: unknown): string {
 const isoOrEmpty = (time?: number | null) => (time ? new Date(time).toISOString() : "");
 
 /** Spreadsheet of the given bookings (UTF-8 BOM so Excel keeps Vietnamese text). */
-export function downloadBookingsCsv(appointments: AppointmentWithExpert[]) {
+export function downloadBookingsCsv<T extends Appointment>(appointments: T[], counterpart: Counterpart<T>) {
   const header = [
     "Booking ID",
-    "Expert",
+    counterpart.label,
     "Specialization",
     "Start",
     "End",
@@ -38,7 +45,7 @@ export function downloadBookingsCsv(appointments: AppointmentWithExpert[]) {
   ];
   const rows = appointments.map((a) => [
     a.appointmentId,
-    a.expertName ?? "",
+    counterpart.name(a) ?? "",
     a.specializationName ?? "",
     isoOrEmpty(a.startTime),
     isoOrEmpty(a.endTime),
@@ -61,14 +68,15 @@ const icsTime = (time: number) =>
 const icsText = (text: string) => text.replace(/[\;,]/g, (c) => `\\${c}`).replace(/\n/g, "\\n");
 
 /** Calendar "tickets" (.ics) for confirmed sessions, importable into any calendar app. */
-export function downloadTicketsIcs(appointments: AppointmentWithExpert[]): number {
+export function downloadTicketsIcs<T extends Appointment>(appointments: T[], counterpart: Counterpart<T>): number {
   const tickets = appointments.filter((a) => a.statusLabel === "CONFIRMED" && a.startTime);
   if (tickets.length === 0) return 0;
 
   const events = tickets.map((a) => {
     const start = a.startTime as number;
     const end = a.endTime ?? start + 60 * 60 * 1000;
-    const summary = `Session with ${a.expertName ?? "expert"}${a.specializationName ? ` (${a.specializationName})` : ""}`;
+    const who = counterpart.name(a) ?? counterpart.label.toLowerCase();
+    const summary = `Session with ${who}${a.specializationName ? ` (${a.specializationName})` : ""}`;
     return [
       "BEGIN:VEVENT",
       `UID:${a.appointmentId}`,
