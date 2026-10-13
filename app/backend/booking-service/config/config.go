@@ -32,6 +32,8 @@ type Config struct {
 
 	// gRPC tới profile-service (truy vấn chuyên gia + hồ sơ người khám khi đặt lịch)
 	ProfileGRPCAddr string // profile-service:9002
+	// PaymentGRPCAddr: gRPC payment-service (tra số tiền thanh toán của lịch hẹn).
+	PaymentGRPCAddr string // payment-service:9004
 
 	// gRPC server cho payment-service gửi kết quả thanh toán (BookingPaymentService)
 	GRPCPort string // 9003
@@ -78,6 +80,7 @@ func LoadConfig() {
 		PaymentServiceInternalURL: getEnvOrDefault("PAYMENT_SERVICE_INTERNAL_URL", "http://payment-service:8082"),
 
 		ProfileGRPCAddr: getEnvOrDefault("PROFILE_GRPC_ADDR", "profile-service:9002"),
+		PaymentGRPCAddr: getEnvOrDefault("PAYMENT_GRPC_ADDR", "payment-service:9004"),
 		GRPCPort:        getEnvOrDefault("GRPC_PORT", "9003"),
 
 		RabbitMQHost: getEnvOrDefault("RABBITMQ_HOST", "localhost"),

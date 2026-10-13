@@ -457,3 +457,19 @@ func mapWriteError(err error) error {
 	}
 	return err
 }
+
+// ListAppointmentPayments trả mỗi lịch hẹn một order đại diện: order SUCCESS nếu có, không thì
+// order mới nhất. Lịch hẹn chưa có order nào không xuất hiện trong kết quả.
+func (r *paymentRepository) ListAppointmentPayments(ctx context.Context, appointmentIDs []uuid.UUID) ([]paymentdomain.PaymentOrder, error) {
+	if len(appointmentIDs) == 0 {
+		return []paymentdomain.PaymentOrder{}, nil
+	}
+	var orders []paymentdomain.PaymentOrder
+	err := r.db.WithContext(ctx).
+		Raw(`SELECT DISTINCT ON (appointment_id) * FROM payment_orders
+			WHERE appointment_id IN ?
+			ORDER BY appointment_id, (status = ?) DESC, created_at DESC`,
+			appointmentIDs, paymentdomain.OrderStatusSuccess).
+		Scan(&orders).Error
+	return orders, err
+}

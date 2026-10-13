@@ -1,0 +1,48 @@
+// Hợp đồng gRPC nội bộ giữa booking-service (client) và payment-service (server).
+// Chỉ dùng trong mạng Docker nội bộ, KHÔNG public qua API Gateway.
+// Mọi lời gọi phải gắn metadata "authorization: Bearer <internal JWT>" do auth-service ký,
+// payment-service chỉ chấp nhận client_id = booking-service.
+//
+// Sinh code: chạy scripts/gen-proto.sh ở thư mục gốc repo.
+syntax = "proto3";
+
+package mindcare.payment.v1;
+
+service PaymentQueryService {
+  // GetAppointmentPayments trả số tiền thanh toán của nhiều lịch hẹn một lần (danh sách lịch hẹn).
+  // Mỗi lịch hẹn lấy order SUCCESS; chưa có order thành công thì lấy order mới nhất.
+  // Lịch hẹn chưa có order nào bị bỏ qua (không lỗi); tối đa 100 id mỗi lần.
+  //
+  // Lỗi:
+  //   INVALID_ARGUMENT - có id không phải UUID hoặc quá 100 id
+  //   UNAUTHENTICATED / PERMISSION_DENIED - thiếu hoặc sai internal JWT
+  rpc GetAppointmentPayments(GetAppointmentPaymentsRequest) returns (GetAppointmentPaymentsResponse);
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING = 1;
+  ORDER_STATUS_SUCCESS = 2;
+  ORDER_STATUS_FAILED = 3;
+  ORDER_STATUS_EXPIRED = 4;
+}
+
+message GetAppointmentPaymentsRequest {
+  repeated string appointment_ids = 1;
+}
+
+message GetAppointmentPaymentsResponse {
+  repeated AppointmentPayment payments = 1;
+}
+
+message AppointmentPayment {
+  string appointment_id = 1;
+  string order_id = 2;
+  // Số tiền bệnh nhân trả (gross, VND).
+  int64 amount_vnd = 3;
+  OrderStatus status = 4;
+  // VNPAY | MOMO | MOCK
+  string gateway = 5;
+  // Unix millis, 0 khi chưa thanh toán.
+  int64 paid_at = 6;
+}

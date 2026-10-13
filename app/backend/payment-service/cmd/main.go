@@ -15,9 +15,11 @@ import (
 	"payment-service/internal/infrastructure/client/internalauth"
 	"payment-service/internal/infrastructure/client/profilegrpc"
 	"payment-service/internal/infrastructure/client/vnpay"
+	paymentgrpc "payment-service/internal/infrastructure/grpc"
 	paymentHandler "payment-service/internal/infrastructure/http/handlers/payment"
 	walletHandler "payment-service/internal/infrastructure/http/handlers/wallet"
 	withdrawalHandler "payment-service/internal/infrastructure/http/handlers/withdrawal"
+	"payment-service/internal/infrastructure/http/middleware"
 	"payment-service/internal/infrastructure/http/routes"
 	"payment-service/internal/infrastructure/messaging"
 	"payment-service/internal/infrastructure/persistence/repository"
@@ -120,6 +122,18 @@ func main() {
 	wHandler := walletHandler.NewHandler(walletUsecase).WithManagedReader(appwallet.NewManagedReader(walletRepo, profileClient))
 	pHandler := paymentHandler.NewHandler(paymentUsecase)
 	wdHandler := withdrawalHandler.NewHandler(withdrawalUsecase)
+
+	// 4.1 gRPC server: booking-service tra số tiền thanh toán của lịch hẹn (PaymentQueryService)
+	appointmentPayments, ok := paymentRepo.(paymentgrpc.AppointmentPaymentReader)
+	if !ok {
+		log.Fatal("payment repository does not implement the payment gRPC contract")
+	}
+	grpcServer, err := paymentgrpc.Start(":"+config.AppConfig.GRPCPort,
+		paymentgrpc.NewPaymentQueryServer(appointmentPayments), middleware.VerifyInternalBearer)
+	if err != nil {
+		log.Fatalf("Failed to start payment gRPC server: %v", err)
+	}
+	defer grpcServer.GracefulStop()
 
 	// 5. Khởi chạy Tần số quét (Background Workers)
 	ctx, cancel := context.WithCancel(context.Background())

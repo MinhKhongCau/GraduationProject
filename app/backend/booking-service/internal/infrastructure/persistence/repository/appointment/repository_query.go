@@ -63,11 +63,25 @@ func (r *pgRepository) ListAppointments(filter appappointment.AppointmentListQue
 		return nil, 0, err
 	}
 	var appointments []appointmentdomain.Appointment
-	err := query.Select("appointment.*, slot.price, slot.start_time, slot.end_time").Order("slot.start_time ASC, appointment.appointment_id ASC").Limit(filter.Page.Size).Offset(filter.Page.Offset()).Scan(&appointments).Error
+	err := query.Select("appointment.*, slot.price, slot.start_time, slot.end_time").Order(appointmentOrder(filter.Sort)).Limit(filter.Page.Size).Offset(filter.Page.Offset()).Scan(&appointments).Error
 	for i := range appointments {
 		appointments[i].StatusLabel = appointments[i].Status.String()
 	}
 	return appointments, total, err
+}
+
+// appointmentOrder dựng ORDER BY từ lựa chọn đã kiểm tra (không nhận chuỗi tự do từ request);
+// appointment_id làm khoá phụ để phân trang ổn định.
+func appointmentOrder(sort appappointment.AppointmentSort) string {
+	column := "slot.start_time"
+	if sort.By == appappointment.AppointmentSortByCreatedAt {
+		column = "appointment.created_at"
+	}
+	direction := "DESC"
+	if sort.Ascending {
+		direction = "ASC"
+	}
+	return column + " " + direction + ", appointment.appointment_id " + direction
 }
 
 // GetAppointmentsByIDs đọc nhiều lịch hẹn kèm giá/giờ khám của slot; id không tồn tại bị bỏ qua.

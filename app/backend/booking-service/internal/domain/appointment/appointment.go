@@ -47,6 +47,9 @@ type Appointment struct {
 	CreatedAt      int64               `json:"created_at"          gorm:"column:created_at"`   // Unix ms
 	UpdatedAt      int64               `json:"updated_at"          gorm:"column:updated_at"`   // Unix ms
 	ConfirmedAt    *int64              `json:"confirmed_at"        gorm:"column:confirmed_at"` // Unix ms, nullable
+	// Payment: order thanh toán đại diện của lịch hẹn, lấy từ payment-service qua gRPC mỗi lần đọc
+	// (không lưu DB). nil khi chưa có order hoặc payment-service không trả về.
+	Payment *PaymentSummary `json:"payment,omitempty" gorm:"-"`
 }
 
 // PatientSnapshot - Hồ sơ người khám tại thời điểm đặt lịch, lấy từ profile-service qua gRPC.
@@ -59,6 +62,16 @@ type PatientSnapshot struct {
 	PhoneNumber  string  `json:"phone_number"  gorm:"column:phone_number;type:varchar(20)"`
 	Email        string  `json:"email"         gorm:"column:email;type:varchar(255)"`
 	Relationship string  `json:"relationship"  gorm:"column:relationship;type:varchar(20)"`
+}
+
+// PaymentSummary - Số tiền thanh toán của lịch hẹn, lấy từ payment-service (gRPC GetAppointmentPayments):
+// order SUCCESS nếu có, không thì order mới nhất.
+type PaymentSummary struct {
+	OrderID   string `json:"order_id"`
+	AmountVND int64  `json:"amount_vnd"`
+	Status    string `json:"status"` // PENDING | SUCCESS | FAILED | EXPIRED
+	Gateway   string `json:"gateway"`
+	PaidAt    *int64 `json:"paid_at"` // Unix ms, nil khi chưa thanh toán
 }
 
 // ParticipantProfile - Thông tin hiển thị hiện tại của chuyên gia hoặc tài khoản đặt lịch, lấy từ

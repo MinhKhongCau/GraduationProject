@@ -40,6 +40,8 @@ type MeetingOptions struct {
 	BaseURL         string
 	MinimumPresence time.Duration
 	Settlement      SessionSettlementGateway
+	// Payments tra số tiền thanh toán để gắn vào lịch hẹn khi đọc; nil thì bỏ qua.
+	Payments PaymentDirectory
 }
 
 // MeetingInfo là thông tin chatroom-service cần để cho phép vào phòng họp.
