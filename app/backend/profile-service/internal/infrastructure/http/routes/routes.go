@@ -12,6 +12,7 @@ import (
 type Handlers struct {
 	Expert        *handlers.ExpertHandler
 	PatientRecord *handlers.PatientRecordHandler
+	Avatar        *handlers.AvatarHandler
 }
 
 func SetupRoutes(r *gin.Engine, h Handlers) {
@@ -52,6 +53,8 @@ func SetupRoutes(r *gin.Engine, h Handlers) {
 		api.GET("/experts/:id", handlers.GetExpert)
 		api.GET("/specializations", handlers.GetAllSpecializations)
 		api.GET("/patients/:id/public", middleware.RequireAuth(), handlers.GetPatientPublic)
+		// Chính chủ hoặc Admin mới được đổi ảnh đại diện (kiểm tra trong handler).
+		api.POST("/:id/avatar", middleware.RequireAuth(), h.Avatar.UploadAvatar)
 		api.GET("/public/:id", handlers.GetPublicProfile)
 
 		// --- Quản trị: chỉ ADMIN ---
