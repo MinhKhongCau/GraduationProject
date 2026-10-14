@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"profile-service/internal/infrastructure/messaging"
 	"profile-service/internal/infrastructure/messaging/consumer"
 	"profile-service/internal/infrastructure/persistence/repository"
+	s3infra "profile-service/internal/infrastructure/s3"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -30,6 +32,21 @@ import (
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
+
+// newAvatarUploader khởi tạo S3 client để lưu ảnh đại diện. Nếu thiếu cấu hình S3 thì service
+// vẫn chạy bình thường, chỉ endpoint upload ảnh trả 503.
+func newAvatarUploader() handlers.AvatarUploader {
+	cfg, err := s3infra.LoadConfig()
+	if err != nil {
+		log.Printf("Cảnh báo: %v - chức năng tải ảnh đại diện bị tắt", err)
+		return nil
+	}
+	client, err := s3infra.NewClient(context.Background(), cfg)
+	if err != nil {
+		log.Fatalf("❌ Không thể khởi tạo S3 client: %v", err)
+	}
+	return client
+}
 
 func main() {
 	// 1. Load biến môi trường từ file .env
@@ -66,6 +83,7 @@ func main() {
 	routes.SetupRoutes(r, routes.Handlers{
 		Expert:        expertHandler,
 		PatientRecord: handlers.NewPatientRecordHandler(patientRecordRepo),
+		Avatar:        handlers.NewAvatarHandler(newAvatarUploader()),
 	})
 
 	// 3c. gRPC nội bộ (booking-service truy vấn thông tin đặt lịch)
