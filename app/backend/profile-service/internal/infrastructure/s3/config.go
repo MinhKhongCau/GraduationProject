@@ -1,0 +1,50 @@
+// File: internal/infrastructure/s3/config.go
+package s3
+
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
+// Config holds the settings used to talk to the S3 bucket that stores profile images.
+type Config struct {
+	Bucket          string // S3_BUCKET
+	URL             string // S3_URL: public base URL used to build object links, e.g. https://cdn.example.com
+	Region          string // AWS_REGION
+	AccessKeyID     string // AWS_ACCESS_KEY_ID
+	SecretAccessKey string // AWS_SECRET_ACCESS_KEY
+}
+
+// LoadConfig reads the S3 settings from environment variables and fails if any of them is missing.
+func LoadConfig() (Config, error) {
+	cfg := Config{
+		Bucket:          os.Getenv("S3_BUCKET"),
+		URL:             strings.TrimRight(os.Getenv("S3_URL"), "/"),
+		Region:          os.Getenv("AWS_REGION"),
+		AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
+		SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+	}
+
+	var missing []string
+	if cfg.Bucket == "" {
+		missing = append(missing, "S3_BUCKET")
+	}
+	if cfg.URL == "" {
+		missing = append(missing, "S3_URL")
+	}
+	if cfg.Region == "" {
+		missing = append(missing, "AWS_REGION")
+	}
+	if cfg.AccessKeyID == "" {
+		missing = append(missing, "AWS_ACCESS_KEY_ID")
+	}
+	if cfg.SecretAccessKey == "" {
+		missing = append(missing, "AWS_SECRET_ACCESS_KEY")
+	}
+	if len(missing) > 0 {
+		return Config{}, fmt.Errorf("thiếu biến môi trường S3: %s", strings.Join(missing, ", "))
+	}
+
+	return cfg, nil
+}
