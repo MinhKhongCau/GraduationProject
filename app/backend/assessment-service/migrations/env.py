@@ -28,7 +28,7 @@ def get_url() -> str:
     db_sslmode = os.getenv("DB_SSLMODE")
     db_port = os.getenv("DB_PORT")
     return (
-        f"postgresql://{db_user}:{db_password}@{db_url}:{db_port}"
+        f"postgresql+psycopg2://{db_user}:{db_password}@{db_url}:{db_port}"
         f"/{db_name}?sslmode={db_sslmode}"
     )
 

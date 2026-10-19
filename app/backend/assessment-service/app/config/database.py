@@ -12,7 +12,8 @@ DB_NAME = os.getenv("DB_NAME")
 DB_SSLMODE = os.getenv("DB_SSLMODE")
 DB_PORT = os.getenv("DB_PORT")
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_URL}:{DB_PORT}/{DB_NAME}?sslmode={DB_SSLMODE}"
+# Driver is explicit: SQLAlchemy 2.1+ maps plain "postgresql://" to psycopg (v3), which is not installed.
+DATABASE_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_URL}:{DB_PORT}/{DB_NAME}?sslmode={DB_SSLMODE}"
 
 # 1. Tạo engine kết nối
 engine = create_engine(DATABASE_URL)

@@ -11,7 +11,8 @@ import (
 type Config struct {
 	Bucket          string // S3_BUCKET
 	URL             string // S3_URL: public base URL used to build object links, e.g. https://cdn.example.com
-	Region          string // AWS_REGION
+	Region          string // AWS_REGION ("auto" for Cloudflare R2; defaults to "auto" when Endpoint is set)
+	Endpoint        string // S3_ENDPOINT (optional): S3-compatible API endpoint, e.g. https://<account_id>.r2.cloudflarestorage.com
 	AccessKeyID     string // AWS_ACCESS_KEY_ID
 	SecretAccessKey string // AWS_SECRET_ACCESS_KEY
 }
@@ -22,8 +23,14 @@ func LoadConfig() (Config, error) {
 		Bucket:          os.Getenv("S3_BUCKET"),
 		URL:             strings.TrimRight(os.Getenv("S3_URL"), "/"),
 		Region:          os.Getenv("AWS_REGION"),
+		Endpoint:        strings.TrimRight(os.Getenv("S3_ENDPOINT"), "/"),
 		AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
 		SecretAccessKey: os.Getenv("AWS_SECRET_ACCESS_KEY"),
+	}
+
+	// Cloudflare R2 (and most S3-compatible stores) ignore the region; R2 expects "auto".
+	if cfg.Region == "" && cfg.Endpoint != "" {
+		cfg.Region = "auto"
 	}
 
 	var missing []string
