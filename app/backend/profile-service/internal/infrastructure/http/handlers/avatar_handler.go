@@ -30,6 +30,12 @@ type AvatarHandler struct {
 	uploader AvatarUploader
 }
 
+// AvatarUploadResult là dữ liệu trả về sau khi tải ảnh lên S3 thành công.
+type AvatarUploadResult struct {
+	AuthID    uuid.UUID `json:"auth_id" swaggertype:"string" format:"uuid" example:"3fa85f64-5717-4562-b3fc-2c963f66afa6"`
+	AvatarURL string    `json:"avatar_url" example:"https://cdn.example.com/profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png"`
+}
+
 func NewAvatarHandler(uploader AvatarUploader) *AvatarHandler {
 	return &AvatarHandler{uploader: uploader}
 }
@@ -37,17 +43,20 @@ func NewAvatarHandler(uploader AvatarUploader) *AvatarHandler {
 // UploadAvatar nhận file ảnh (multipart/form-data, field "file") và lưu URL vào avatar_url.
 // Chỉ chính chủ hoặc Admin mới được cập nhật; Admin không có ảnh đại diện nên bị từ chối.
 // @Summary      Tải lên ảnh đại diện
+// @Description  Tải ảnh lên S3 và lưu URL trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.
+// @Description  Bấm "Authorize" và nhập "Bearer <access_token>" trước khi thử.
 // @Tags         profiles
 // @Security     BearerAuth
 // @Accept       multipart/form-data
 // @Produce      json
 // @Param        id   path     string true "Auth Account ID"
 // @Param        file formData file   true "Ảnh JPEG, PNG, GIF hoặc WebP, tối đa 5 MB"
-// @Success      200 {object} response.BaseResponse
+// @Success      200 {object} response.BaseResponse{result=AvatarUploadResult}
 // @Failure      400 {object} response.BaseResponse
 // @Failure      403 {object} response.BaseResponse
 // @Failure      404 {object} response.BaseResponse
 // @Failure      413 {object} response.BaseResponse
+// @Failure      500 {object} response.BaseResponse
 // @Failure      503 {object} response.BaseResponse
 // @Router       /api/v1/profiles/{id}/avatar [post]
 func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
@@ -126,5 +135,5 @@ func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, "Cập nhật ảnh đại diện thành công", gin.H{"auth_id": authID, "avatar_url": url})
+	response.Success(c, "Cập nhật ảnh đại diện thành công", AvatarUploadResult{AuthID: authID, AvatarURL: url})
 }

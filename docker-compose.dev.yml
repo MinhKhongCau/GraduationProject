@@ -167,6 +167,12 @@ services:
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PROFILE}
       # gRPC nội bộ cho booking-service (không publish ra host, không qua Kong)
       - GRPC_PORT=${PROFILE_GRPC_PORT:-9002}
+      # S3 storage for avatar uploads
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_URL=${S3_URL}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
   payment-service:
     build:
@@ -267,12 +273,6 @@ services:
       - RABBITMQ_PORT=5672
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
-      # AWS config
-      - S3_BUCKET=${S3_BUCKET}
-      - S3_URL=${S3_URL}
-      - AWS_REGION=${AWS_REGION}
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:

@@ -7,6 +7,8 @@ import { z } from "zod";
 import { Card, CardHeader, Button, Input, Textarea, Label, FieldError } from "@/components/ui";
 import { Camera, User } from "lucide-react";
 import Image from "next/image";
+import { useAvatarUpload } from "@/hooks";
+import { AVATAR_ACCEPTED_TYPES } from "@/api/profile";
 
 const expertProfileSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -45,15 +47,16 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultValues.fullName, defaultValues.avatarUrl, defaultValues.introductionVideoUrl, defaultValues.bio]);
 
+  // Upload to S3 right away; the returned URL is saved as avatarUrl with the form.
+  const { upload, isUploading } = useAvatarUpload((url) =>
+    setValue("avatarUrl", url, { shouldDirty: true })
+  );
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue("avatarUrl", reader.result as string, { shouldDirty: true });
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) upload(file);
+    // Allow picking the same file again after a failed upload.
+    e.target.value = "";
   };
 
   const triggerFileInput = () => {
@@ -84,6 +87,7 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
             <button
               type="button"
               onClick={triggerFileInput}
+              disabled={isUploading}
               className="absolute inset-0 flex flex-col items-center justify-center bg-foreground/60 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
             >
               <Camera className="text-white" size={20} />
@@ -93,21 +97,22 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
           
           <div className="text-center sm:text-left">
             <h4 className="text-sm font-semibold text-foreground">Profile Picture</h4>
-            <p className="mt-1 text-xs text-muted-foreground">PNG or JPG. Max 2MB.</p>
+            <p className="mt-1 text-xs text-muted-foreground">JPG, PNG, GIF or WebP. Max 5MB.</p>
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="mt-2"
               onClick={triggerFileInput}
+              disabled={isUploading}
             >
-              Upload Image
+              {isUploading ? "Uploading..." : "Upload Image"}
             </Button>
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept="image/*"
+              accept={AVATAR_ACCEPTED_TYPES.join(",")}
               className="hidden"
             />
           </div>
@@ -149,7 +154,7 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
         </div>
 
         <div className="flex justify-end border-t border-border pt-5">
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || isUploading}>
             {isSubmitting ? "Saving..." : "Save changes"}
           </Button>
         </div>
