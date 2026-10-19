@@ -45,8 +45,21 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 		return nil, fmt.Errorf("không thể khởi tạo cấu hình AWS: %w", err)
 	}
 
+	api := awss3.NewFromConfig(awsCfg, func(o *awss3.Options) {
+		if cfg.Endpoint == "" {
+			return // Amazon S3: the SDK resolves the endpoint from the region.
+		}
+		// S3-compatible store such as Cloudflare R2.
+		o.BaseEndpoint = aws.String(cfg.Endpoint)
+		o.UsePathStyle = true
+		// Only send/verify checksums when the API requires them; newer SDK defaults
+		// add checksum headers that S3-compatible stores may reject.
+		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+		o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
+	})
+
 	return &Client{
-		api:     awss3.NewFromConfig(awsCfg),
+		api:     api,
 		bucket:  cfg.Bucket,
 		baseURL: cfg.URL,
 	}, nil
