@@ -58,4 +58,12 @@ describe("toSnakeCase", () => {
     const original = { patientId: "p1", medicalHistories: [{ conditionName: "Insomnia" }] };
     expect(toCamelCase(toSnakeCase(original))).toEqual(original);
   });
+
+  it("passes FormData through untouched (multipart uploads)", () => {
+    const formData = new FormData();
+    formData.append("file", new Blob(["img"]), "avatar.png");
+    const result = toSnakeCase<FormData>(formData);
+    expect(result).toBe(formData);
+    expect(result.get("file")).toBeInstanceOf(Blob);
+  });
 });

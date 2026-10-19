@@ -16,3 +16,4 @@ export * from "./useForumPosts";
 export * from "./useForumMutations";
 export * from "./useForumAuthorName";
 export * from "./useMedicalRecords";
+export * from "./useAvatarUpload";
