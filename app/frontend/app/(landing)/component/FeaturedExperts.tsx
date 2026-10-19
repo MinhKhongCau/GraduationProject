@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { FEATURED_EXPERTS_MOCK } from "@/data";
 import { Card } from "@/components/ui";
+import { resolveImageUrl } from "@/lib/image";
 
 export function FeaturedExperts() {
   return (
@@ -11,7 +12,7 @@ export function FeaturedExperts() {
           {FEATURED_EXPERTS_MOCK.map((expert) => (
             <Card key={expert.expertId} className="p-6 text-center transition-shadow hover:shadow-elevated">
               <Image
-                src={expert.avatarUrl ?? "/images/auth-bg.png"}
+                src={resolveImageUrl(expert.avatarUrl) ?? "/images/auth-bg.png"}
                 alt={expert.fullName}
                 width={64}
                 height={64}

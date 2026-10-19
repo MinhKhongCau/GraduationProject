@@ -9,6 +9,7 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - NEXT_PUBLIC_S3_PUBLIC_URL=${NEXT_PUBLIC_S3_PUBLIC_URL}
     networks:
       - app-network
 
@@ -147,7 +148,6 @@ services:
       - GRPC_PORT=${PROFILE_GRPC_PORT:-9002}
       # S3 storage for avatar uploads
       - S3_BUCKET=${S3_BUCKET}
-      - S3_URL=${S3_URL}
       - S3_ENDPOINT=${S3_ENDPOINT:-}
       - AWS_REGION=${AWS_REGION}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}

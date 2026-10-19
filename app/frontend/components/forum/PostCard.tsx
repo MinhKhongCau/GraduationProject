@@ -3,6 +3,7 @@ import { Heart, MessageSquare, Bookmark } from "lucide-react";
 import { Badge, Card } from "@/components/ui";
 import type { Post } from "@/types";
 import { useForumAuthorName } from "@/hooks";
+import { resolveImageUrl } from "@/lib/image";
 
 export interface PostCardProps {
   post: Post;
@@ -22,7 +23,7 @@ function initials(fullName: string): string {
 export function PostCard({ post, basePath }: PostCardProps) {
   const fallbackAuthorName = useForumAuthorName(post.authorId);
   const authorName = post.author?.name || fallbackAuthorName;
-  const avatarUrl = post.author?.avatarUrl;
+  const avatarUrl = resolveImageUrl(post.author?.avatarUrl);
 
   return (
     <Card className="flex flex-col overflow-hidden p-0 transition-shadow hover:shadow-elevated">

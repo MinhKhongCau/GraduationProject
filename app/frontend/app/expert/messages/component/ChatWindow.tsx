@@ -7,6 +7,7 @@ import { MessageBubble } from "./MessageBubble";
 import { VoiceRecorderButton } from "./VoiceRecorderButton";
 import type { ChatContact, ChatMessage } from "@/types";
 import { useChatContext } from "@/context/ChatContext";
+import { resolveImageUrl } from "@/lib/image";
 
 const TYPING_IDLE_MS = 2000;
 
@@ -158,7 +159,7 @@ export function ChatWindow({
           )}
           <div className="relative">
             <Image
-              src={contact.avatarUrl || "https://i.pravatar.cc/150?u=" + contact.id}
+              src={resolveImageUrl(contact.avatarUrl) || "https://i.pravatar.cc/150?u=" + contact.id}
               alt={contact.fullName}
               width={40}
               height={40}

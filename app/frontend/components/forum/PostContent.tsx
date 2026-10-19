@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useForumAuthorName } from "@/hooks";
 import type { PostDetail } from "@/types";
 import { Badge } from "@/components/ui";
+import { resolveImageUrl } from "@/lib/image";
 
 const ContentViewer = dynamic(() => import("@/components/ui/MDXEditor"), { ssr: false });
 
@@ -23,7 +24,7 @@ function initials(fullName: string): string {
 export function PostContent({ post }: PostContentProps) {
   const fallbackAuthorName = useForumAuthorName(post.authorId);
   const authorName = post.author?.name || fallbackAuthorName;
-  const avatarUrl = post.author?.avatarUrl;
+  const avatarUrl = resolveImageUrl(post.author?.avatarUrl);
 
   return (
     <div>

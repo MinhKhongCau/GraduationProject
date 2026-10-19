@@ -22,7 +22,8 @@ const maxAvatarSize = 5 << 20
 
 // AvatarUploader là phần lưu trữ ảnh mà handler cần (S3 client thật hoặc fake khi test).
 type AvatarUploader interface {
-	UploadProfileImage(ctx context.Context, profileID string, body io.ReadSeeker) (string, error)
+	// UploadProfileImage lưu ảnh và trả về object key trên S3 (không phải URL đầy đủ).
+	UploadProfileImage(ctx context.Context, profileID string, body io.ReadSeeker) (objectKey string, err error)
 }
 
 // AvatarHandler xử lý upload ảnh đại diện cho bệnh nhân và chuyên gia.
@@ -31,19 +32,21 @@ type AvatarHandler struct {
 }
 
 // AvatarUploadResult là dữ liệu trả về sau khi tải ảnh lên S3 thành công.
+// ObjectKey là key của ảnh trong bucket; FE ghép với public URL của bucket để hiển thị.
 type AvatarUploadResult struct {
 	AuthID    uuid.UUID `json:"auth_id" swaggertype:"string" format:"uuid" example:"3fa85f64-5717-4562-b3fc-2c963f66afa6"`
-	AvatarURL string    `json:"avatar_url" example:"https://cdn.example.com/profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png"`
+	ObjectKey string    `json:"object_key" example:"profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png"`
 }
 
 func NewAvatarHandler(uploader AvatarUploader) *AvatarHandler {
 	return &AvatarHandler{uploader: uploader}
 }
 
-// UploadAvatar nhận file ảnh (multipart/form-data, field "file") và lưu URL vào avatar_url.
+// UploadAvatar nhận file ảnh (multipart/form-data, field "file") và lưu object key vào avatar_url.
 // Chỉ chính chủ hoặc Admin mới được cập nhật; Admin không có ảnh đại diện nên bị từ chối.
 // @Summary      Tải lên ảnh đại diện
-// @Description  Tải ảnh lên S3 và lưu URL trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.
+// @Description  Tải ảnh lên S3 và lưu object key trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.
+// @Description  FE hiển thị ảnh bằng <public URL của bucket>/<object_key>.
 // @Description  Bấm "Authorize" và nhập "Bearer <access_token>" trước khi thử.
 // @Tags         profiles
 // @Security     BearerAuth
@@ -115,7 +118,7 @@ func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
 	}
 	defer file.Close()
 
-	url, err := h.uploader.UploadProfileImage(c.Request.Context(), profile.ID.String(), file)
+	objectKey, err := h.uploader.UploadProfileImage(c.Request.Context(), profile.ID.String(), file)
 	if err != nil {
 		if errors.Is(err, s3infra.ErrUnsupportedImageType) {
 			response.Error(c, http.StatusBadRequest, "Định dạng ảnh không được hỗ trợ (JPEG, PNG, GIF, WebP)", err.Error())
@@ -125,7 +128,7 @@ func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	result := config.DB.Model(avatarRecord).Where("profile_id = ?", profile.ID).Update("avatar_url", url)
+	result := config.DB.Model(avatarRecord).Where("profile_id = ?", profile.ID).Update("avatar_url", objectKey)
 	if result.Error != nil {
 		response.Error(c, http.StatusInternalServerError, "Không thể cập nhật ảnh đại diện", result.Error.Error())
 		return
@@ -135,5 +138,5 @@ func (h *AvatarHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, "Cập nhật ảnh đại diện thành công", AvatarUploadResult{AuthID: authID, AvatarURL: url})
+	response.Success(c, "Cập nhật ảnh đại diện thành công", AvatarUploadResult{AuthID: authID, ObjectKey: objectKey})
 }

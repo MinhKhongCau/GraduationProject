@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForumAuthor } from "@/hooks";
 import { CommentComposer } from "./CommentComposer";
 import type { Comment } from "@/types";
+import { resolveImageUrl } from "@/lib/image";
 
 export interface CommentThreadProps {
   postId: number;
@@ -36,7 +37,7 @@ function CommentNode({ postId, comment }: { postId: number; comment: Comment }) 
   const [replying, setReplying] = useState(false);
   const clientProfile = useForumAuthor(comment.user ? "" : comment.userId);
   const authorName = comment.user?.name ?? clientProfile.name;
-  const avatarUrl = comment.user?.avatarUrl ?? clientProfile.avatarUrl;
+  const avatarUrl = resolveImageUrl(comment.user?.avatarUrl ?? clientProfile.avatarUrl);
 
   return (
     <div>

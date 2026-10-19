@@ -16,7 +16,6 @@ var pngHeader = []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0, 0, 0, 0x0
 
 func TestLoadConfig_MissingVariables(t *testing.T) {
 	t.Setenv("S3_BUCKET", "")
-	t.Setenv("S3_URL", "")
 	t.Setenv("AWS_REGION", "")
 	t.Setenv("AWS_ACCESS_KEY_ID", "")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "")
@@ -27,9 +26,8 @@ func TestLoadConfig_MissingVariables(t *testing.T) {
 	assert.Contains(t, err.Error(), "AWS_SECRET_ACCESS_KEY")
 }
 
-func TestLoadConfig_TrimsTrailingSlashFromURL(t *testing.T) {
+func TestLoadConfig_ReadsBucket(t *testing.T) {
 	t.Setenv("S3_BUCKET", "mindcare-profiles")
-	t.Setenv("S3_URL", "https://cdn.example.com/")
 	t.Setenv("AWS_REGION", "ap-southeast-1")
 	t.Setenv("AWS_ACCESS_KEY_ID", "key-id")
 	t.Setenv("AWS_SECRET_ACCESS_KEY", "secret")
@@ -37,12 +35,10 @@ func TestLoadConfig_TrimsTrailingSlashFromURL(t *testing.T) {
 	cfg, err := LoadConfig()
 	require.NoError(t, err)
 	assert.Equal(t, "mindcare-profiles", cfg.Bucket)
-	assert.Equal(t, "https://cdn.example.com", cfg.URL)
 }
 
 func TestLoadConfig_EndpointDefaultsRegionToAuto(t *testing.T) {
 	t.Setenv("S3_BUCKET", "mindcare-profiles")
-	t.Setenv("S3_URL", "https://pub-123.r2.dev")
 	t.Setenv("S3_ENDPOINT", "https://account.r2.cloudflarestorage.com/")
 	t.Setenv("AWS_REGION", "")
 	t.Setenv("AWS_ACCESS_KEY_ID", "key-id")
@@ -56,7 +52,7 @@ func TestLoadConfig_EndpointDefaultsRegionToAuto(t *testing.T) {
 
 func TestNewClient_WithEndpoint(t *testing.T) {
 	_, err := NewClient(context.Background(), Config{
-		Bucket: "b", URL: "https://pub-123.r2.dev", Region: "auto",
+		Bucket: "b", Region: "auto",
 		Endpoint: "https://account.r2.cloudflarestorage.com", AccessKeyID: "k", SecretAccessKey: "s",
 	})
 	require.NoError(t, err)
@@ -80,13 +76,8 @@ func TestDetectImageType_RejectsNonImage(t *testing.T) {
 
 func TestUploadProfileImage_RejectsNonImageBeforeTouchingS3(t *testing.T) {
 	// The client has no real endpoint; the call must fail on validation before any network request.
-	c := &Client{bucket: "b", baseURL: "https://cdn.example.com"}
+	c := &Client{bucket: "b"}
 
 	_, err := c.UploadProfileImage(context.Background(), "profile-1", bytes.NewReader([]byte("%PDF-1.4 ...")))
 	assert.True(t, errors.Is(err, ErrUnsupportedImageType))
-}
-
-func TestObjectURL(t *testing.T) {
-	c := &Client{baseURL: "https://cdn.example.com"}
-	assert.Equal(t, "https://cdn.example.com/profiles/p1/a.png", c.ObjectURL("profiles/p1/a.png"))
 }

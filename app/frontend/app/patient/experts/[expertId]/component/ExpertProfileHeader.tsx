@@ -2,13 +2,14 @@ import Image from "next/image";
 import { BadgeCheck, Languages, GraduationCap } from "lucide-react";
 import { Card } from "@/components/ui";
 import type { ExpertProfile } from "@/types";
+import { resolveImageUrl } from "@/lib/image";
 
 export function ExpertProfileHeader({ expert }: { expert: ExpertProfile }) {
   return (
     <Card className="p-6">
       <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:text-left">
         <Image
-          src={expert.avatarUrl || "/images/auth-bg.png"}
+          src={resolveImageUrl(expert.avatarUrl) || "/images/auth-bg.png"}
           alt={expert.fullName}
           width={96}
           height={96}

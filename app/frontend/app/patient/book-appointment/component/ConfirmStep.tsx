@@ -10,6 +10,7 @@ import { normalizeError } from "@/api/http/errorNormalizer";
 import { QUERY_KEYS } from "@/constants";
 import type { BookingConfirmationParams, PatientRecordRelationship } from "@/types";
 import { RELATIONSHIP_LABELS } from "./PatientProfileSection";
+import { resolveImageUrl } from "@/lib/image";
 
 export interface ConfirmStepProps {
   params: BookingConfirmationParams;
@@ -121,7 +122,7 @@ export function ConfirmStep({ params, onBack, onPickAnotherSlot, onConfirm, isSu
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Appointment</p>
           <div className="flex items-center gap-3">
             <Image
-              src={expert.avatarUrl || "/images/auth-bg.png"}
+              src={resolveImageUrl(expert.avatarUrl) || "/images/auth-bg.png"}
               alt={expert.fullName}
               width={44}
               height={44}

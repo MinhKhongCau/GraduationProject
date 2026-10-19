@@ -8,9 +8,10 @@ import (
 )
 
 // Config holds the settings used to talk to the S3 bucket that stores profile images.
+// The public URL of the bucket is not needed here: the service stores only object keys,
+// and the frontend prefixes them with its own public URL (NEXT_PUBLIC_S3_PUBLIC_URL).
 type Config struct {
 	Bucket          string // S3_BUCKET
-	URL             string // S3_URL: public base URL used to build object links, e.g. https://cdn.example.com
 	Region          string // AWS_REGION ("auto" for Cloudflare R2; defaults to "auto" when Endpoint is set)
 	Endpoint        string // S3_ENDPOINT (optional): S3-compatible API endpoint, e.g. https://<account_id>.r2.cloudflarestorage.com
 	AccessKeyID     string // AWS_ACCESS_KEY_ID
@@ -21,7 +22,6 @@ type Config struct {
 func LoadConfig() (Config, error) {
 	cfg := Config{
 		Bucket:          os.Getenv("S3_BUCKET"),
-		URL:             strings.TrimRight(os.Getenv("S3_URL"), "/"),
 		Region:          os.Getenv("AWS_REGION"),
 		Endpoint:        strings.TrimRight(os.Getenv("S3_ENDPOINT"), "/"),
 		AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
@@ -36,9 +36,6 @@ func LoadConfig() (Config, error) {
 	var missing []string
 	if cfg.Bucket == "" {
 		missing = append(missing, "S3_BUCKET")
-	}
-	if cfg.URL == "" {
-		missing = append(missing, "S3_URL")
 	}
 	if cfg.Region == "" {
 		missing = append(missing, "AWS_REGION")

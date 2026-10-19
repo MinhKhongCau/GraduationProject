@@ -6,8 +6,8 @@ definitions:
         example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
         format: uuid
         type: string
-      avatar_url:
-        example: https://cdn.example.com/profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png
+      object_key:
+        example: profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png
         type: string
     type: object
   internal_infrastructure_http_handlers.specializationAdminView:
@@ -714,7 +714,8 @@ paths:
       consumes:
       - multipart/form-data
       description: |-
-        Tải ảnh lên S3 và lưu URL trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.
+        Tải ảnh lên S3 và lưu object key trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.
+        FE hiển thị ảnh bằng <public URL của bucket>/<object_key>.
         Bấm "Authorize" và nhập "Bearer <access_token>" trước khi thử.
       parameters:
       - description: Auth Account ID
