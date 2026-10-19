@@ -50,13 +50,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/BaseResponse"
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "result": {
-                                            "$ref": "#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
                                         }
                                     }
                                 }
@@ -88,7 +88,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/CreateProfileRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.CreateProfileRequest"
                         }
                     }
                 ],
@@ -96,19 +96,19 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -143,6 +143,12 @@
                         "description": "Tìm theo tên",
                         "name": "search",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Lọc theo chuyên khoa (spec_id)",
+                        "name": "specialization_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -151,17 +157,93 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/BaseResponse"
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "result": {
-                                            "$ref": "#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
                                         }
                                     }
                                 }
                             ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/profiles/experts/managed": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "experts"
+                ],
+                "summary": "[Admin] Danh sách chuyên gia tôi quản lý",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Trang",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Số dòng/trang",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tìm theo tên",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -189,13 +271,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -230,7 +312,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/UpsertExpertRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.UpsertExpertRequest"
                         }
                     }
                 ],
@@ -238,19 +320,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -285,7 +367,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/PatchExpertRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.PatchExpertRequest"
                         }
                     }
                 ],
@@ -293,25 +375,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -335,19 +417,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -372,19 +454,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -409,19 +491,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -445,19 +527,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -485,7 +567,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/CreateMedicalHistoryRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.CreateMedicalHistoryRequest"
                         }
                     }
                 ],
@@ -493,19 +575,206 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/profiles/me/patient-records": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "patient-records"
+                ],
+                "summary": "Danh sách hồ sơ người khám của chính mình",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.PatientRecord"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "patient-records"
+                ],
+                "summary": "Tạo hồ sơ người khám mới",
+                "parameters": [
+                    {
+                        "description": "Hồ sơ người khám",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.CreatePatientRecordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.PatientRecord"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/profiles/me/specializations/{specId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "experts"
+                ],
+                "summary": "[Expert] Thêm chuyên khoa cho chính mình",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Specialization ID",
+                        "name": "specId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "experts"
+                ],
+                "summary": "[Expert] Bỏ chuyên khoa của chính mình",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Specialization ID",
+                        "name": "specId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -553,13 +822,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/BaseResponse"
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "result": {
-                                            "$ref": "#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile"
                                         }
                                     }
                                 }
@@ -596,13 +865,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -637,7 +906,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/UpsertPatientRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.UpsertPatientRequest"
                         }
                     }
                 ],
@@ -645,19 +914,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -692,7 +961,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/PatchPatientRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.PatchPatientRequest"
                         }
                     }
                 ],
@@ -700,19 +969,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -745,13 +1014,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -779,13 +1048,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -806,7 +1075,7 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/BaseResponse"
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                                 },
                                 {
                                     "type": "object",
@@ -814,7 +1083,7 @@
                                         "result": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/Specialization"
+                                                "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.Specialization"
                                             }
                                         }
                                     }
@@ -848,7 +1117,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/CreateSpecializationRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.CreateSpecializationRequest"
                         }
                     }
                 ],
@@ -858,13 +1127,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/BaseResponse"
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "result": {
-                                            "$ref": "#/definitions/Specialization"
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.Specialization"
                                         }
                                     }
                                 }
@@ -876,13 +1145,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/BaseResponse"
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "result": {
-                                            "$ref": "#/definitions/ErrorResult"
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.ErrorResult"
                                         }
                                     }
                                 }
@@ -894,17 +1163,326 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/BaseResponse"
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "result": {
-                                            "$ref": "#/definitions/ErrorResult"
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.ErrorResult"
                                         }
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/profiles/specializations/all": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "specializations"
+                ],
+                "summary": "[Admin] Danh sách tất cả chuyên khoa",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Trang",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Số dòng/trang",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tìm theo tên hoặc mã",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Lọc theo trạng thái hoạt động",
+                        "name": "is_active",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.PageResult-internal_infrastructure_http_handlers_specializationAdminView"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/profiles/specializations/{specId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "specializations"
+                ],
+                "summary": "[Admin] Xem chi tiết chuyên khoa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Specialization ID",
+                        "name": "specId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/internal_infrastructure_http_handlers.specializationAdminView"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "code và slug là duy nhất; slug bỏ trống sẽ được sinh lại từ name. Không đổi trạng thái hoạt động.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "specializations"
+                ],
+                "summary": "[Admin] Cập nhật chuyên khoa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Specialization ID",
+                        "name": "specId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Chuyên khoa",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.UpdateSpecializationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/internal_infrastructure_http_handlers.specializationAdminView"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Chuyên khoa đang có chuyên gia đăng ký không xoá được (409) - hãy ngừng hoạt động thay vì xoá.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "specializations"
+                ],
+                "summary": "[Admin] Xoá chuyên khoa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Specialization ID",
+                        "name": "specId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/profiles/specializations/{specId}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Chuyên khoa ngừng hoạt động bị ẩn khỏi danh sách public và không đăng ký mới được; chuyên gia đã đăng ký vẫn giữ.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "specializations"
+                ],
+                "summary": "[Admin] Bật/tắt chuyên khoa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Specialization ID",
+                        "name": "specId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Trạng thái",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.UpdateSpecializationStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/internal_infrastructure_http_handlers.specializationAdminView"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -937,13 +1515,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -978,7 +1556,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/UpdateProfileRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.UpdateProfileRequest"
                         }
                     }
                 ],
@@ -986,19 +1564,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -1029,13 +1607,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -1070,7 +1648,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/PatchProfileRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.PatchProfileRequest"
                         }
                     }
                 ],
@@ -1078,19 +1656,111 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/profiles/{id}/avatar": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tải ảnh lên S3 và lưu URL trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.\nBấm \"Authorize\" và nhập \"Bearer \u003caccess_token\u003e\" trước khi thử.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profiles"
+                ],
+                "summary": "Tải lên ảnh đại diện",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Auth Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Ảnh JPEG, PNG, GIF hoặc WebP, tối đa 5 MB",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "result": {
+                                            "$ref": "#/definitions/internal_infrastructure_http_handlers.AvatarUploadResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Request Entity Too Large",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -1116,7 +1786,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/CreateProfileRequest"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.CreateProfileRequest"
                         }
                     }
                 ],
@@ -1124,19 +1794,19 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -1156,13 +1826,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/BaseResponse"
+                            "$ref": "#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse"
                         }
                     }
                 }
@@ -1170,21 +1840,59 @@
         }
     },
     "definitions": {
-        "AdminProfile": {
+        "internal_infrastructure_http_handlers.AvatarUploadResult": {
             "type": "object",
             "properties": {
-                "email": {
-                    "type": "string"
+                "auth_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
                 },
-                "note": {
-                    "type": "string"
-                },
-                "profile_id": {
-                    "type": "string"
+                "avatar_url": {
+                    "type": "string",
+                    "example": "https://cdn.example.com/profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png"
                 }
             }
         },
-        "BaseResponse": {
+        "internal_infrastructure_http_handlers.specializationAdminView": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "expert_count": {
+                    "type": "integer"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "location": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "spec_id": {
+                    "type": "string"
+                },
+                "symptoms": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_response.BaseResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -1199,7 +1907,73 @@
                 }
             }
         },
-        "CreateMedicalHistoryRequest": {
+        "profile-service_internal_infrastructure_http_response.ErrorResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_response.PageResult-internal_infrastructure_http_handlers_specializationAdminView": {
+            "type": "object",
+            "properties": {
+                "hasNext": {
+                    "type": "boolean"
+                },
+                "hasPrevious": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_infrastructure_http_handlers.specializationAdminView"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile": {
+            "type": "object",
+            "properties": {
+                "hasNext": {
+                    "type": "boolean"
+                },
+                "hasPrevious": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.Profile"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_schemas.CreateMedicalHistoryRequest": {
             "type": "object",
             "required": [
                 "condition_name",
@@ -1221,7 +1995,58 @@
                 }
             }
         },
-        "CreateProfileRequest": {
+        "profile-service_internal_infrastructure_http_schemas.CreatePatientRecordRequest": {
+            "type": "object",
+            "required": [
+                "date_of_birth",
+                "full_name",
+                "gender",
+                "phone_number",
+                "relationship"
+            ],
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "date_of_birth": {
+                    "description": "Định dạng: YYYY-MM-DD",
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "full_name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "MALE",
+                        "FEMALE",
+                        "OTHER"
+                    ]
+                },
+                "phone_number": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "relationship": {
+                    "type": "string",
+                    "enum": [
+                        "PARENT",
+                        "CHILD",
+                        "SPOUSE",
+                        "SIBLING",
+                        "RELATIVE",
+                        "OTHER"
+                    ]
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_schemas.CreateProfileRequest": {
             "type": "object",
             "required": [
                 "auth_id",
@@ -1252,7 +2077,7 @@
                 }
             }
         },
-        "CreateSpecializationRequest": {
+        "profile-service_internal_infrastructure_http_schemas.CreateSpecializationRequest": {
             "type": "object",
             "required": [
                 "code",
@@ -1290,100 +2115,7 @@
                 }
             }
         },
-        "ErrorResult": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string"
-                }
-            }
-        },
-        "ExpertProfile": {
-            "type": "object",
-            "properties": {
-                "avatar_url": {
-                    "type": "string"
-                },
-                "bio": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "introduction_video_url": {
-                    "type": "string"
-                },
-                "profile_id": {
-                    "type": "string"
-                },
-                "specializations": {
-                    "description": "Quan hệ N-N: Chuyên gia và Chuyên khoa (GORM tự tạo bảng trung gian)",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/Specialization"
-                    }
-                },
-                "verification_status": {
-                    "type": "string"
-                }
-            }
-        },
-        "MedicalHistory": {
-            "type": "object",
-            "properties": {
-                "condition_name": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "diagnosed_at": {
-                    "type": "string"
-                },
-                "history_id": {
-                    "type": "string"
-                },
-                "is_active": {
-                    "type": "boolean"
-                },
-                "is_chronic": {
-                    "type": "boolean"
-                },
-                "patient_profile_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "PageResult-profile-service_internal_infrastructure_persistence_models_Profile": {
-            "type": "object",
-            "properties": {
-                "hasNext": {
-                    "type": "boolean"
-                },
-                "hasPrevious": {
-                    "type": "boolean"
-                },
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/Profile"
-                    }
-                },
-                "page": {
-                    "type": "integer"
-                },
-                "pageSize": {
-                    "type": "integer"
-                },
-                "total": {
-                    "type": "integer"
-                },
-                "totalPages": {
-                    "type": "integer"
-                }
-            }
-        },
-        "PatchExpertRequest": {
+        "profile-service_internal_infrastructure_http_schemas.PatchExpertRequest": {
             "type": "object",
             "properties": {
                 "avatar_url": {
@@ -1405,7 +2137,7 @@
                     }
                 },
                 "user_information": {
-                    "$ref": "#/definitions/PatchUserInformationRequest"
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.PatchUserInformationRequest"
                 },
                 "verification_status": {
                     "type": "string",
@@ -1418,7 +2150,7 @@
                 }
             }
         },
-        "PatchPatientRequest": {
+        "profile-service_internal_infrastructure_http_schemas.PatchPatientRequest": {
             "type": "object",
             "properties": {
                 "address": {
@@ -1431,19 +2163,19 @@
                     "type": "string"
                 },
                 "user_information": {
-                    "$ref": "#/definitions/PatchUserInformationRequest"
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.PatchUserInformationRequest"
                 }
             }
         },
-        "PatchProfileRequest": {
+        "profile-service_internal_infrastructure_http_schemas.PatchProfileRequest": {
             "type": "object",
             "properties": {
                 "user_information": {
-                    "$ref": "#/definitions/PatchUserInformationRequest"
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.PatchUserInformationRequest"
                 }
             }
         },
-        "PatchUserInformationRequest": {
+        "profile-service_internal_infrastructure_http_schemas.PatchUserInformationRequest": {
             "type": "object",
             "properties": {
                 "country": {
@@ -1471,7 +2203,215 @@
                 }
             }
         },
-        "PatientProfile": {
+        "profile-service_internal_infrastructure_http_schemas.UpdateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "user_information": {
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.UserInformationRequest"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_schemas.UpdateSpecializationRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "name",
+                "symptoms"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "description": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string"
+                },
+                "location": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "symptoms": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_schemas.UpdateSpecializationStatusRequest": {
+            "type": "object",
+            "required": [
+                "is_active"
+            ],
+            "properties": {
+                "is_active": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_schemas.UpsertExpertRequest": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "introduction_video_url": {
+                    "type": "string"
+                },
+                "specialization_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "user_information": {
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.UserInformationRequest"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_schemas.UpsertPatientRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "avatar_url": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "user_information": {
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_http_schemas.UserInformationRequest"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_http_schemas.UserInformationRequest": {
+            "type": "object",
+            "required": [
+                "full_name"
+            ],
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "date_of_birth": {
+                    "description": "Định dạng: YYYY-MM-DD, rỗng = không khai báo",
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "MALE",
+                        "FEMALE",
+                        "OTHER"
+                    ]
+                },
+                "phone_number": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_persistence_models.AdminProfile": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "profile_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_persistence_models.ExpertProfile": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "bio": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "introduction_video_url": {
+                    "type": "string"
+                },
+                "managed_by_admin_id": {
+                    "description": "Admin đã duyệt chuyên gia và trở thành người quản lý (auth id của Admin).",
+                    "type": "string"
+                },
+                "profile_id": {
+                    "type": "string"
+                },
+                "specializations": {
+                    "description": "Quan hệ N-N: Chuyên gia và Chuyên khoa (GORM tự tạo bảng trung gian)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.Specialization"
+                    }
+                },
+                "verification_status": {
+                    "type": "string"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_persistence_models.MedicalHistory": {
+            "type": "object",
+            "properties": {
+                "condition_name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "diagnosed_at": {
+                    "type": "string"
+                },
+                "history_id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_chronic": {
+                    "type": "boolean"
+                },
+                "patient_profile_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_persistence_models.PatientProfile": {
             "type": "object",
             "properties": {
                 "address": {
@@ -1486,7 +2426,7 @@
                 "medical_histories": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/MedicalHistory"
+                        "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.MedicalHistory"
                     }
                 },
                 "profile_id": {
@@ -1494,11 +2434,49 @@
                 }
             }
         },
-        "Profile": {
+        "profile-service_internal_infrastructure_persistence_models.PatientRecord": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "owner_auth_id": {
+                    "type": "string"
+                },
+                "phone_number": {
+                    "type": "string"
+                },
+                "record_id": {
+                    "type": "string"
+                },
+                "relationship": {
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.Relationship"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "profile-service_internal_infrastructure_persistence_models.Profile": {
             "type": "object",
             "properties": {
                 "admin_profile": {
-                    "$ref": "#/definitions/AdminProfile"
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.AdminProfile"
                 },
                 "auth_id": {
                     "type": "string"
@@ -1510,16 +2488,16 @@
                     "type": "string"
                 },
                 "expert_profile": {
-                    "$ref": "#/definitions/ExpertProfile"
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.ExpertProfile"
                 },
                 "id": {
                     "type": "string"
                 },
                 "patient_profile": {
-                    "$ref": "#/definitions/PatientProfile"
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.PatientProfile"
                 },
                 "role": {
-                    "$ref": "#/definitions/Role"
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.Role"
                 },
                 "slug": {
                     "type": "string"
@@ -1528,11 +2506,32 @@
                     "type": "string"
                 },
                 "user_information": {
-                    "$ref": "#/definitions/UserInformation"
+                    "$ref": "#/definitions/profile-service_internal_infrastructure_persistence_models.UserInformation"
                 }
             }
         },
-        "Role": {
+        "profile-service_internal_infrastructure_persistence_models.Relationship": {
+            "type": "string",
+            "enum": [
+                "SELF",
+                "PARENT",
+                "CHILD",
+                "SPOUSE",
+                "SIBLING",
+                "RELATIVE",
+                "OTHER"
+            ],
+            "x-enum-varnames": [
+                "RelationshipSelf",
+                "RelationshipParent",
+                "RelationshipChild",
+                "RelationshipSpouse",
+                "RelationshipSibling",
+                "RelationshipRelative",
+                "RelationshipOther"
+            ]
+        },
+        "profile-service_internal_infrastructure_persistence_models.Role": {
             "type": "string",
             "enum": [
                 "ADMIN",
@@ -1545,7 +2544,7 @@
                 "RolePatient"
             ]
         },
-        "Specialization": {
+        "profile-service_internal_infrastructure_persistence_models.Specialization": {
             "type": "object",
             "properties": {
                 "code": {
@@ -1580,58 +2579,7 @@
                 }
             }
         },
-        "UpdateProfileRequest": {
-            "type": "object",
-            "properties": {
-                "user_information": {
-                    "$ref": "#/definitions/UserInformationRequest"
-                }
-            }
-        },
-        "UpsertExpertRequest": {
-            "type": "object",
-            "properties": {
-                "avatar_url": {
-                    "type": "string"
-                },
-                "bio": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "introduction_video_url": {
-                    "type": "string"
-                },
-                "specialization_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "user_information": {
-                    "$ref": "#/definitions/UserInformationRequest"
-                }
-            }
-        },
-        "UpsertPatientRequest": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string"
-                },
-                "avatar_url": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "user_information": {
-                    "$ref": "#/definitions/UserInformationRequest"
-                }
-            }
-        },
-        "UserInformation": {
+        "profile-service_internal_infrastructure_persistence_models.UserInformation": {
             "type": "object",
             "properties": {
                 "country": {
@@ -1648,37 +2596,6 @@
                 },
                 "phone_number": {
                     "type": "string"
-                }
-            }
-        },
-        "UserInformationRequest": {
-            "type": "object",
-            "required": [
-                "full_name"
-            ],
-            "properties": {
-                "country": {
-                    "type": "string",
-                    "maxLength": 100
-                },
-                "date_of_birth": {
-                    "description": "Định dạng: YYYY-MM-DD, rỗng = không khai báo",
-                    "type": "string"
-                },
-                "full_name": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string",
-                    "enum": [
-                        "MALE",
-                        "FEMALE",
-                        "OTHER"
-                    ]
-                },
-                "phone_number": {
-                    "type": "string",
-                    "maxLength": 20
                 }
             }
         }

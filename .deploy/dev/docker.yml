@@ -145,6 +145,12 @@ services:
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_PROFILE}
       # Internal gRPC for booking-service (not published, not via Kong)
       - GRPC_PORT=${PROFILE_GRPC_PORT:-9002}
+      # S3 storage for avatar uploads
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_URL=${S3_URL}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
   payment-service:
     image: ${DOCKERHUB_USERNAME}/payment-service-dev:latest
@@ -183,6 +189,8 @@ services:
       # Internal gRPC to booking-service / profile-service
       - BOOKING_GRPC_ADDR=booking-service:${BOOKING_GRPC_PORT:-9003}
       - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
+      # Internal gRPC server for booking-service (payment amount lookup per booking)
+      - GRPC_PORT=${PAYMENT_GRPC_PORT:-9004}
       # VNPay Sandbox
       - VNP_TMN_CODE=${VNP_TMN_CODE}
       - VNP_HASH_SECRET=${VNP_HASH_SECRET}
@@ -235,6 +243,8 @@ services:
       # gRPC to profile-service; internal gRPC server for payment-service
       - PROFILE_GRPC_ADDR=profile-service:${PROFILE_GRPC_PORT:-9002}
       - GRPC_PORT=${BOOKING_GRPC_PORT:-9003}
+      # gRPC to payment-service (payment amount in booking list)
+      - PAYMENT_GRPC_ADDR=payment-service:${PAYMENT_GRPC_PORT:-9004}
 
   # 7. ASSESSMENT SERVICE (Python)
   assessment-service:

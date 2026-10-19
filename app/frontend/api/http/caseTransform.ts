@@ -13,7 +13,9 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
     !Array.isArray(value) &&
     !(value instanceof Date) &&
     !(typeof File !== "undefined" && value instanceof File) &&
-    !(typeof Blob !== "undefined" && value instanceof Blob)
+    !(typeof Blob !== "undefined" && value instanceof Blob) &&
+    // Multipart bodies (e.g. avatar upload) must reach axios untouched.
+    !(typeof FormData !== "undefined" && value instanceof FormData)
   );
 }
 

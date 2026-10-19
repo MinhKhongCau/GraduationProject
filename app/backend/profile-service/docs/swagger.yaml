@@ -1,15 +1,41 @@
 basePath: /
 definitions:
-  AdminProfile:
+  internal_infrastructure_http_handlers.AvatarUploadResult:
     properties:
-      email:
+      auth_id:
+        example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+        format: uuid
         type: string
-      note:
-        type: string
-      profile_id:
+      avatar_url:
+        example: https://cdn.example.com/profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png
         type: string
     type: object
-  BaseResponse:
+  internal_infrastructure_http_handlers.specializationAdminView:
+    properties:
+      code:
+        type: string
+      description:
+        type: string
+      expert_count:
+        type: integer
+      image_url:
+        type: string
+      is_active:
+        type: boolean
+      location:
+        type: string
+      name:
+        type: string
+      slug:
+        type: string
+      spec_id:
+        type: string
+      symptoms:
+        items:
+          type: string
+        type: array
+    type: object
+  profile-service_internal_infrastructure_http_response.BaseResponse:
     properties:
       message:
         type: string
@@ -19,7 +45,50 @@ definitions:
       timestamp:
         type: string
     type: object
-  CreateMedicalHistoryRequest:
+  profile-service_internal_infrastructure_http_response.ErrorResult:
+    properties:
+      error:
+        type: string
+    type: object
+  profile-service_internal_infrastructure_http_response.PageResult-internal_infrastructure_http_handlers_specializationAdminView:
+    properties:
+      hasNext:
+        type: boolean
+      hasPrevious:
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/internal_infrastructure_http_handlers.specializationAdminView'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  ? profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile
+  : properties:
+      hasNext:
+        type: boolean
+      hasPrevious:
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.Profile'
+        type: array
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  profile-service_internal_infrastructure_http_schemas.CreateMedicalHistoryRequest:
     properties:
       condition_name:
         type: string
@@ -34,7 +103,46 @@ definitions:
     - condition_name
     - diagnosed_at
     type: object
-  CreateProfileRequest:
+  profile-service_internal_infrastructure_http_schemas.CreatePatientRecordRequest:
+    properties:
+      address:
+        maxLength: 500
+        type: string
+      date_of_birth:
+        description: 'Định dạng: YYYY-MM-DD'
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      full_name:
+        maxLength: 255
+        type: string
+      gender:
+        enum:
+        - MALE
+        - FEMALE
+        - OTHER
+        type: string
+      phone_number:
+        maxLength: 20
+        type: string
+      relationship:
+        enum:
+        - PARENT
+        - CHILD
+        - SPOUSE
+        - SIBLING
+        - RELATIVE
+        - OTHER
+        type: string
+    required:
+    - date_of_birth
+    - full_name
+    - gender
+    - phone_number
+    - relationship
+    type: object
+  profile-service_internal_infrastructure_http_schemas.CreateProfileRequest:
     properties:
       auth_id:
         type: string
@@ -56,7 +164,7 @@ definitions:
     - full_name
     - role
     type: object
-  CreateSpecializationRequest:
+  profile-service_internal_infrastructure_http_schemas.CreateSpecializationRequest:
     properties:
       code:
         maxLength: 50
@@ -83,69 +191,7 @@ definitions:
     - name
     - symptoms
     type: object
-  ErrorResult:
-    properties:
-      error:
-        type: string
-    type: object
-  ExpertProfile:
-    properties:
-      avatar_url:
-        type: string
-      bio:
-        type: string
-      email:
-        type: string
-      introduction_video_url:
-        type: string
-      profile_id:
-        type: string
-      specializations:
-        description: 'Quan hệ N-N: Chuyên gia và Chuyên khoa (GORM tự tạo bảng trung
-          gian)'
-        items:
-          $ref: '#/definitions/Specialization'
-        type: array
-      verification_status:
-        type: string
-    type: object
-  MedicalHistory:
-    properties:
-      condition_name:
-        type: string
-      description:
-        type: string
-      diagnosed_at:
-        type: string
-      history_id:
-        type: string
-      is_active:
-        type: boolean
-      is_chronic:
-        type: boolean
-      patient_profile_id:
-        type: string
-    type: object
-  PageResult-profile-service_internal_infrastructure_persistence_models_Profile:
-    properties:
-      hasNext:
-        type: boolean
-      hasPrevious:
-        type: boolean
-      items:
-        items:
-          $ref: '#/definitions/Profile'
-        type: array
-      page:
-        type: integer
-      pageSize:
-        type: integer
-      total:
-        type: integer
-      totalPages:
-        type: integer
-    type: object
-  PatchExpertRequest:
+  profile-service_internal_infrastructure_http_schemas.PatchExpertRequest:
     properties:
       avatar_url:
         type: string
@@ -160,7 +206,7 @@ definitions:
           type: string
         type: array
       user_information:
-        $ref: '#/definitions/PatchUserInformationRequest'
+        $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.PatchUserInformationRequest'
       verification_status:
         enum:
         - UNVERIFIED
@@ -169,7 +215,7 @@ definitions:
         - REJECTED
         type: string
     type: object
-  PatchPatientRequest:
+  profile-service_internal_infrastructure_http_schemas.PatchPatientRequest:
     properties:
       address:
         type: string
@@ -178,14 +224,14 @@ definitions:
       email:
         type: string
       user_information:
-        $ref: '#/definitions/PatchUserInformationRequest'
+        $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.PatchUserInformationRequest'
     type: object
-  PatchProfileRequest:
+  profile-service_internal_infrastructure_http_schemas.PatchProfileRequest:
     properties:
       user_information:
-        $ref: '#/definitions/PatchUserInformationRequest'
+        $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.PatchUserInformationRequest'
     type: object
-  PatchUserInformationRequest:
+  profile-service_internal_infrastructure_http_schemas.PatchUserInformationRequest:
     properties:
       country:
         maxLength: 100
@@ -205,7 +251,149 @@ definitions:
         maxLength: 20
         type: string
     type: object
-  PatientProfile:
+  profile-service_internal_infrastructure_http_schemas.UpdateProfileRequest:
+    properties:
+      user_information:
+        $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.UserInformationRequest'
+    type: object
+  profile-service_internal_infrastructure_http_schemas.UpdateSpecializationRequest:
+    properties:
+      code:
+        maxLength: 50
+        type: string
+      description:
+        type: string
+      image_url:
+        type: string
+      location:
+        maxLength: 255
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      slug:
+        maxLength: 255
+        type: string
+      symptoms:
+        items:
+          type: string
+        type: array
+    required:
+    - code
+    - name
+    - symptoms
+    type: object
+  profile-service_internal_infrastructure_http_schemas.UpdateSpecializationStatusRequest:
+    properties:
+      is_active:
+        type: boolean
+    required:
+    - is_active
+    type: object
+  profile-service_internal_infrastructure_http_schemas.UpsertExpertRequest:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      email:
+        type: string
+      introduction_video_url:
+        type: string
+      specialization_ids:
+        items:
+          type: string
+        type: array
+      user_information:
+        $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.UserInformationRequest'
+    type: object
+  profile-service_internal_infrastructure_http_schemas.UpsertPatientRequest:
+    properties:
+      address:
+        type: string
+      avatar_url:
+        type: string
+      email:
+        type: string
+      user_information:
+        $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.UserInformationRequest'
+    type: object
+  profile-service_internal_infrastructure_http_schemas.UserInformationRequest:
+    properties:
+      country:
+        maxLength: 100
+        type: string
+      date_of_birth:
+        description: 'Định dạng: YYYY-MM-DD, rỗng = không khai báo'
+        type: string
+      full_name:
+        type: string
+      gender:
+        enum:
+        - MALE
+        - FEMALE
+        - OTHER
+        type: string
+      phone_number:
+        maxLength: 20
+        type: string
+    required:
+    - full_name
+    type: object
+  profile-service_internal_infrastructure_persistence_models.AdminProfile:
+    properties:
+      email:
+        type: string
+      note:
+        type: string
+      profile_id:
+        type: string
+    type: object
+  profile-service_internal_infrastructure_persistence_models.ExpertProfile:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      email:
+        type: string
+      introduction_video_url:
+        type: string
+      managed_by_admin_id:
+        description: Admin đã duyệt chuyên gia và trở thành người quản lý (auth id
+          của Admin).
+        type: string
+      profile_id:
+        type: string
+      specializations:
+        description: 'Quan hệ N-N: Chuyên gia và Chuyên khoa (GORM tự tạo bảng trung
+          gian)'
+        items:
+          $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.Specialization'
+        type: array
+      verification_status:
+        type: string
+      verified_at:
+        type: string
+    type: object
+  profile-service_internal_infrastructure_persistence_models.MedicalHistory:
+    properties:
+      condition_name:
+        type: string
+      description:
+        type: string
+      diagnosed_at:
+        type: string
+      history_id:
+        type: string
+      is_active:
+        type: boolean
+      is_chronic:
+        type: boolean
+      patient_profile_id:
+        type: string
+    type: object
+  profile-service_internal_infrastructure_persistence_models.PatientProfile:
     properties:
       address:
         type: string
@@ -215,15 +403,40 @@ definitions:
         type: string
       medical_histories:
         items:
-          $ref: '#/definitions/MedicalHistory'
+          $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.MedicalHistory'
         type: array
       profile_id:
         type: string
     type: object
-  Profile:
+  profile-service_internal_infrastructure_persistence_models.PatientRecord:
+    properties:
+      address:
+        type: string
+      created_at:
+        type: string
+      date_of_birth:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      gender:
+        type: string
+      owner_auth_id:
+        type: string
+      phone_number:
+        type: string
+      record_id:
+        type: string
+      relationship:
+        $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.Relationship'
+      updated_at:
+        type: string
+    type: object
+  profile-service_internal_infrastructure_persistence_models.Profile:
     properties:
       admin_profile:
-        $ref: '#/definitions/AdminProfile'
+        $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.AdminProfile'
       auth_id:
         type: string
       created_at:
@@ -231,21 +444,39 @@ definitions:
       deleted_at:
         type: string
       expert_profile:
-        $ref: '#/definitions/ExpertProfile'
+        $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.ExpertProfile'
       id:
         type: string
       patient_profile:
-        $ref: '#/definitions/PatientProfile'
+        $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.PatientProfile'
       role:
-        $ref: '#/definitions/Role'
+        $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.Role'
       slug:
         type: string
       updated_at:
         type: string
       user_information:
-        $ref: '#/definitions/UserInformation'
+        $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.UserInformation'
     type: object
-  Role:
+  profile-service_internal_infrastructure_persistence_models.Relationship:
+    enum:
+    - SELF
+    - PARENT
+    - CHILD
+    - SPOUSE
+    - SIBLING
+    - RELATIVE
+    - OTHER
+    type: string
+    x-enum-varnames:
+    - RelationshipSelf
+    - RelationshipParent
+    - RelationshipChild
+    - RelationshipSpouse
+    - RelationshipSibling
+    - RelationshipRelative
+    - RelationshipOther
+  profile-service_internal_infrastructure_persistence_models.Role:
     enum:
     - ADMIN
     - EXPERT
@@ -255,7 +486,7 @@ definitions:
     - RoleAdmin
     - RoleExpert
     - RolePatient
-  Specialization:
+  profile-service_internal_infrastructure_persistence_models.Specialization:
     properties:
       code:
         type: string
@@ -278,40 +509,7 @@ definitions:
           type: string
         type: array
     type: object
-  UpdateProfileRequest:
-    properties:
-      user_information:
-        $ref: '#/definitions/UserInformationRequest'
-    type: object
-  UpsertExpertRequest:
-    properties:
-      avatar_url:
-        type: string
-      bio:
-        type: string
-      email:
-        type: string
-      introduction_video_url:
-        type: string
-      specialization_ids:
-        items:
-          type: string
-        type: array
-      user_information:
-        $ref: '#/definitions/UserInformationRequest'
-    type: object
-  UpsertPatientRequest:
-    properties:
-      address:
-        type: string
-      avatar_url:
-        type: string
-      email:
-        type: string
-      user_information:
-        $ref: '#/definitions/UserInformationRequest'
-    type: object
-  UserInformation:
+  profile-service_internal_infrastructure_persistence_models.UserInformation:
     properties:
       country:
         type: string
@@ -323,28 +521,6 @@ definitions:
         type: string
       phone_number:
         type: string
-    type: object
-  UserInformationRequest:
-    properties:
-      country:
-        maxLength: 100
-        type: string
-      date_of_birth:
-        description: 'Định dạng: YYYY-MM-DD, rỗng = không khai báo'
-        type: string
-      full_name:
-        type: string
-      gender:
-        enum:
-        - MALE
-        - FEMALE
-        - OTHER
-        type: string
-      phone_number:
-        maxLength: 20
-        type: string
-    required:
-    - full_name
     type: object
 info:
   contact: {}
@@ -376,10 +552,10 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/BaseResponse'
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
             - properties:
                 result:
-                  $ref: '#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile'
+                  $ref: '#/definitions/profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile'
               type: object
       security:
       - BearerAuth: []
@@ -395,22 +571,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/CreateProfileRequest'
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.CreateProfileRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Tạo mới một profile'
@@ -430,11 +606,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Xoá (mềm) một profile'
@@ -453,11 +629,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Xem chi tiết 1 profile'
@@ -477,22 +653,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/PatchProfileRequest'
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.PatchProfileRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật một phần thông tin profile'
@@ -512,28 +688,223 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/UpdateProfileRequest'
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.UpdateProfileRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật thông tin người dùng của profile'
       tags:
       - profiles
+  /api/v1/profiles/{id}/avatar:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        Tải ảnh lên S3 và lưu URL trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.
+        Bấm "Authorize" và nhập "Bearer <access_token>" trước khi thử.
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Ảnh JPEG, PNG, GIF hoặc WebP, tối đa 5 MB
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/internal_infrastructure_http_handlers.AvatarUploadResult'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "413":
+          description: Request Entity Too Large
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Tải lên ảnh đại diện
+      tags:
+      - profiles
   /api/v1/profiles/experts:
+    get:
+      parameters:
+      - default: 1
+        description: Trang
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Số dòng/trang
+        in: query
+        name: page_size
+        type: integer
+      - description: Tìm theo tên
+        in: query
+        name: search
+        type: string
+      - description: Lọc theo chuyên khoa (spec_id)
+        in: query
+        name: specialization_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      summary: Danh sách chuyên gia
+      tags:
+      - experts
+  /api/v1/profiles/experts/{id}:
+    get:
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      summary: Xem chi tiết chuyên gia
+      tags:
+      - experts
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Các trường cần cập nhật
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.PatchExpertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật một phần hồ sơ chuyên gia'
+      tags:
+      - experts
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Auth Account ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Hồ sơ chuyên gia
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.UpsertExpertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật toàn bộ hồ sơ chuyên gia'
+      tags:
+      - experts
+  /api/v1/profiles/experts/managed:
     get:
       parameters:
       - default: 1
@@ -557,108 +928,22 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/BaseResponse'
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
             - properties:
                 result:
-                  $ref: '#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile'
+                  $ref: '#/definitions/profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile'
               type: object
-      summary: Danh sách chuyên gia
-      tags:
-      - experts
-  /api/v1/profiles/experts/{id}:
-    get:
-      parameters:
-      - description: Auth Account ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
+        "401":
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/BaseResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/BaseResponse'
-      summary: Xem chi tiết chuyên gia
-      tags:
-      - experts
-    patch:
-      consumes:
-      - application/json
-      parameters:
-      - description: Auth Account ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Các trường cần cập nhật
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/PatchExpertRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/BaseResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/BaseResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
-      summary: '[Admin] Cập nhật một phần hồ sơ chuyên gia'
-      tags:
-      - experts
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: Auth Account ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Hồ sơ chuyên gia
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/UpsertExpertRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/BaseResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/BaseResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/BaseResponse'
-      security:
-      - BearerAuth: []
-      summary: '[Admin] Cập nhật toàn bộ hồ sơ chuyên gia'
+      summary: '[Admin] Danh sách chuyên gia tôi quản lý'
       tags:
       - experts
   /api/v1/profiles/me:
@@ -669,15 +954,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: Xem hồ sơ của chính mình
@@ -692,15 +977,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: Cập nhật một phần hồ sơ của chính mình
@@ -715,15 +1000,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: Cập nhật toàn bộ hồ sơ của chính mình
@@ -737,15 +1022,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: Xem tiền sử bệnh của chính mình
@@ -760,27 +1045,138 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/CreateMedicalHistoryRequest'
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.CreateMedicalHistoryRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: Thêm tiền sử bệnh cho chính mình
       tags:
       - patients
+  /api/v1/profiles/me/patient-records:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+            - properties:
+                result:
+                  items:
+                    $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.PatientRecord'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Danh sách hồ sơ người khám của chính mình
+      tags:
+      - patient-records
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Hồ sơ người khám
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.CreatePatientRecordRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.PatientRecord'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: Tạo hồ sơ người khám mới
+      tags:
+      - patient-records
+  /api/v1/profiles/me/specializations/{specId}:
+    delete:
+      parameters:
+      - description: Specialization ID
+        in: path
+        name: specId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Expert] Bỏ chuyên khoa của chính mình'
+      tags:
+      - experts
+    post:
+      parameters:
+      - description: Specialization ID
+        in: path
+        name: specId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Expert] Thêm chuyên khoa cho chính mình'
+      tags:
+      - experts
   /api/v1/profiles/patients:
     get:
       parameters:
@@ -805,10 +1201,10 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/BaseResponse'
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
             - properties:
                 result:
-                  $ref: '#/definitions/PageResult-profile-service_internal_infrastructure_persistence_models_Profile'
+                  $ref: '#/definitions/profile-service_internal_infrastructure_http_response.PageResult-profile-service_internal_infrastructure_persistence_models_Profile'
               type: object
       security:
       - BearerAuth: []
@@ -829,11 +1225,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Xem chi tiết bệnh nhân'
@@ -853,22 +1249,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/PatchPatientRequest'
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.PatchPatientRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật một phần hồ sơ bệnh nhân'
@@ -888,22 +1284,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/UpsertPatientRequest'
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.UpsertPatientRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Cập nhật toàn bộ hồ sơ bệnh nhân'
@@ -923,11 +1319,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       security:
       - BearerAuth: []
       summary: '[Admin] Xem tiền sử bệnh của một bệnh nhân'
@@ -947,11 +1343,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       summary: Xem chi tiết 1 profile công khai
       tags:
       - profiles
@@ -964,11 +1360,11 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/BaseResponse'
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
             - properties:
                 result:
                   items:
-                    $ref: '#/definitions/Specialization'
+                    $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.Specialization'
                   type: array
               type: object
       summary: Danh sách chuyên khoa
@@ -985,7 +1381,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/CreateSpecializationRequest'
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.CreateSpecializationRequest'
       produces:
       - application/json
       responses:
@@ -993,32 +1389,221 @@ paths:
           description: Created
           schema:
             allOf:
-            - $ref: '#/definitions/BaseResponse'
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
             - properties:
                 result:
-                  $ref: '#/definitions/Specialization'
+                  $ref: '#/definitions/profile-service_internal_infrastructure_persistence_models.Specialization'
               type: object
         "400":
           description: Bad Request
           schema:
             allOf:
-            - $ref: '#/definitions/BaseResponse'
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
             - properties:
                 result:
-                  $ref: '#/definitions/ErrorResult'
+                  $ref: '#/definitions/profile-service_internal_infrastructure_http_response.ErrorResult'
               type: object
         "409":
           description: Conflict
           schema:
             allOf:
-            - $ref: '#/definitions/BaseResponse'
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
             - properties:
                 result:
-                  $ref: '#/definitions/ErrorResult'
+                  $ref: '#/definitions/profile-service_internal_infrastructure_http_response.ErrorResult'
               type: object
       security:
       - BearerAuth: []
       summary: '[Admin] Tạo chuyên khoa mới'
+      tags:
+      - specializations
+  /api/v1/profiles/specializations/{specId}:
+    delete:
+      description: Chuyên khoa đang có chuyên gia đăng ký không xoá được (409) - hãy
+        ngừng hoạt động thay vì xoá.
+      parameters:
+      - description: Specialization ID
+        in: path
+        name: specId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Xoá chuyên khoa'
+      tags:
+      - specializations
+    get:
+      parameters:
+      - description: Specialization ID
+        in: path
+        name: specId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/internal_infrastructure_http_handlers.specializationAdminView'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Xem chi tiết chuyên khoa'
+      tags:
+      - specializations
+    put:
+      consumes:
+      - application/json
+      description: code và slug là duy nhất; slug bỏ trống sẽ được sinh lại từ name.
+        Không đổi trạng thái hoạt động.
+      parameters:
+      - description: Specialization ID
+        in: path
+        name: specId
+        required: true
+        type: string
+      - description: Chuyên khoa
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.UpdateSpecializationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/internal_infrastructure_http_handlers.specializationAdminView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Cập nhật chuyên khoa'
+      tags:
+      - specializations
+  /api/v1/profiles/specializations/{specId}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Chuyên khoa ngừng hoạt động bị ẩn khỏi danh sách public và không
+        đăng ký mới được; chuyên gia đã đăng ký vẫn giữ.
+      parameters:
+      - description: Specialization ID
+        in: path
+        name: specId
+        required: true
+        type: string
+      - description: Trạng thái
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.UpdateSpecializationStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/internal_infrastructure_http_handlers.specializationAdminView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Bật/tắt chuyên khoa'
+      tags:
+      - specializations
+  /api/v1/profiles/specializations/all:
+    get:
+      parameters:
+      - default: 1
+        description: Trang
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Số dòng/trang
+        in: query
+        name: page_size
+        type: integer
+      - description: Tìm theo tên hoặc mã
+        in: query
+        name: search
+        type: string
+      - description: Lọc theo trạng thái hoạt động
+        in: query
+        name: is_active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+            - properties:
+                result:
+                  $ref: '#/definitions/profile-service_internal_infrastructure_http_response.PageResult-internal_infrastructure_http_handlers_specializationAdminView'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
+      security:
+      - BearerAuth: []
+      summary: '[Admin] Danh sách tất cả chuyên khoa'
       tags:
       - specializations
   /internal/api/v1/profiles/create:
@@ -1033,22 +1618,22 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/CreateProfileRequest'
+          $ref: '#/definitions/profile-service_internal_infrastructure_http_schemas.CreateProfileRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       summary: '[Internal] Tạo profile khi có tài khoản mới'
       tags:
       - internal
@@ -1062,11 +1647,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/BaseResponse'
+            $ref: '#/definitions/profile-service_internal_infrastructure_http_response.BaseResponse'
       summary: '[Internal] Đồng bộ authorId cho các post mẫu'
       tags:
       - internal

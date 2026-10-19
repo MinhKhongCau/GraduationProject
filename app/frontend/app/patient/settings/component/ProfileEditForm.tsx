@@ -7,6 +7,8 @@ import { z } from "zod";
 import { Card, CardHeader, Button, Input, Label, FieldError } from "@/components/ui";
 import { Camera, User } from "lucide-react";
 import Image from "next/image";
+import { useAvatarUpload } from "@/hooks";
+import { AVATAR_ACCEPTED_TYPES } from "@/api/profile";
 
 const profileSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -44,15 +46,16 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultValues.fullName, defaultValues.avatarUrl, defaultValues.dateOfBirth]);
 
+  // Upload to S3 right away; the returned URL is saved as avatarUrl with the form.
+  const { upload, isUploading } = useAvatarUpload((url) =>
+    setValue("avatarUrl", url, { shouldDirty: true })
+  );
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setValue("avatarUrl", reader.result as string, { shouldDirty: true });
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) upload(file);
+    // Allow picking the same file again after a failed upload.
+    e.target.value = "";
   };
 
   const triggerFileInput = () => {
@@ -73,7 +76,7 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
                 alt="Avatar Preview"
                 fill
                 className="object-cover"
-                unoptimized // to support base64 strings correctly in Next.js Image
+                unoptimized
               />
             ) : (
               <div className="flex h-full w-full items-center justify-center text-muted-foreground">
@@ -83,6 +86,7 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
             <button
               type="button"
               onClick={triggerFileInput}
+              disabled={isUploading}
               aria-label="Change Photo"
               className="absolute inset-0 flex flex-col items-center justify-center bg-foreground/60 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
             >
@@ -93,21 +97,22 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
           
           <div className="text-center sm:text-left">
             <h3 className="text-sm font-semibold text-foreground">Profile Picture</h3>
-            <p className="mt-1 text-xs text-muted-foreground">PNG or JPG. Max 2MB.</p>
+            <p className="mt-1 text-xs text-muted-foreground">JPG, PNG, GIF or WebP. Max 5MB.</p>
             <Button
               type="button"
               variant="outline"
               size="sm"
               className="mt-2"
               onClick={triggerFileInput}
+              disabled={isUploading}
             >
-              Upload Image
+              {isUploading ? "Uploading..." : "Upload Image"}
             </Button>
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept="image/*"
+              accept={AVATAR_ACCEPTED_TYPES.join(",")}
               className="hidden"
             />
           </div>
@@ -128,7 +133,7 @@ export function ProfileEditForm({ defaultValues, onSubmit, isSubmitting }: Profi
         </div>
 
         <div>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting || isUploading}>
             {isSubmitting ? "Saving..." : "Save changes"}
           </Button>
         </div>
