@@ -40,6 +40,28 @@ func TestLoadConfig_TrimsTrailingSlashFromURL(t *testing.T) {
 	assert.Equal(t, "https://cdn.example.com", cfg.URL)
 }
 
+func TestLoadConfig_EndpointDefaultsRegionToAuto(t *testing.T) {
+	t.Setenv("S3_BUCKET", "mindcare-profiles")
+	t.Setenv("S3_URL", "https://pub-123.r2.dev")
+	t.Setenv("S3_ENDPOINT", "https://account.r2.cloudflarestorage.com/")
+	t.Setenv("AWS_REGION", "")
+	t.Setenv("AWS_ACCESS_KEY_ID", "key-id")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "secret")
+
+	cfg, err := LoadConfig()
+	require.NoError(t, err)
+	assert.Equal(t, "auto", cfg.Region)
+	assert.Equal(t, "https://account.r2.cloudflarestorage.com", cfg.Endpoint)
+}
+
+func TestNewClient_WithEndpoint(t *testing.T) {
+	_, err := NewClient(context.Background(), Config{
+		Bucket: "b", URL: "https://pub-123.r2.dev", Region: "auto",
+		Endpoint: "https://account.r2.cloudflarestorage.com", AccessKeyID: "k", SecretAccessKey: "s",
+	})
+	require.NoError(t, err)
+}
+
 func TestDetectImageType_AcceptsPNG(t *testing.T) {
 	body := bytes.NewReader(pngHeader)
 
