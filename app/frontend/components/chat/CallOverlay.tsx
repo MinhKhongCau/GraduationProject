@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { Phone, PhoneOff, Mic, MicOff, Video, VideoOff, User } from "lucide-react";
 import Image from "next/image";
+import { resolveImageUrl } from "@/lib/image";
 
 interface CallOverlayProps {
   status: "idle" | "calling" | "incoming" | "connecting" | "connected";
@@ -95,7 +96,7 @@ export function CallOverlay({
               <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
               {peerAvatar ? (
                 <Image
-                  src={peerAvatar}
+                  src={resolveImageUrl(peerAvatar) ?? ""}
                   alt={peerName}
                   width={120}
                   height={120}

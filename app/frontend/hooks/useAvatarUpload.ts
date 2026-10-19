@@ -8,9 +8,9 @@ import { useErrorContext } from "@/context/ErrorContext";
 
 /**
  * Uploads the logged-in user's avatar to S3 (POST /profiles/:id/avatar) and
- * hands the returned S3 URL to `onUploaded`, so the form can save it as avatarUrl.
+ * hands the returned S3 object key to `onUploaded`, so the form can save it as avatarUrl.
  */
-export function useAvatarUpload(onUploaded: (avatarUrl: string) => void) {
+export function useAvatarUpload(onUploaded: (objectKey: string) => void) {
   const { user } = useAuthContext();
   const { showError } = useErrorContext();
 
@@ -19,7 +19,7 @@ export function useAvatarUpload(onUploaded: (avatarUrl: string) => void) {
       if (!user) throw new Error("You need to be logged in to upload an avatar.");
       return profileApi.uploadAvatar(user.id, file);
     },
-    onSuccess: (result) => onUploaded(result.avatarUrl),
+    onSuccess: (result) => onUploaded(result.objectKey),
   });
 
   function upload(file: File) {

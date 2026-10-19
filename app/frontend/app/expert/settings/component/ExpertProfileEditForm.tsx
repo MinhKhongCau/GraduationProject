@@ -9,6 +9,7 @@ import { Camera, User } from "lucide-react";
 import Image from "next/image";
 import { useAvatarUpload } from "@/hooks";
 import { AVATAR_ACCEPTED_TYPES } from "@/api/profile";
+import { resolveImageUrl } from "@/lib/image";
 
 const expertProfileSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
@@ -47,7 +48,7 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultValues.fullName, defaultValues.avatarUrl, defaultValues.introductionVideoUrl, defaultValues.bio]);
 
-  // Upload to S3 right away; the returned URL is saved as avatarUrl with the form.
+  // Upload to S3 right away; the returned object key is saved as avatarUrl with the form.
   const { upload, isUploading } = useAvatarUpload((url) =>
     setValue("avatarUrl", url, { shouldDirty: true })
   );
@@ -73,7 +74,7 @@ export function ExpertProfileEditForm({ defaultValues, onSubmit, isSubmitting }:
           <div className="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-border bg-surface transition-colors hover:border-primary">
             {avatarUrl ? (
               <Image
-                src={avatarUrl}
+                src={resolveImageUrl(avatarUrl) ?? ""}
                 alt="Avatar Preview"
                 fill
                 className="object-cover"
