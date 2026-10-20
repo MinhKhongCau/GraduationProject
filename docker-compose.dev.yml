@@ -4,6 +4,9 @@ services:
     build:
       context: ./app/frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_S3_PUBLIC_URL=${NEXT_PUBLIC_S3_PUBLIC_URL}
     container_name: frontend-app
     restart: always
     ports:
