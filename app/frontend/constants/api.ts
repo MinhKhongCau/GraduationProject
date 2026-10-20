@@ -33,7 +33,7 @@ export const PROFILE_ENDPOINTS = {
   MANAGED_EXPERTS: "/profiles/experts/managed",
   EXPERT: (accountId: string) => `/profiles/experts/${accountId}`,
   PROFILE: (accountId: string) => `/profiles/public/${accountId}`,
-  /** Uploads the avatar to S3 and saves the returned URL as the profile's avatar_url. */
+  /** Uploads the avatar to S3 and saves the returned object key as the profile's avatar_url. */
   AVATAR: (accountId: string) => `/profiles/${accountId}/avatar`,
 };
 

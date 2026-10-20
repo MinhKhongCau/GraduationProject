@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { patientApi, expertApi } from "@/api";
 import type { NavItem } from "@/constants/nav";
 import type { PatientProfile, ExpertProfile } from "@/types";
+import { resolveImageUrl } from "@/lib/image";
 
 export interface NavAvatarMenuProps {
   settingsItem: NavItem;
@@ -38,7 +39,7 @@ export function NavAvatarMenu({ settingsItem }: NavAvatarMenuProps) {
 
   if (!user) return null;
 
-  const displayAvatar = profile?.avatarUrl;
+  const displayAvatar = resolveImageUrl(profile?.avatarUrl);
   const displayFullName = profile?.fullName || user.fullName;
 
   return (

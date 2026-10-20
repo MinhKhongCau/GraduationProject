@@ -9,6 +9,7 @@ import { expertApi, patientApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
 import { useAuthContext } from "@/context/AuthContext";
 import type { AppointmentParty } from "@/types";
+import { resolveImageUrl } from "@/lib/image";
 
 const GENDER_TEXT: Record<string, string> = { MALE: "Nam", FEMALE: "Nữ", OTHER: "Khác" };
 const ROLE_TEXT: Record<string, string> = { PATIENT: "Bệnh nhân", EXPERT: "Chuyên gia", ADMIN: "Quản trị viên" };
@@ -61,7 +62,7 @@ function ExpandableParty({ party, fallbackId, renderDetail }: ExpandablePartyPro
         onClick={() => setOpen((value) => !value)}
         className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-colors hover:bg-surface/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
       >
-        <Avatar name={party?.fullName} url={party?.avatarUrl} />
+        <Avatar name={party?.fullName} url={resolveImageUrl(party?.avatarUrl)} />
         <div className="min-w-0 flex-1 text-sm">
           <p className="font-semibold text-foreground">{party?.fullName || `#${fallbackId.slice(0, 8)}`}</p>
           <p className="truncate text-xs text-muted-foreground">

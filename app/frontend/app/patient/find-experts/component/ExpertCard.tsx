@@ -4,13 +4,14 @@ import { BadgeCheck } from "lucide-react";
 import { Card, buttonClasses } from "@/components/ui";
 import { ROUTES } from "@/constants";
 import type { ExpertProfile } from "@/types";
+import { resolveImageUrl } from "@/lib/image";
 
 export function ExpertCard({ expert }: { expert: ExpertProfile }) {
   return (
     <Card className="flex flex-col p-6 transition-shadow hover:shadow-elevated">
       <div className="mb-4 flex items-center gap-3">
         <Image
-          src={expert.avatarUrl || "/images/auth-bg.png"}
+          src={resolveImageUrl(expert.avatarUrl) || "/images/auth-bg.png"}
           alt={expert.fullName}
           width={48}
           height={48}

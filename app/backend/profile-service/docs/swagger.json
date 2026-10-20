@@ -1681,7 +1681,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Tải ảnh lên S3 và lưu URL trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.\nBấm \"Authorize\" và nhập \"Bearer \u003caccess_token\u003e\" trước khi thử.",
+                "description": "Tải ảnh lên S3 và lưu object key trả về vào avatar_url của hồ sơ bệnh nhân/chuyên gia.\nFE hiển thị ảnh bằng \u003cpublic URL của bucket\u003e/\u003cobject_key\u003e.\nBấm \"Authorize\" và nhập \"Bearer \u003caccess_token\u003e\" trước khi thử.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -1848,9 +1848,9 @@
                     "format": "uuid",
                     "example": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
                 },
-                "avatar_url": {
+                "object_key": {
                     "type": "string",
-                    "example": "https://cdn.example.com/profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png"
+                    "example": "profiles/1b4e28ba-2fa1-11d2-883f-0016d3cca427/avatar-9f8c.png"
                 }
             }
         },

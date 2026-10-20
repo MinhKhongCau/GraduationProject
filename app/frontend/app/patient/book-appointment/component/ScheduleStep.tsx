@@ -10,6 +10,7 @@ import { useApiQuery } from "@/hooks";
 import { bookingApi, expertApi, specializationApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
 import type { AvailableTimeSlot, ExpertProfile, PatientRecord, Specialization } from "@/types";
+import { resolveImageUrl } from "@/lib/image";
 
 /** Lists longer than these are cut short behind a "Show all" toggle. */
 const VISIBLE_SPECIALIZATIONS = 8;
@@ -192,7 +193,7 @@ export function ScheduleStep({
                         </div>
                       )}
                       <Image
-                        src={expert.avatarUrl || "/images/auth-bg.png"}
+                        src={resolveImageUrl(expert.avatarUrl) || "/images/auth-bg.png"}
                         alt={expert.fullName}
                         width={44}
                         height={44}

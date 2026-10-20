@@ -28,9 +28,8 @@ var allowedImageExtensions = map[string]string{
 
 // Client uploads objects to a single S3 bucket.
 type Client struct {
-	api     *awss3.Client
-	bucket  string
-	baseURL string
+	api    *awss3.Client
+	bucket string
 }
 
 // NewClient creates an S3 client with the static credentials from cfg.
@@ -59,14 +58,14 @@ func NewClient(ctx context.Context, cfg Config) (*Client, error) {
 	})
 
 	return &Client{
-		api:     api,
-		bucket:  cfg.Bucket,
-		baseURL: cfg.URL,
+		api:    api,
+		bucket: cfg.Bucket,
 	}, nil
 }
 
 // UploadProfileImage checks that body is an image, stores it under profiles/<profileID>/ with a
-// unique name, and returns the public URL of the stored object.
+// unique name, and returns the object key (e.g. profiles/<profileID>/avatar-<uuid>.png).
+// Callers store the key; clients build the public URL by prefixing it with the bucket's public URL.
 // The content type is detected from the file bytes, not from the client-supplied header.
 func (c *Client) UploadProfileImage(ctx context.Context, profileID string, body io.ReadSeeker) (string, error) {
 	contentType, err := detectImageType(body)
@@ -89,12 +88,7 @@ func (c *Client) UploadProfileImage(ctx context.Context, profileID string, body 
 		return "", fmt.Errorf("upload ảnh lên S3 thất bại: %w", err)
 	}
 
-	return c.ObjectURL(key), nil
-}
-
-// ObjectURL returns the public URL of an object key in the bucket.
-func (c *Client) ObjectURL(key string) string {
-	return c.baseURL + "/" + key
+	return key, nil
 }
 
 // detectImageType sniffs the first 512 bytes of body and returns its image content type.

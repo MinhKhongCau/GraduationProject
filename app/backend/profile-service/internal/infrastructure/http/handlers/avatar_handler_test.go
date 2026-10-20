@@ -23,7 +23,7 @@ import (
 // pngBytes là header PNG tối thiểu để http.DetectContentType nhận diện đúng (chỉ dùng trong fake uploader).
 var pngBytes = []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n', 0, 0, 0, 0x0d}
 
-// fakeAvatarUploader ghi lại lần gọi và trả về URL/lỗi đã cấu hình, không kết nối S3 thật.
+// fakeAvatarUploader ghi lại lần gọi và trả về object key/lỗi đã cấu hình, không kết nối S3 thật.
 type fakeAvatarUploader struct {
 	url   string
 	err   error
@@ -69,7 +69,7 @@ func expectProfileLookup(mock sqlmock.Sqlmock, profileID, authID uuid.UUID, role
 
 func TestUploadAvatar_Forbidden_WhenNotOwnerOrAdmin(t *testing.T) {
 	SetupTestDB(t)
-	uploader := &fakeAvatarUploader{url: "https://cdn.example.com/x.png"}
+	uploader := &fakeAvatarUploader{url: "profiles/p/x.png"}
 	h := NewAvatarHandler(uploader)
 
 	targetID, callerID := uuid.New(), uuid.New()
@@ -97,7 +97,7 @@ func TestUploadAvatar_ServiceUnavailable_WhenS3NotConfigured(t *testing.T) {
 
 func TestUploadAvatar_BadRequest_WhenTargetIsAdmin(t *testing.T) {
 	_, mock := SetupTestDB(t)
-	uploader := &fakeAvatarUploader{url: "https://cdn.example.com/x.png"}
+	uploader := &fakeAvatarUploader{url: "profiles/p/x.png"}
 	h := NewAvatarHandler(uploader)
 
 	authID := uuid.New()
@@ -144,7 +144,7 @@ func TestUploadAvatar_BadRequest_WhenNotImage(t *testing.T) {
 
 func TestUploadAvatar_PayloadTooLarge(t *testing.T) {
 	_, mock := SetupTestDB(t)
-	uploader := &fakeAvatarUploader{url: "https://cdn.example.com/x.png"}
+	uploader := &fakeAvatarUploader{url: "profiles/p/x.png"}
 	h := NewAvatarHandler(uploader)
 
 	authID := uuid.New()
@@ -160,7 +160,7 @@ func TestUploadAvatar_PayloadTooLarge(t *testing.T) {
 }
 
 func TestUploadAvatar_Success(t *testing.T) {
-	const url = "https://cdn.example.com/profiles/p/avatar-1.png"
+	const objectKey = "profiles/p/avatar-1.png"
 
 	cases := []struct {
 		name  string
@@ -174,7 +174,7 @@ func TestUploadAvatar_Success(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, mock := SetupTestDB(t)
-			uploader := &fakeAvatarUploader{url: url}
+			uploader := &fakeAvatarUploader{url: objectKey}
 			h := NewAvatarHandler(uploader)
 
 			authID := uuid.New()
@@ -196,7 +196,7 @@ func TestUploadAvatar_Success(t *testing.T) {
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
 			assertBaseResponse(t, w, resp)
 			result := resp["result"].(map[string]interface{})
-			assert.Equal(t, url, result["avatar_url"])
+			assert.Equal(t, objectKey, result["object_key"])
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
