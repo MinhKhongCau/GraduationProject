@@ -73,6 +73,10 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image-tag }}:latest
+          # Baked into the frontend bundle at build time; other services ignore them.
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_S3_PUBLIC_URL=${{ vars.NEXT_PUBLIC_S3_PUBLIC_URL }}
 
           # Cấu hình Cache ma thuật bằng Buildx qua GitHub Actions Cache (gha)
           cache-from: type=gha,scope=${{ matrix.service-name }}
