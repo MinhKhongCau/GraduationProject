@@ -351,6 +351,9 @@ services:
       - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
       - INTERNAL_CLIENT_ID=${CHATROOM_SERVICE_NAME:-chatroom-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_CHATROOM}
+      # Meet room join window (minutes before slot start / after slot end).
+      - MEET_JOIN_EARLY_MINUTES=${MEET_JOIN_EARLY_MINUTES:-15}
+      - MEET_JOIN_LATE_MINUTES=${MEET_JOIN_LATE_MINUTES:-60}
 
   # 9. API GATEWAY (Kong)
   api-gateway:
