@@ -150,8 +150,10 @@ func (u *appointmentUsecase) GetAppointmentDetail(ctx context.Context, actorID, 
 			return nil, ErrUnauthorized
 		}
 	}
-	u.attachProfiles(ctx, []*appointmentdomain.Appointment{result})
-	u.attachPayments(ctx, []*appointmentdomain.Appointment{result})
+	refs := []*appointmentdomain.Appointment{result}
+	u.attachSlotAndMeeting(refs)
+	u.attachProfiles(ctx, refs)
+	u.attachPayments(ctx, refs)
 	return result, nil
 }
 
@@ -185,9 +187,20 @@ func (u *appointmentUsecase) listDetails(ctx context.Context, filter Appointment
 	for i := range items {
 		refs[i] = &items[i]
 	}
+	u.attachSlotAndMeeting(refs)
 	u.attachProfiles(ctx, refs)
 	u.attachPayments(ctx, refs)
 	return bookingquery.NewPage(items, filter.Page, total), nil
+}
+
+// attachSlotAndMeeting điền thông tin slot và meeting_status (too_early | open | too_late)
+// theo cửa sổ vào phòng họp; chatroom-service không còn chặn theo giờ.
+func (u *appointmentUsecase) attachSlotAndMeeting(appointments []*appointmentdomain.Appointment) {
+	nowMs := u.meetings.Now().UnixMilli()
+	for _, a := range appointments {
+		a.FillSlot()
+		a.MeetingStatus = u.meetings.JoinWindow.MeetingStatus(*a, nowMs)
+	}
 }
 
 func (u *appointmentUsecase) managedExperts(ctx context.Context, adminID string) ([]string, error) {

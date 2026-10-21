@@ -18,7 +18,7 @@ export interface AppointmentTableProps {
   children: ReactNode;
 }
 
-/** Bordered table frame: select-all header, loading/empty rows, rows, then pagination. */
+/** Bordered table frame: header, loading/empty rows, rows, then pagination. */
 export function AppointmentTable({
   state,
   counterpartLabel,
@@ -30,9 +30,8 @@ export function AppointmentTable({
   children,
 }: AppointmentTableProps) {
   const shownColumns = OPTIONAL_COLUMNS.filter((column) => state.columns[column.id]);
-  // checkbox + Booking ID + counterpart + Actions, plus the optional columns shown.
-  const columnCount = 4 + shownColumns.length;
-  const allSelected = visibleIds.length > 0 && visibleIds.every((id) => state.selectedIds.has(id));
+  // Booking ID + counterpart + Actions, plus the optional columns shown.
+  const columnCount = 3 + shownColumns.length;
 
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-background">
@@ -43,16 +42,6 @@ export function AppointmentTable({
         <table className="w-full border-collapse text-left">
           <thead className="border-b border-border bg-surface">
             <tr className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <th scope="col" className="w-10 px-3 py-2.5">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={(event) => state.selectAll(visibleIds, event.target.checked)}
-                  disabled={visibleIds.length === 0}
-                  aria-label="Select all bookings"
-                  className="h-4 w-4 accent-primary"
-                />
-              </th>
               <th scope="col" className="px-3 py-2.5">
                 Booking ID
               </th>

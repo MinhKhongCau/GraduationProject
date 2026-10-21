@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { ClipboardList, Eye, FileText, Video, XCircle } from "lucide-react";
+import { ClipboardList, Eye, FileText, XCircle } from "lucide-react";
 import { useAppointmentMedicalRecord, type AppointmentWithPatient } from "@/hooks";
 import { SaveMedicalRecordModal } from "@/components/medical-record/SaveMedicalRecordModal";
 import { MedicalRecordDetailModal } from "@/components/medical-record/MedicalRecordDetailModal";
+import { MedicalRecordLoadingModal } from "@/components/medical-record/MedicalRecordLoadingModal";
 import {
   AppointmentDetailModal,
-  AppointmentIdentityCells,
+  AppointmentIdentityCell,
   AppointmentOptionalCells,
+  MeetingRoomActionItem,
   RowActionItem,
   RowActionSeparator,
   RowActionsMenu,
@@ -19,35 +21,28 @@ import {
 export interface AppointmentTableRowProps {
   appointment: AppointmentWithPatient;
   columns: Record<OptionalColumn, boolean>;
-  selected: boolean;
-  onSelectedChange: (selected: boolean) => void;
   onCancel: (appointment: AppointmentWithPatient) => void;
 }
 
-export function AppointmentTableRow({
-  appointment,
-  columns,
-  selected,
-  onSelectedChange,
-  onCancel,
-}: AppointmentTableRowProps) {
+export function AppointmentTableRow({ appointment, columns, onCancel }: AppointmentTableRowProps) {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [recordOpen, setRecordOpen] = useState(false);
   const [appointmentDetailOpen, setAppointmentDetailOpen] = useState(false);
-  const { data: medicalRecord } = useAppointmentMedicalRecord(appointment.appointmentId);
 
-  const isConfirmed = appointment.statusLabel === "CONFIRMED";
-  const canWriteRecord = isConfirmed || appointment.statusLabel === "COMPLETED";
+  const hasRecord = !!appointment.hasMedicalRecord;
+  // Load the record only when it is viewed, or edited when one already exists (to prefill the form).
+  const needsRecord = recordOpen || (saveModalOpen && hasRecord);
+  const { data: medicalRecord, isFetching: isLoadingRecord } = useAppointmentMedicalRecord(
+    appointment.appointmentId,
+    { enabled: needsRecord }
+  );
+  const recordPending = needsRecord && !medicalRecord;
+
+  const canWriteRecord = appointment.statusLabel === "CONFIRMED" || appointment.statusLabel === "COMPLETED";
 
   return (
-    <tr className={selected ? "bg-primary-soft/40" : "hover:bg-surface/60"}>
-      <AppointmentIdentityCells
-        appointment={appointment}
-        selected={selected}
-        onSelectedChange={onSelectedChange}
-        onOpenDetail={() => setAppointmentDetailOpen(true)}
-        hasMedicalRecord={!!medicalRecord}
-      />
+    <tr className="hover:bg-surface/60">
+      <AppointmentIdentityCell appointment={appointment} onOpenDetail={() => setAppointmentDetailOpen(true)} />
       <td className="px-3 py-3 align-top text-sm">
         <p className="font-medium text-foreground">
           {appointment.patientName || `Bệnh nhân (#${appointment.patientId.slice(0, 8)})`}
@@ -61,22 +56,9 @@ export function AppointmentTableRow({
           <Eye className="h-4 w-4" aria-hidden="true" />
           Chi tiết
         </RowActionItem>
-        {isConfirmed &&
-          (appointment.meetingLink ? (
-            <RowActionItem asChild>
-              <a href={appointment.meetingLink} target="_blank" rel="noreferrer">
-                <Video className="h-4 w-4" aria-hidden="true" />
-                Vào phòng tư vấn
-              </a>
-            </RowActionItem>
-          ) : (
-            <RowActionItem disabled>
-              <Video className="h-4 w-4" aria-hidden="true" />
-              Phòng tư vấn chưa sẵn sàng
-            </RowActionItem>
-          ))}
-        {medicalRecord && (
-          <RowActionItem onSelect={() => setDetailModalOpen(true)}>
+        <MeetingRoomActionItem appointment={appointment} />
+        {hasRecord && (
+          <RowActionItem onSelect={() => setRecordOpen(true)}>
             <FileText className="h-4 w-4" aria-hidden="true" />
             Xem bệnh án
           </RowActionItem>
@@ -84,7 +66,7 @@ export function AppointmentTableRow({
         {canWriteRecord && (
           <RowActionItem onSelect={() => setSaveModalOpen(true)}>
             <ClipboardList className="h-4 w-4" aria-hidden="true" />
-            {medicalRecord ? "Cập nhật bệnh án" : "Ghi chú bệnh án"}
+            {hasRecord ? "Cập nhật bệnh án" : "Ghi chú bệnh án"}
           </RowActionItem>
         )}
         {isCancelable(appointment) && (
@@ -102,20 +84,35 @@ export function AppointmentTableRow({
         appointmentId={appointmentDetailOpen ? appointment.appointmentId : null}
         onClose={() => setAppointmentDetailOpen(false)}
       />
-      <SaveMedicalRecordModal
-        open={saveModalOpen}
-        onOpenChange={setSaveModalOpen}
-        appointmentId={appointment.appointmentId}
-        patientName={appointment.patientName}
-        initialData={medicalRecord}
-      />
-      <MedicalRecordDetailModal
-        open={detailModalOpen}
-        onOpenChange={setDetailModalOpen}
-        record={medicalRecord || null}
-        onEdit={() => setSaveModalOpen(true)}
-        isExpert
-      />
+      {recordPending ? (
+        <MedicalRecordLoadingModal
+          open
+          onOpenChange={(open) => {
+            if (!open) {
+              setRecordOpen(false);
+              setSaveModalOpen(false);
+            }
+          }}
+          isLoading={isLoadingRecord}
+        />
+      ) : (
+        <>
+          <SaveMedicalRecordModal
+            open={saveModalOpen}
+            onOpenChange={setSaveModalOpen}
+            appointmentId={appointment.appointmentId}
+            patientName={appointment.patientName}
+            initialData={medicalRecord}
+          />
+          <MedicalRecordDetailModal
+            open={recordOpen}
+            onOpenChange={setRecordOpen}
+            record={medicalRecord || null}
+            onEdit={() => setSaveModalOpen(true)}
+            isExpert
+          />
+        </>
+      )}
     </tr>
   );
 }

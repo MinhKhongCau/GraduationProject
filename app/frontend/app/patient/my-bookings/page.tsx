@@ -4,17 +4,13 @@ import { useState } from "react";
 import { BookingTableRow } from "./component/BookingTableRow";
 import {
   AppointmentListHeader,
-  AppointmentListToolbar,
+  AppointmentListSummary,
   AppointmentTable,
   CancelAppointmentsDialog,
   DateSortFilters,
   STATUSES,
   StatusFilterLinks,
-  downloadBookingsCsv,
-  downloadTicketsIcs,
-  isCancelable,
   useAppointmentListState,
-  type Counterpart,
 } from "@/components/appointment";
 import { useMyBookingsPage, useMyBookingCounts, useCancelBooking, usePaymentRedirect } from "@/hooks";
 import { useApiMutation } from "@/hooks";
@@ -23,13 +19,13 @@ import { CHANNELING_FEE } from "@/constants";
 import { useErrorContext } from "@/context/ErrorContext";
 import type { AppointmentWithExpert } from "@/hooks";
 
-const EXPERT: Counterpart<AppointmentWithExpert> = { label: "Expert", name: (a) => a.expertName };
+const expertName = (a: AppointmentWithExpert) => a.expertName;
 
 export default function MyBookingsPage() {
   const list = useAppointmentListState();
   const [cancelingAppointments, setCancelingAppointments] = useState<AppointmentWithExpert[]>([]);
   const [payingAppointmentId, setPayingAppointmentId] = useState<string | null>(null);
-  const [isBulkCanceling, setIsBulkCanceling] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
   const { showSuccess, showError } = useErrorContext();
 
   const { data: bookingPage, isLoading, isFetching, refetch } = useMyBookingsPage(list.params);
@@ -71,52 +67,24 @@ export default function MyBookingsPage() {
     list.setPage(Math.max(totalPages - 1, 0));
   }
 
-  const selectedAppointments = visibleAppointments.filter((a) => list.selectedIds.has(a.appointmentId));
-
   function handlePayNow(appointment: AppointmentWithExpert) {
     setPayingAppointmentId(appointment.appointmentId);
     payMutation.mutate(appointment);
   }
 
-  function handleApplyBulkAction() {
-    if (selectedAppointments.length === 0) {
-      showError({ message: "Select at least one booking first." });
-      return;
-    }
-    if (list.bulkAction === "download") {
-      downloadBookingsCsv(selectedAppointments, EXPERT);
-    } else if (list.bulkAction === "cancel") {
-      const cancelable = selectedAppointments.filter(isCancelable);
-      if (cancelable.length === 0) {
-        showError({ message: "None of the selected bookings can be canceled." });
-        return;
-      }
-      setCancelingAppointments(cancelable);
-    }
-  }
-
-  function handleDownloadTickets() {
-    const source = selectedAppointments.length > 0 ? selectedAppointments : visibleAppointments;
-    if (downloadTicketsIcs(source, EXPERT) === 0)
-      showError({ message: "No confirmed sessions to download tickets for." });
-  }
-
   async function handleConfirmCancel(reason: string) {
     if (cancelingAppointments.length === 0) return;
-    setIsBulkCanceling(true);
+    setIsCanceling(true);
     const results = await Promise.allSettled(
       cancelingAppointments.map((a) => cancelMutation.mutateAsync({ appointmentId: a.appointmentId, reason }))
     );
-    setIsBulkCanceling(false);
+    setIsCanceling(false);
 
     const succeeded = results.filter((r) => r.status === "fulfilled").length;
-    if (succeeded > 0) showSuccess(succeeded > 1 ? `${succeeded} bookings canceled.` : "Booking canceled.");
-    if (succeeded < results.length)
-      showError({ message: `${results.length - succeeded} booking(s) could not be canceled.` });
+    if (succeeded > 0) showSuccess("Booking canceled.");
+    if (succeeded < results.length) showError({ message: "The booking could not be canceled." });
 
     setCancelingAppointments([]);
-    list.clearSelection();
-    list.setBulkAction("");
   }
 
   return (
@@ -128,26 +96,21 @@ export default function MyBookingsPage() {
           <>
             <p>
               The Actions button on each row opens a menu: booking details, the expert&apos;s profile, joining the
-              consultation room, and paying or cancelling when that applies.
+              consultation room, viewing the medical record, and paying or cancelling when that applies.
             </p>
-            <p>Select rows and use Bulk Actions to cancel or download several bookings at once.</p>
             <p>
-              &quot;Download bookings&quot; and &quot;Download tickets&quot; use the bookings on the current page;
-              tickets are a calendar file (.ics) of confirmed sessions.
+              The consultation room opens shortly before the session starts; until then its link stays hidden. The
+              Status column shows when a medical record is available.
             </p>
           </>
         }
       />
       <StatusFilterLinks state={list} counts={filterCounts} />
       <DateSortFilters state={list} />
-      <AppointmentListToolbar
+      <AppointmentListSummary
         state={list}
         visibleCount={visibleAppointments.length}
-        selectedCount={selectedAppointments.length}
         totalItems={bookingPage?.totalItems ?? 0}
-        onApplyBulkAction={handleApplyBulkAction}
-        onDownloadBookings={() => downloadBookingsCsv(visibleAppointments, EXPERT)}
-        onDownloadTickets={handleDownloadTickets}
       />
 
       <AppointmentTable
@@ -164,8 +127,6 @@ export default function MyBookingsPage() {
             key={appointment.appointmentId}
             appointment={appointment}
             columns={list.columns}
-            selected={list.selectedIds.has(appointment.appointmentId)}
-            onSelectedChange={(selected) => list.toggleSelected(appointment.appointmentId, selected)}
             onCancel={(a) => setCancelingAppointments([a])}
             onPayNow={handlePayNow}
             isPaying={
@@ -177,11 +138,11 @@ export default function MyBookingsPage() {
 
       <CancelAppointmentsDialog
         appointments={cancelingAppointments}
-        counterpartName={EXPERT.name}
+        counterpartName={expertName}
         counterpartFallback="the expert"
         onOpenChange={(open) => !open && setCancelingAppointments([])}
         onConfirm={handleConfirmCancel}
-        isSubmitting={isBulkCanceling}
+        isSubmitting={isCanceling}
       />
     </>
   );

@@ -42,6 +42,11 @@ type MeetingOptions struct {
 	Settlement      SessionSettlementGateway
 	// Payments tra số tiền thanh toán để gắn vào lịch hẹn khi đọc; nil thì bỏ qua.
 	Payments PaymentDirectory
+	// JoinWindow: phòng họp mở từ (giờ bắt đầu - Early) tới (giờ kết thúc + Late); dùng để trả
+	// meeting_status (too_early | open | too_late) trong danh sách lịch hẹn.
+	JoinWindow appointmentdomain.MeetingWindow
+	// Now: đồng hồ (ghi đè trong test); nil = time.Now.
+	Now func() time.Time
 }
 
 // MeetingInfo là thông tin chatroom-service cần để cho phép vào phòng họp.
@@ -90,6 +95,15 @@ func normalizeMeetingOptions(options MeetingOptions) MeetingOptions {
 	}
 	if options.MinimumPresence <= 0 {
 		options.MinimumPresence = appointmentdomain.DefaultMinimumExpertPresence
+	}
+	if options.JoinWindow.Early <= 0 {
+		options.JoinWindow.Early = appointmentdomain.DefaultMeetingJoinEarly
+	}
+	if options.JoinWindow.Late <= 0 {
+		options.JoinWindow.Late = appointmentdomain.DefaultMeetingJoinLate
+	}
+	if options.Now == nil {
+		options.Now = time.Now
 	}
 	return options
 }

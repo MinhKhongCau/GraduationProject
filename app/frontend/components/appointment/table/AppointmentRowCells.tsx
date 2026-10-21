@@ -3,15 +3,19 @@
 import type { ComponentProps, ReactNode } from "react";
 import clsx from "clsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, FileText } from "lucide-react";
+import { CalendarDays, ChevronDown, Clock, FileText, Video } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import {
   APPOINTMENT_STATUS_TEXT as STATUS_TEXT,
   APPOINTMENT_STATUS_TONES as STATUS_TONES,
-  formatAppointmentTime,
+  MEETING_STATUS_TEXT,
+  MEETING_STATUS_TONES,
+  appointmentSlot,
+  formatSlotDate,
+  formatSlotHours,
 } from "../status";
 import type { Appointment, AppointmentPayment } from "@/types";
-import { shortBookingId } from "./downloads";
+import { shortBookingId } from "./bookingId";
 import type { OptionalColumn } from "./useAppointmentListState";
 
 const PAYMENT_STATUS_TEXT: Record<AppointmentPayment["status"], string> = {
@@ -23,48 +27,69 @@ const PAYMENT_STATUS_TEXT: Record<AppointmentPayment["status"], string> = {
 
 const formatVnd = (amount: number) => `${amount.toLocaleString("vi-VN")} đ`;
 
-/** Row checkbox + Booking ID (opens details) with the "has medical record" badge. */
-export function AppointmentIdentityCells({
+/** Booking ID cell; the ID opens the appointment details. */
+export function AppointmentIdentityCell({
   appointment,
-  selected,
-  onSelectedChange,
   onOpenDetail,
-  hasMedicalRecord,
 }: {
   appointment: Appointment;
-  selected: boolean;
-  onSelectedChange: (selected: boolean) => void;
   onOpenDetail: () => void;
-  hasMedicalRecord: boolean;
 }) {
-  const bookingId = shortBookingId(appointment.appointmentId);
   return (
-    <>
-      <td className="w-10 px-3 py-3 align-top">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={(event) => onSelectedChange(event.target.checked)}
-          aria-label={`Select booking ${bookingId}`}
-          className="mt-0.5 h-4 w-4 accent-primary"
-        />
-      </td>
-      <td className="whitespace-nowrap px-3 py-3 align-top">
-        <button
-          type="button"
-          onClick={onOpenDetail}
-          className="font-mono text-sm font-semibold text-primary hover:underline"
-        >
-          {bookingId}
-        </button>
-        {hasMedicalRecord && (
-          <Badge tone="primary" className="ml-2 align-middle">
-            <FileText className="h-3 w-3" aria-hidden="true" />
-            Đã có bệnh án
-          </Badge>
-        )}
-      </td>
-    </>
+    <td className="whitespace-nowrap px-3 py-3 align-top">
+      <button
+        type="button"
+        onClick={onOpenDetail}
+        className="font-mono text-sm font-semibold text-primary hover:underline"
+      >
+        {shortBookingId(appointment.appointmentId)}
+      </button>
+    </td>
+  );
+}
+
+/** Slot day, hours and length, e.g. "Thứ Ba, 13/10/2026" / "11:00 – 12:00 · 60 phút". */
+export function AppointmentSlotInfo({ appointment }: { appointment: Appointment }) {
+  const slot = appointmentSlot(appointment);
+  if (!slot) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="space-y-0.5">
+      <p className="flex items-center gap-1.5 font-medium capitalize text-foreground">
+        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+        {formatSlotDate(slot.startTime)}
+      </p>
+      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+        <span className="tabular-nums">{formatSlotHours(slot.startTime, slot.endTime)}</span>
+        {slot.durationMinutes > 0 && <span>· {slot.durationMinutes} phút</span>}
+      </p>
+    </div>
+  );
+}
+
+/** Status badge plus "has medical record" and meeting-room window, and the cancel reason. */
+export function AppointmentStatusInfo({ appointment }: { appointment: Appointment }) {
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <Badge tone={STATUS_TONES[appointment.statusLabel] ?? "neutral"}>
+        {STATUS_TEXT[appointment.statusLabel] || appointment.statusLabel}
+      </Badge>
+      {appointment.hasMedicalRecord && (
+        <Badge tone="primary">
+          <FileText className="h-3 w-3" aria-hidden="true" />
+          Đã có bệnh án
+        </Badge>
+      )}
+      {appointment.meetingStatus && (
+        <Badge tone={MEETING_STATUS_TONES[appointment.meetingStatus] ?? "neutral"}>
+          <Video className="h-3 w-3" aria-hidden="true" />
+          {MEETING_STATUS_TEXT[appointment.meetingStatus] ?? appointment.meetingStatus}
+        </Badge>
+      )}
+      {appointment.statusLabel === "CANCELLED" && appointment.cancellationReason && (
+        <p className="max-w-[220px] text-xs text-muted-foreground">Lý do: {appointment.cancellationReason}</p>
+      )}
+    </div>
   );
 }
 
@@ -76,14 +101,15 @@ export function AppointmentOptionalCells({
   appointment: Appointment;
   columns: Record<OptionalColumn, boolean>;
 }) {
+  const slotPrice = appointment.slot?.price || appointment.price;
   return (
     <>
       {columns.specialization && (
         <td className="px-3 py-3 align-top text-sm text-muted-foreground">{appointment.specializationName || "—"}</td>
       )}
       {columns.session && (
-        <td className="whitespace-nowrap px-3 py-3 align-top text-sm text-foreground">
-          {formatAppointmentTime(appointment.startTime, appointment.endTime)}
+        <td className="whitespace-nowrap px-3 py-3 align-top text-sm">
+          <AppointmentSlotInfo appointment={appointment} />
         </td>
       )}
       {columns.bookedAt && (
@@ -104,9 +130,9 @@ export function AppointmentOptionalCells({
                 {PAYMENT_STATUS_TEXT[appointment.payment.status] ?? appointment.payment.status}
               </p>
             </>
-          ) : appointment.price ? (
+          ) : slotPrice ? (
             // No payment order yet (or payment-service unreachable): fall back to the slot price.
-            <span className="text-muted-foreground">{formatVnd(appointment.price)}</span>
+            <span className="text-muted-foreground">{formatVnd(slotPrice)}</span>
           ) : (
             "—"
           )}
@@ -114,12 +140,7 @@ export function AppointmentOptionalCells({
       )}
       {columns.status && (
         <td className="px-3 py-3 align-top">
-          <Badge tone={STATUS_TONES[appointment.statusLabel] ?? "neutral"}>
-            {STATUS_TEXT[appointment.statusLabel] || appointment.statusLabel}
-          </Badge>
-          {appointment.statusLabel === "CANCELLED" && appointment.cancellationReason && (
-            <p className="mt-1 max-w-[220px] text-xs text-muted-foreground">Lý do: {appointment.cancellationReason}</p>
-          )}
+          <AppointmentStatusInfo appointment={appointment} />
         </td>
       )}
     </>
@@ -176,4 +197,52 @@ export function RowActionItem({
 
 export function RowActionSeparator() {
   return <DropdownMenu.Separator className="my-1 h-px bg-border" />;
+}
+
+/**
+ * "Vào phòng tư vấn" for a CONFIRMED appointment. Too early: link hidden, disabled item with the slot time.
+ * Too late: disabled "room closed". No link yet: disabled "not ready".
+ */
+export function MeetingRoomActionItem({ appointment }: { appointment: Appointment }) {
+  if (appointment.statusLabel !== "CONFIRMED") return null;
+  if (appointment.meetingStatus === "too_early") {
+    const slot = appointmentSlot(appointment);
+    return (
+      <RowActionItem disabled>
+        <Video className="h-4 w-4" aria-hidden="true" />
+        <span>
+          Phòng tư vấn chưa mở
+          {slot && (
+            <span className="block text-xs font-normal text-muted-foreground">
+              Mở gần giờ hẹn: {formatSlotHours(slot.startTime)}, {new Date(slot.startTime).toLocaleDateString("vi-VN")}
+            </span>
+          )}
+        </span>
+      </RowActionItem>
+    );
+  }
+  if (appointment.meetingStatus === "too_late") {
+    return (
+      <RowActionItem disabled>
+        <Video className="h-4 w-4" aria-hidden="true" />
+        Phòng tư vấn đã đóng
+      </RowActionItem>
+    );
+  }
+  if (!appointment.meetingLink) {
+    return (
+      <RowActionItem disabled>
+        <Video className="h-4 w-4" aria-hidden="true" />
+        Phòng tư vấn chưa sẵn sàng
+      </RowActionItem>
+    );
+  }
+  return (
+    <RowActionItem asChild>
+      <a href={appointment.meetingLink} target="_blank" rel="noreferrer">
+        <Video className="h-4 w-4" aria-hidden="true" />
+        Vào phòng tư vấn
+      </a>
+    </RowActionItem>
+  );
 }

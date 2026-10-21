@@ -28,6 +28,9 @@ type Config struct {
 	// Phòng họp tư vấn: link = MeetingBaseURL/<token>; payment-service chi trả sau buổi tư vấn.
 	MeetingBaseURL            string // http://localhost:3000/meet
 	MinSessionPresenceMinutes int    // 30
+	// Cửa sổ vào phòng họp (phút trước giờ bắt đầu / sau giờ kết thúc) → meeting_status.
+	MeetJoinEarlyMinutes      int    // 15
+	MeetJoinLateMinutes       int    // 60
 	PaymentServiceInternalURL string // http://payment-service:8082
 
 	// gRPC tới profile-service (truy vấn chuyên gia + hồ sơ người khám khi đặt lịch)
@@ -60,6 +63,14 @@ func LoadConfig() {
 	if err != nil || minPresence < 1 || minPresence > 600 {
 		log.Fatalf("invalid MIN_SESSION_PRESENCE_MINUTES: must be an integer between 1 and 600")
 	}
+	joinEarly, err := strconv.Atoi(getEnvOrDefault("MEET_JOIN_EARLY_MINUTES", "15"))
+	if err != nil || joinEarly < 0 {
+		log.Fatalf("invalid MEET_JOIN_EARLY_MINUTES: must be a non-negative integer")
+	}
+	joinLate, err := strconv.Atoi(getEnvOrDefault("MEET_JOIN_LATE_MINUTES", "60"))
+	if err != nil || joinLate < 0 {
+		log.Fatalf("invalid MEET_JOIN_LATE_MINUTES: must be a non-negative integer")
+	}
 	AppConfig = &Config{
 		DBHost:          getEnvOrDefault("DB_HOST", "localhost"),
 		DBPort:          getEnvOrDefault("DB_PORT", "5432"),
@@ -77,6 +88,8 @@ func LoadConfig() {
 
 		MeetingBaseURL:            getEnvOrDefault("MEETING_BASE_URL", "http://localhost:3000/meet"),
 		MinSessionPresenceMinutes: minPresence,
+		MeetJoinEarlyMinutes:      joinEarly,
+		MeetJoinLateMinutes:       joinLate,
 		PaymentServiceInternalURL: getEnvOrDefault("PAYMENT_SERVICE_INTERNAL_URL", "http://payment-service:8082"),
 
 		ProfileGRPCAddr: getEnvOrDefault("PROFILE_GRPC_ADDR", "profile-service:9002"),

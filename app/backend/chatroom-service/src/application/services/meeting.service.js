@@ -12,7 +12,9 @@ export class MeetError extends Error {
 export const meetRoom = (appointmentId) => `meet:${appointmentId}`;
 
 // Returns "PATIENT" | "EXPERT" for the account allowed into the meeting.
-export function resolveParticipant(meeting, user, nowMs, { earlyMs, lateMs }) {
+// No time-window check here: booking-service reports too_early / open / too_late as
+// `meeting_status` in the appointment lists, and the frontend hides the link when too early.
+export function resolveParticipant(meeting, user) {
   if (!meeting) throw new MeetError("not_found", "Meeting not found");
 
   let role = null;
@@ -23,12 +25,6 @@ export function resolveParticipant(meeting, user, nowMs, { earlyMs, lateMs }) {
   if (meeting.session_completed_at) throw new MeetError("ended", "This session has already ended");
   if (meeting.status !== "CONFIRMED" && meeting.status !== "COMPLETED") {
     throw new MeetError("not_paid", "The appointment is not paid or was cancelled");
-  }
-  if (nowMs < meeting.start_time - earlyMs) {
-    throw new MeetError("too_early", "The meeting room is not open yet");
-  }
-  if (nowMs > meeting.end_time + lateMs) {
-    throw new MeetError("expired", "The meeting room has closed");
   }
   return role;
 }

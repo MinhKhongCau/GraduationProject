@@ -54,8 +54,11 @@ export function useMedicalRecords(params: { page?: number; size?: number } = {})
   });
 }
 
-/** [PATIENT/EXPERT] Get medical record for a specific appointment. */
-export function useAppointmentMedicalRecord(appointmentId?: string) {
+/**
+ * [PATIENT/EXPERT] Get medical record for a specific appointment. Pass `enabled: false` to defer the
+ * request (list rows only load it when the user opens the record).
+ */
+export function useAppointmentMedicalRecord(appointmentId?: string, { enabled = true }: { enabled?: boolean } = {}) {
   return useApiQuery({
     queryKey: appointmentId ? QUERY_KEYS.appointmentMedicalRecord(appointmentId) : ["booking", "none"],
     queryFn: async () => {
@@ -65,7 +68,7 @@ export function useAppointmentMedicalRecord(appointmentId?: string) {
       const [enriched] = await enrichMedicalRecords([record]);
       return enriched ?? null;
     },
-    enabled: !!appointmentId,
+    enabled: !!appointmentId && enabled,
   });
 }
 

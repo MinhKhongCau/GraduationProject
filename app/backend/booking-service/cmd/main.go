@@ -22,6 +22,7 @@ import (
 	"booking-service/internal/application/schedule"
 	"booking-service/internal/application/slot"
 	"booking-service/internal/application/timeoff"
+	appointmentdomain "booking-service/internal/domain/appointment"
 	appointmentrepo "booking-service/internal/infrastructure/persistence/repository/appointment"
 	schedulerepo "booking-service/internal/infrastructure/persistence/repository/schedule"
 	slotrepo "booking-service/internal/infrastructure/persistence/repository/slot"
@@ -90,6 +91,10 @@ func main() {
 		MinimumPresence: time.Duration(config.AppConfig.MinSessionPresenceMinutes) * time.Minute,
 		Settlement:      client.NewPaymentSettlementClient(config.AppConfig.PaymentServiceInternalURL, tokenManager),
 		Payments:        paymentClient,
+		JoinWindow: appointmentdomain.MeetingWindow{
+			Early: time.Duration(config.AppConfig.MeetJoinEarlyMinutes) * time.Minute,
+			Late:  time.Duration(config.AppConfig.MeetJoinLateMinutes) * time.Minute,
+		},
 	})
 	generationService := slot.NewGenerationService(slotUsecase, scheduleRepo, timeoffRepo)
 

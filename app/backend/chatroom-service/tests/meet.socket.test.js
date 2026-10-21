@@ -48,7 +48,6 @@ function setup({ user, meetingData = meeting(), presenceMs = 0 } = {}) {
       isEnded: jest.fn().mockResolvedValue(false),
     },
     now: () => NOW,
-    window: { earlyMs: 15 * MIN, lateMs: 60 * MIN },
   };
   meetSocketController(io, socket, deps);
 
@@ -99,12 +98,34 @@ describe("Meet room (paid appointment link)", () => {
 
   test.each([
     ["unpaid appointment", meeting({ status: "PENDING_PAYMENT" }), "not_paid"],
-    ["before the room opens", meeting({ start_time: NOW + 30 * MIN, end_time: NOW + 90 * MIN }), "too_early"],
-    ["after the room closes", meeting({ start_time: NOW - 3 * 60 * MIN, end_time: NOW - 2 * 60 * MIN }), "expired"],
     ["session already ended", meeting({ session_completed_at: NOW - MIN }), "ended"],
   ])("rejects join: %s", async (_name, meetingData, code) => {
     const { call } = setup({ user: patient, meetingData });
     expect(await call("meet:join", { meetingToken: "tok-1" })).toMatchObject({ ok: false, code });
+  });
+
+  test.each([
+    ["days before the slot", meeting({ start_time: NOW + 3 * 24 * 60 * MIN, end_time: NOW + (3 * 24 * 60 + 60) * MIN })],
+    ["days after the slot", meeting({ start_time: NOW - 3 * 24 * 60 * MIN, end_time: NOW - (3 * 24 * 60 - 60) * MIN })],
+  ])("joins regardless of time window: %s", async (_name, meetingData) => {
+    const { call, socket } = setup({ user: patient, meetingData });
+    expect(await call("meet:join", { meetingToken: "tok-1" })).toMatchObject({ ok: true, role: "PATIENT" });
+    expect(socket.join).toHaveBeenCalled();
+  });
+
+  test("expert joining weeks early arms a capped completion timer", async () => {
+    jest.useFakeTimers();
+    try {
+      const start = NOW + 40 * 24 * 60 * MIN;
+      const { call, socket } = setup({ user: expert, meetingData: meeting({ start_time: start, end_time: start + 60 * MIN }) });
+      const spy = jest.spyOn(global, "setTimeout");
+      await call("meet:join", { meetingToken: "tok-1" });
+      expect(socket.data.meetTimer).toBeTruthy();
+      expect(spy.mock.calls.at(-1)[1]).toBe(2 ** 31 - 1);
+      spy.mockRestore();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test("unknown link returns not_found", async () => {

@@ -4,28 +4,24 @@ import { useState } from "react";
 import { AppointmentTableRow } from "./component/AppointmentTableRow";
 import {
   AppointmentListHeader,
-  AppointmentListToolbar,
+  AppointmentListSummary,
   AppointmentTable,
   CancelAppointmentsDialog,
   DateSortFilters,
   STATUSES,
   StatusFilterLinks,
-  downloadBookingsCsv,
-  downloadTicketsIcs,
-  isCancelable,
   useAppointmentListState,
-  type Counterpart,
 } from "@/components/appointment";
 import { useExpertAppointmentsPage, useExpertAppointmentCounts, useCancelBooking } from "@/hooks";
 import { useErrorContext } from "@/context/ErrorContext";
 import type { AppointmentWithPatient } from "@/hooks";
 
-const PATIENT: Counterpart<AppointmentWithPatient> = { label: "Patient", name: (a) => a.patientName };
+const patientName = (a: AppointmentWithPatient) => a.patientName;
 
 export default function ExpertAppointmentsPage() {
   const list = useAppointmentListState();
   const [cancelingAppointments, setCancelingAppointments] = useState<AppointmentWithPatient[]>([]);
-  const [isBulkCanceling, setIsBulkCanceling] = useState(false);
+  const [isCanceling, setIsCanceling] = useState(false);
   const { showSuccess, showError } = useErrorContext();
 
   const { data: appointmentPage, isLoading, isFetching } = useExpertAppointmentsPage(list.params);
@@ -40,47 +36,19 @@ export default function ExpertAppointmentsPage() {
     list.setPage(Math.max(totalPages - 1, 0));
   }
 
-  const selectedAppointments = visibleAppointments.filter((a) => list.selectedIds.has(a.appointmentId));
-
-  function handleApplyBulkAction() {
-    if (selectedAppointments.length === 0) {
-      showError({ message: "Select at least one appointment first." });
-      return;
-    }
-    if (list.bulkAction === "download") {
-      downloadBookingsCsv(selectedAppointments, PATIENT);
-    } else if (list.bulkAction === "cancel") {
-      const cancelable = selectedAppointments.filter(isCancelable);
-      if (cancelable.length === 0) {
-        showError({ message: "None of the selected appointments can be canceled." });
-        return;
-      }
-      setCancelingAppointments(cancelable);
-    }
-  }
-
-  function handleDownloadTickets() {
-    const source = selectedAppointments.length > 0 ? selectedAppointments : visibleAppointments;
-    if (downloadTicketsIcs(source, PATIENT) === 0)
-      showError({ message: "No confirmed sessions to download tickets for." });
-  }
-
   async function handleConfirmCancel(reason: string) {
     if (cancelingAppointments.length === 0) return;
-    setIsBulkCanceling(true);
+    setIsCanceling(true);
     const results = await Promise.allSettled(
       cancelingAppointments.map((a) => cancelMutation.mutateAsync({ appointmentId: a.appointmentId, reason }))
     );
-    setIsBulkCanceling(false);
+    setIsCanceling(false);
 
     const succeeded = results.filter((r) => r.status === "fulfilled").length;
-    if (succeeded > 0) showSuccess(succeeded > 1 ? `${succeeded} appointments canceled.` : "Appointment canceled.");
-    if (succeeded < results.length)
-      showError({ message: `${results.length - succeeded} appointment(s) could not be canceled.` });
+    if (succeeded > 0) showSuccess("Appointment canceled.");
+    if (succeeded < results.length) showError({ message: "The appointment could not be canceled." });
 
     setCancelingAppointments([]);
-    list.clearSelection();
-    list.setBulkAction("");
   }
 
   return (
@@ -94,24 +62,19 @@ export default function ExpertAppointmentsPage() {
               The Actions button on each row opens a menu: appointment details, joining the consultation room, viewing
               or writing the medical record, and cancelling when that applies.
             </p>
-            <p>Select rows and use Bulk Actions to cancel or download several appointments at once.</p>
             <p>
-              &quot;Download bookings&quot; and &quot;Download tickets&quot; use the appointments on the current page;
-              tickets are a calendar file (.ics) of confirmed sessions.
+              The consultation room opens shortly before the session starts; until then its link stays hidden. The
+              Status column shows which appointments already have a medical record.
             </p>
           </>
         }
       />
       <StatusFilterLinks state={list} counts={filterCounts} />
       <DateSortFilters state={list} />
-      <AppointmentListToolbar
+      <AppointmentListSummary
         state={list}
         visibleCount={visibleAppointments.length}
-        selectedCount={selectedAppointments.length}
         totalItems={appointmentPage?.totalItems ?? 0}
-        onApplyBulkAction={handleApplyBulkAction}
-        onDownloadBookings={() => downloadBookingsCsv(visibleAppointments, PATIENT)}
-        onDownloadTickets={handleDownloadTickets}
       />
 
       <AppointmentTable
@@ -128,8 +91,6 @@ export default function ExpertAppointmentsPage() {
             key={appointment.appointmentId}
             appointment={appointment}
             columns={list.columns}
-            selected={list.selectedIds.has(appointment.appointmentId)}
-            onSelectedChange={(selected) => list.toggleSelected(appointment.appointmentId, selected)}
             onCancel={(a) => setCancelingAppointments([a])}
           />
         ))}
@@ -137,11 +98,11 @@ export default function ExpertAppointmentsPage() {
 
       <CancelAppointmentsDialog
         appointments={cancelingAppointments}
-        counterpartName={PATIENT.name}
+        counterpartName={patientName}
         counterpartFallback="the patient"
         onOpenChange={(open) => !open && setCancelingAppointments([])}
         onConfirm={handleConfirmCancel}
-        isSubmitting={isBulkCanceling}
+        isSubmitting={isCanceling}
       />
     </>
   );
