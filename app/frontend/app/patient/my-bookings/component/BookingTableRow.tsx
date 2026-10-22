@@ -2,14 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CreditCard, Eye, FileText, UserRound, Video, XCircle } from "lucide-react";
+import { CreditCard, Eye, FileText, UserRound, XCircle } from "lucide-react";
 import { useAppointmentMedicalRecord } from "@/hooks";
 import { ROUTES } from "@/constants";
 import { MedicalRecordDetailModal } from "@/components/medical-record/MedicalRecordDetailModal";
+import { MedicalRecordLoadingModal } from "@/components/medical-record/MedicalRecordLoadingModal";
 import {
   AppointmentDetailModal,
-  AppointmentIdentityCells,
+  AppointmentIdentityCell,
   AppointmentOptionalCells,
+  MeetingRoomActionItem,
   RowActionItem,
   RowActionSeparator,
   RowActionsMenu,
@@ -21,38 +23,25 @@ import type { AppointmentWithExpert } from "@/hooks";
 export interface BookingTableRowProps {
   appointment: AppointmentWithExpert;
   columns: Record<OptionalColumn, boolean>;
-  selected: boolean;
-  onSelectedChange: (selected: boolean) => void;
   onCancel: (appointment: AppointmentWithExpert) => void;
   onPayNow: (appointment: AppointmentWithExpert) => void;
   isPaying: boolean;
 }
 
-export function BookingTableRow({
-  appointment,
-  columns,
-  selected,
-  onSelectedChange,
-  onCancel,
-  onPayNow,
-  isPaying,
-}: BookingTableRowProps) {
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
+export function BookingTableRow({ appointment, columns, onCancel, onPayNow, isPaying }: BookingTableRowProps) {
+  const [recordOpen, setRecordOpen] = useState(false);
   const [appointmentDetailOpen, setAppointmentDetailOpen] = useState(false);
-  const { data: medicalRecord } = useAppointmentMedicalRecord(appointment.appointmentId);
+  // The record is only requested once the user opens it; the list itself only carries `hasMedicalRecord`.
+  const { data: medicalRecord, isFetching: isLoadingRecord } = useAppointmentMedicalRecord(
+    appointment.appointmentId,
+    { enabled: recordOpen }
+  );
 
   const canPay = appointment.statusLabel === "PENDING_PAYMENT";
-  const isConfirmed = appointment.statusLabel === "CONFIRMED";
 
   return (
-    <tr className={selected ? "bg-primary-soft/40" : "hover:bg-surface/60"}>
-      <AppointmentIdentityCells
-        appointment={appointment}
-        selected={selected}
-        onSelectedChange={onSelectedChange}
-        onOpenDetail={() => setAppointmentDetailOpen(true)}
-        hasMedicalRecord={!!medicalRecord}
-      />
+    <tr className="hover:bg-surface/60">
+      <AppointmentIdentityCell appointment={appointment} onOpenDetail={() => setAppointmentDetailOpen(true)} />
       <td className="px-3 py-3 align-top text-sm font-medium text-foreground">
         {appointment.expertName ?? "Chuyên gia"}
       </td>
@@ -69,22 +58,9 @@ export function BookingTableRow({
             Hồ sơ chuyên gia
           </Link>
         </RowActionItem>
-        {isConfirmed &&
-          (appointment.meetingLink ? (
-            <RowActionItem asChild>
-              <a href={appointment.meetingLink} target="_blank" rel="noreferrer">
-                <Video className="h-4 w-4" aria-hidden="true" />
-                Vào phòng tư vấn
-              </a>
-            </RowActionItem>
-          ) : (
-            <RowActionItem disabled>
-              <Video className="h-4 w-4" aria-hidden="true" />
-              Phòng tư vấn chưa sẵn sàng
-            </RowActionItem>
-          ))}
-        {medicalRecord && (
-          <RowActionItem onSelect={() => setDetailModalOpen(true)}>
+        <MeetingRoomActionItem appointment={appointment} />
+        {appointment.hasMedicalRecord && (
+          <RowActionItem onSelect={() => setRecordOpen(true)}>
             <FileText className="h-4 w-4" aria-hidden="true" />
             Xem bệnh án
           </RowActionItem>
@@ -110,12 +86,20 @@ export function BookingTableRow({
         appointmentId={appointmentDetailOpen ? appointment.appointmentId : null}
         onClose={() => setAppointmentDetailOpen(false)}
       />
-      <MedicalRecordDetailModal
-        open={detailModalOpen}
-        onOpenChange={setDetailModalOpen}
-        record={medicalRecord || null}
-        isExpert={false}
-      />
+      {recordOpen && !medicalRecord ? (
+        <MedicalRecordLoadingModal
+          open={recordOpen}
+          onOpenChange={setRecordOpen}
+          isLoading={isLoadingRecord}
+        />
+      ) : (
+        <MedicalRecordDetailModal
+          open={recordOpen}
+          onOpenChange={setRecordOpen}
+          record={medicalRecord || null}
+          isExpert={false}
+        />
+      )}
     </tr>
   );
 }

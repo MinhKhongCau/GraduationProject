@@ -31,10 +31,6 @@ export const ENV = {
   BOOKING_SERVICE_INTERNAL_URL: process.env.BOOKING_SERVICE_INTERNAL_URL || "http://booking-service:8083",
   INTERNAL_CLIENT_ID: process.env.INTERNAL_CLIENT_ID || "chatroom-service",
   INTERNAL_CLIENT_SECRET: process.env.INTERNAL_CLIENT_SECRET || "",
-
-  // Meet room: how long before the slot starts / after it ends the link opens.
-  MEET_JOIN_EARLY_MINUTES: Number(process.env.MEET_JOIN_EARLY_MINUTES || 15),
-  MEET_JOIN_LATE_MINUTES: Number(process.env.MEET_JOIN_LATE_MINUTES || 60),
 };
 
 if (!ENV.REDIS_URL && process.env.NODE_ENV !== "test") throw new Error("❌ Missing REDIS_URL in .env");

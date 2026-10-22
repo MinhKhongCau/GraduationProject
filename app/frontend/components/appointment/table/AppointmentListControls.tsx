@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import clsx from "clsx";
-import { CalendarDays, Download, Ticket, X } from "lucide-react";
+import { CalendarDays, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import { APPOINTMENT_STATUS_TEXT } from "../status";
 import { ToolbarDropdown, ToolbarDropdownCheckbox, ToolbarDropdownLabel } from "./ToolbarDropdown";
@@ -12,7 +12,6 @@ import {
   PAGE_SIZES,
   SORT_OPTIONS,
   type AppointmentListState,
-  type BulkAction,
   type SortOption,
   type StatusFilter,
 } from "./useAppointmentListState";
@@ -167,67 +166,25 @@ export function DateSortFilters({ state }: { state: AppointmentListState }) {
   );
 }
 
-/** Bulk actions + downloads on the left, "Showing a–b of N" on the right. */
-export function AppointmentListToolbar({
+/** "Showing a–b of N bookings" above the table. */
+export function AppointmentListSummary({
   state,
   visibleCount,
-  selectedCount,
   totalItems,
-  onApplyBulkAction,
-  onDownloadBookings,
-  onDownloadTickets,
 }: {
   state: AppointmentListState;
   visibleCount: number;
-  selectedCount: number;
   totalItems: number;
-  onApplyBulkAction: () => void;
-  onDownloadBookings: () => void;
-  onDownloadTickets: () => void;
 }) {
   const firstRow = totalItems === 0 ? 0 : state.page * state.pageSize + 1;
   const lastRow = state.page * state.pageSize + visibleCount;
   return (
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={state.bulkAction}
-          onChange={(event) => state.setBulkAction(event.target.value as BulkAction)}
-          aria-label="Bulk actions"
-          className={SELECT_CLASS}
-        >
-          <option value="">Bulk Actions</option>
-          <option value="cancel">Cancel bookings</option>
-          <option value="download">Download selected</option>
-        </select>
-        <Button size="sm" variant="outline" onClick={onApplyBulkAction} disabled={!state.bulkAction}>
-          Apply
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDownloadBookings} disabled={visibleCount === 0}>
-          <Download className="h-3.5 w-3.5" aria-hidden="true" />
-          Download bookings
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDownloadTickets} disabled={visibleCount === 0}>
-          <Ticket className="h-3.5 w-3.5" aria-hidden="true" />
-          Download tickets
-        </Button>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Showing{" "}
-        <span className="font-semibold text-foreground">
-          {firstRow}–{lastRow}
-        </span>{" "}
-        of <span className="font-semibold text-foreground">{totalItems}</span>{" "}
-        {totalItems === 1 ? "booking" : "bookings"}
-        {selectedCount > 0 && (
-          <>
-            <span className="px-1.5" aria-hidden="true">
-              |
-            </span>
-            {selectedCount} selected
-          </>
-        )}
-      </p>
-    </div>
+    <p className="mb-3 text-right text-xs text-muted-foreground">
+      Showing{" "}
+      <span className="font-semibold text-foreground">
+        {firstRow}–{lastRow}
+      </span>{" "}
+      of <span className="font-semibold text-foreground">{totalItems}</span> {totalItems === 1 ? "booking" : "bookings"}
+    </p>
   );
 }

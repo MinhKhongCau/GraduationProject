@@ -1,10 +1,11 @@
 import { EVENTS } from "../events.js";
-import { ENV } from "../../../../config/env.js";
 import { MeetError, meetRoom, presenceSummary, resolveParticipant } from "../../../application/services/meeting.service.js";
 import { BookingClientError, createBookingClient } from "../../clients/booking.client.js";
 import * as meetingStore from "../../persistence/stores/meeting.store.js";
 
 const SIGNAL_TYPES = new Set(["offer", "answer", "ice"]);
+// setTimeout fires immediately for delays above 2^31-1 ms (~24.8 days); the timer re-arms itself instead.
+const MAX_TIMER_MS = 2 ** 31 - 1;
 
 let defaultBookingClient = null;
 
@@ -14,10 +15,6 @@ function defaultDeps() {
     booking: defaultBookingClient,
     store: meetingStore,
     now: Date.now,
-    window: {
-      earlyMs: ENV.MEET_JOIN_EARLY_MINUTES * 60_000,
-      lateMs: ENV.MEET_JOIN_LATE_MINUTES * 60_000,
-    },
   };
 }
 
@@ -63,7 +60,7 @@ export function meetSocketController(io, socket, deps = defaultDeps()) {
     const presence = await currentPresence(meet);
     // Presence only accrues from the slot start, so wait for that too.
     const untilStart = Math.max(0, meet.startTime - deps.now());
-    const delayMs = untilStart + presence.remainingSeconds * 1000;
+    const delayMs = Math.min(untilStart + presence.remainingSeconds * 1000, MAX_TIMER_MS);
     const timer = setTimeout(async () => {
       socket.data.meetTimer = null;
       if (socket.data.meet !== meet) return;
@@ -98,7 +95,7 @@ export function meetSocketController(io, socket, deps = defaultDeps()) {
       if (meeting && (await deps.store.isEnded(meeting.appointment_id))) {
         throw new MeetError("ended", "This session has already ended");
       }
-      const role = resolveParticipant(meeting, user(), deps.now(), deps.window);
+      const role = resolveParticipant(meeting, user());
 
       await leave(); // one meeting per socket
       const meet = {

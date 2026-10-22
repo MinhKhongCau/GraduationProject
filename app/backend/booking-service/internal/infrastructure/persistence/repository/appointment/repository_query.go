@@ -25,7 +25,7 @@ func (r *pgRepository) GetAppointmentBySlotID(slotID string) (*appointmentdomain
 func (r *pgRepository) GetAppointmentByID(appointmentID string) (*appointmentdomain.Appointment, error) {
 	var appt appointmentdomain.Appointment
 	err := r.db.Table("Booking_Appointments").
-		Select("\"Booking_Appointments\".*, \"Booking_Expert_Slots\".price, \"Booking_Expert_Slots\".start_time, \"Booking_Expert_Slots\".end_time").
+		Select("\"Booking_Appointments\".*, \"Booking_Expert_Slots\".price, \"Booking_Expert_Slots\".start_time, \"Booking_Expert_Slots\".end_time, "+hasMedicalRecordColumn(`"Booking_Appointments"`)).
 		Joins("JOIN \"Booking_Expert_Slots\" ON \"Booking_Appointments\".slot_id = \"Booking_Expert_Slots\".slot_id").
 		Where("\"Booking_Appointments\".appointment_id = ?", appointmentID).
 		First(&appt).Error
@@ -63,11 +63,16 @@ func (r *pgRepository) ListAppointments(filter appappointment.AppointmentListQue
 		return nil, 0, err
 	}
 	var appointments []appointmentdomain.Appointment
-	err := query.Select("appointment.*, slot.price, slot.start_time, slot.end_time").Order(appointmentOrder(filter.Sort)).Limit(filter.Page.Size).Offset(filter.Page.Offset()).Scan(&appointments).Error
+	err := query.Select("appointment.*, slot.price, slot.start_time, slot.end_time, " + hasMedicalRecordColumn("appointment")).Order(appointmentOrder(filter.Sort)).Limit(filter.Page.Size).Offset(filter.Page.Offset()).Scan(&appointments).Error
 	for i := range appointments {
 		appointments[i].StatusLabel = appointments[i].Status.String()
 	}
 	return appointments, total, err
+}
+
+// hasMedicalRecordColumn: cột has_medical_record = lịch hẹn đã có bệnh án (không tải nội dung bệnh án).
+func hasMedicalRecordColumn(appointmentTable string) string {
+	return `EXISTS (SELECT 1 FROM "Booking_Medical_Records" record WHERE record.appointment_id = ` + appointmentTable + `.appointment_id) AS has_medical_record`
 }
 
 // appointmentOrder dựng ORDER BY từ lựa chọn đã kiểm tra (không nhận chuỗi tự do từ request);
@@ -90,7 +95,7 @@ func (r *pgRepository) GetAppointmentsByIDs(appointmentIDs []string) ([]appointm
 	err := r.db.Table(`"Booking_Appointments" appointment`).
 		Joins(`JOIN "Booking_Expert_Slots" slot ON slot.slot_id = appointment.slot_id`).
 		Where("appointment.appointment_id IN ?", appointmentIDs).
-		Select("appointment.*, slot.price, slot.start_time, slot.end_time").
+		Select("appointment.*, slot.price, slot.start_time, slot.end_time, " + hasMedicalRecordColumn("appointment")).
 		Scan(&appointments).Error
 	for i := range appointments {
 		appointments[i].StatusLabel = appointments[i].Status.String()

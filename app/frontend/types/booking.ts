@@ -53,6 +53,12 @@ export interface Appointment {
   /** Slot start/end (Unix ms), joined from the booked slot. */
   startTime?: number;
   endTime?: number;
+  /** The booked slot (time, length, price); absent on the rare row whose slot could not be read. */
+  slot?: AppointmentSlot;
+  /** True once the expert has written a medical record; load the record itself only when it is opened. */
+  hasMedicalRecord?: boolean;
+  /** Join window of the meeting room, set for CONFIRMED appointments only. */
+  meetingStatus?: MeetingStatus;
   specializationId?: string | null;
   specializationName?: string;
   /** Snapshot of the patient record chosen at booking time (empty on legacy appointments). */
@@ -67,6 +73,21 @@ export interface Appointment {
   /** Absent when no payment order exists yet or payment-service could not be reached. */
   payment?: AppointmentPayment;
 }
+
+/** booking-service `slot` on an appointment. Times are Unix ms. */
+export interface AppointmentSlot {
+  slotId: string;
+  startTime: number;
+  endTime: number;
+  durationMinutes: number;
+  price: number;
+}
+
+/**
+ * Meeting room window computed by booking-service: `too_early` before (start - 15 min),
+ * `too_late` after (end + 60 min), `open` in between.
+ */
+export type MeetingStatus = "too_early" | "open" | "too_late";
 
 /** Display profile of an appointment participant (profile-service ProfileSummary). */
 export interface AppointmentParty {

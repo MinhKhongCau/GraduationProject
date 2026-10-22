@@ -29,10 +29,18 @@ type Appointment struct {
 	CancelledBy        *string           `json:"cancelled_by"        gorm:"column:cancelled_by;type:varchar(50)"` // SYSTEM / PATIENT / EXPERT
 	Status             AppointmentStatus `json:"status"              gorm:"column:status;type:smallint;default:0"`
 	StatusLabel        string            `json:"status_label"        gorm:"-"` // Tự động điền bởi AfterFind hook
-	Price              float64           `json:"price"               gorm:"-"` // Giá tiền lấy từ bảng Slot thông qua JOIN
-	StartTime          int64             `json:"start_time"          gorm:"-"`
-	EndTime            int64             `json:"end_time"            gorm:"-"`
-	MeetingLink        string            `json:"meeting_link"        gorm:"column:meeting_link"`
+	// Price / StartTime / EndTime lấy từ bảng Slot qua JOIN: chỉ đọc (`->`), không tạo cột (`-:migration`).
+	// Không dùng `gorm:"-"` vì tag đó làm GORM bỏ qua cột khi Scan, trả về 0.
+	Price     float64 `json:"price"      gorm:"->;-:migration"`
+	StartTime int64   `json:"start_time" gorm:"->;-:migration"`
+	EndTime   int64   `json:"end_time"   gorm:"->;-:migration"`
+	// Slot: thông tin slot khám (giờ, thời lượng, giá), điền sau khi đọc bằng FillSlot.
+	Slot *SlotInfo `json:"slot,omitempty" gorm:"-"`
+	// HasMedicalRecord: chuyên gia đã ghi bệnh án cho lịch hẹn này chưa (EXISTS trên Booking_Medical_Records).
+	HasMedicalRecord bool `json:"has_medical_record" gorm:"->;-:migration"`
+	// MeetingStatus: too_early | open | too_late cho lịch hẹn CONFIRMED; rỗng khi không có phòng họp.
+	MeetingStatus string `json:"meeting_status,omitempty" gorm:"-"`
+	MeetingLink   string `json:"meeting_link"        gorm:"column:meeting_link"`
 	// MeetingToken: mã phòng họp sinh khi thanh toán thành công; MeetingLink = <MEETING_BASE_URL>/<token>.
 	MeetingToken *string `json:"-" gorm:"column:meeting_token;type:varchar(64);uniqueIndex"`
 	// SessionCompletedAt: thời điểm chuyên gia kết thúc buổi tư vấn hợp lệ (đủ thời gian có mặt).
@@ -50,6 +58,27 @@ type Appointment struct {
 	// Payment: order thanh toán đại diện của lịch hẹn, lấy từ payment-service qua gRPC mỗi lần đọc
 	// (không lưu DB). nil khi chưa có order hoặc payment-service không trả về.
 	Payment *PaymentSummary `json:"payment,omitempty" gorm:"-"`
+}
+
+// SlotInfo - Slot khám của lịch hẹn (giờ bắt đầu/kết thúc theo Unix ms, thời lượng, giá).
+type SlotInfo struct {
+	SlotID          string  `json:"slot_id"`
+	StartTime       int64   `json:"start_time"`
+	EndTime         int64   `json:"end_time"`
+	DurationMinutes int64   `json:"duration_minutes"`
+	Price           float64 `json:"price"`
+}
+
+// FillSlot dựng Slot từ các cột slot đã JOIN; bỏ qua khi chưa đọc được giờ khám.
+func (a *Appointment) FillSlot() {
+	if a.StartTime == 0 {
+		return
+	}
+	info := SlotInfo{SlotID: a.SlotID, StartTime: a.StartTime, EndTime: a.EndTime, Price: a.Price}
+	if a.EndTime > a.StartTime {
+		info.DurationMinutes = (a.EndTime - a.StartTime) / 60_000
+	}
+	a.Slot = &info
 }
 
 // PatientSnapshot - Hồ sơ người khám tại thời điểm đặt lịch, lấy từ profile-service qua gRPC.
