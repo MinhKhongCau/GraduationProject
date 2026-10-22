@@ -1,12 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Video } from "lucide-react";
+import { FileText, Video } from "lucide-react";
 import { Badge, Modal, Spinner } from "@/components/ui";
 import { useApiQuery } from "@/hooks";
 import { bookingApi } from "@/api";
 import { QUERY_KEYS } from "@/constants";
-import { APPOINTMENT_STATUS_TEXT, APPOINTMENT_STATUS_TONES, formatAppointmentTime } from "./status";
+import { APPOINTMENT_STATUS_TEXT, APPOINTMENT_STATUS_TONES, MEETING_STATUS_TEXT } from "./status";
+import { AppointmentSlotInfo } from "./table/AppointmentRowCells";
 import { BookingAccountPanel, ExpertPanel } from "./ParticipantPanels";
 
 export interface AppointmentDetailModalProps {
@@ -84,12 +85,28 @@ export function AppointmentDetailModal({ appointmentId, onClose, actions }: Appo
                 {APPOINTMENT_STATUS_TEXT[appointment.statusLabel] ?? appointment.statusLabel}
               </Badge>
             </Row>
-            <Row label="Thời gian khám">{formatAppointmentTime(appointment.startTime, appointment.endTime)}</Row>
+            <Row label="Thời gian khám">
+              <AppointmentSlotInfo appointment={appointment} />
+            </Row>
+            {appointment.hasMedicalRecord && (
+              <Row label="Bệnh án">
+                <span className="inline-flex items-center gap-1.5 text-primary">
+                  <FileText className="h-3.5 w-3.5" aria-hidden="true" /> Đã có bệnh án
+                </span>
+              </Row>
+            )}
             <Row label="Chuyên khoa">{appointment.specializationName}</Row>
             <Row label="Phí tư vấn">
               {appointment.price ? `${appointment.price.toLocaleString("vi-VN")} đ` : "—"}
             </Row>
-            {appointment.statusLabel === "CONFIRMED" && appointment.meetingLink && (
+            {appointment.statusLabel === "CONFIRMED" && appointment.meetingStatus && appointment.meetingStatus !== "open" && (
+              <Row label="Phòng tư vấn">
+                <span className="text-muted-foreground">{MEETING_STATUS_TEXT[appointment.meetingStatus]}</span>
+              </Row>
+            )}
+            {appointment.statusLabel === "CONFIRMED" &&
+              appointment.meetingLink &&
+              (!appointment.meetingStatus || appointment.meetingStatus === "open") && (
               <Row label="Phòng tư vấn">
                 <a
                   href={appointment.meetingLink}

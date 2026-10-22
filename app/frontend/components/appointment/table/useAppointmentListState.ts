@@ -5,7 +5,6 @@ import type { Appointment, AppointmentListParams, AppointmentStatus } from "@/ty
 
 export type StatusFilter = "ALL" | AppointmentStatus;
 export type OptionalColumn = "specialization" | "session" | "bookedAt" | "price" | "status";
-export type BulkAction = "" | "cancel" | "download";
 
 export const STATUSES = [
   "PENDING_PAYMENT",
@@ -40,7 +39,7 @@ export const OPTIONAL_COLUMNS: { id: OptionalColumn; label: string; align?: "rig
 export const isCancelable = (a: Appointment) => a.statusLabel === "CONFIRMED" || a.statusLabel === "PENDING_PAYMENT";
 
 /**
- * Filter, sort, paging, selection and column state shared by the patient Bookings and expert
+ * Filter, sort, paging and column state shared by the patient Bookings and expert
  * Appointments tables. `params` is what the paged list query takes; `dateRange` feeds the counts.
  */
 export function useAppointmentListState() {
@@ -52,8 +51,6 @@ export function useAppointmentListState() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("session-desc");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<BulkAction>("");
   const [columns, setColumns] = useState<Record<OptionalColumn, boolean>>({
     specialization: true,
     session: true,
@@ -79,7 +76,6 @@ export function useAppointmentListState() {
 
   function goToPage(next: number) {
     setPage(next);
-    setSelectedIds(new Set());
   }
 
   return {
@@ -91,14 +87,10 @@ export function useAppointmentListState() {
     fromDate,
     toDate,
     sortOption,
-    selectedIds,
-    bulkAction,
     columns,
     hasFilters: statusFilter !== "ALL" || !!fromDate || !!toDate,
-    setBulkAction,
     setPage,
     goToPage,
-    clearSelection: () => setSelectedIds(new Set()),
     setStatusFilter(filter: StatusFilter) {
       setStatusFilter(filter);
       goToPage(0);
@@ -123,17 +115,6 @@ export function useAppointmentListState() {
     },
     setColumn(column: OptionalColumn, visible: boolean) {
       setColumns((current) => ({ ...current, [column]: visible }));
-    },
-    toggleSelected(appointmentId: string, selected: boolean) {
-      setSelectedIds((current) => {
-        const next = new Set(current);
-        if (selected) next.add(appointmentId);
-        else next.delete(appointmentId);
-        return next;
-      });
-    },
-    selectAll(appointmentIds: string[], selected: boolean) {
-      setSelectedIds(selected ? new Set(appointmentIds) : new Set());
     },
   };
 }

@@ -264,6 +264,9 @@ services:
       # Phòng họp tư vấn: link gửi cho bệnh nhân/chuyên gia sau khi thanh toán thành công
       - MEETING_BASE_URL=${MEETING_BASE_URL:-http://localhost:3000/meet}
       - MIN_SESSION_PRESENCE_MINUTES=${MIN_SESSION_PRESENCE_MINUTES:-30}
+      # Meet room join window → meeting_status (too_early | open | too_late) in appointment lists.
+      - MEET_JOIN_EARLY_MINUTES=${MEET_JOIN_EARLY_MINUTES:-15}
+      - MEET_JOIN_LATE_MINUTES=${MEET_JOIN_LATE_MINUTES:-60}
       # Chi trả thù lao chuyên gia khi buổi tư vấn hoàn tất
       - PAYMENT_SERVICE_INTERNAL_URL=http://payment-service:${PORT_PAYMENT_SERVICE}
       # gRPC tới profile-service (trang xác nhận + tạo cuộc hẹn)
@@ -372,9 +375,6 @@ services:
       - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
       - INTERNAL_CLIENT_ID=${CHATROOM_SERVICE_NAME:-chatroom-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_CHATROOM}
-      # Meet room join window (minutes before start / after end). Raise LATE for local testing of past slots.
-      - MEET_JOIN_EARLY_MINUTES=${MEET_JOIN_EARLY_MINUTES:-15}
-      - MEET_JOIN_LATE_MINUTES=${MEET_JOIN_LATE_MINUTES:-60}
 
   # 10. CHATBOT SERVICE (Python FastAPI)
   # chatbot-service:

@@ -3,4 +3,4 @@ export * from "./AppointmentListControls";
 export * from "./AppointmentTable";
 export * from "./AppointmentRowCells";
 export * from "./CancelAppointmentsDialog";
-export * from "./downloads";
+export * from "./bookingId";

@@ -3,12 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Eye } from "lucide-react";
-import { Badge, Button, Card, Input, Label, PageHeader, Pagination, Select, Spinner } from "@/components/ui";
+import { Button, Card, Input, Label, PageHeader, Pagination, Select, Spinner } from "@/components/ui";
 import {
   APPOINTMENT_STATUS_TEXT,
-  APPOINTMENT_STATUS_TONES,
   AppointmentDetailModal,
-  formatAppointmentTime,
+  AppointmentSlotInfo,
+  AppointmentStatusInfo,
 } from "@/components/appointment";
 import { useApiQuery } from "@/hooks";
 import { bookingApi, expertApi } from "@/api";
@@ -161,8 +161,8 @@ export default function AdminAppointmentsPage() {
                   <tbody className="divide-y divide-border bg-background">
                     {data?.items.map((appointment) => (
                       <tr key={appointment.appointmentId} className="transition-colors hover:bg-surface/60">
-                        <td className="whitespace-nowrap px-4 py-3 text-foreground">
-                          {formatAppointmentTime(appointment.startTime, appointment.endTime)}
+                        <td className="whitespace-nowrap px-4 py-3 align-top">
+                          <AppointmentSlotInfo appointment={appointment} />
                         </td>
                         <td className="px-4 py-3 font-medium text-foreground">
                           {appointment.expert?.fullName ?? `#${appointment.expertId.slice(0, 8)}`}
@@ -179,12 +179,12 @@ export default function AdminAppointmentsPage() {
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">{appointment.specializationName || "—"}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
-                          {appointment.price ? `${appointment.price.toLocaleString("vi-VN")} đ` : "—"}
+                          {appointment.slot?.price || appointment.price
+                            ? `${(appointment.slot?.price || appointment.price || 0).toLocaleString("vi-VN")} đ`
+                            : "—"}
                         </td>
-                        <td className="px-4 py-3">
-                          <Badge tone={APPOINTMENT_STATUS_TONES[appointment.statusLabel] ?? "neutral"}>
-                            {APPOINTMENT_STATUS_TEXT[appointment.statusLabel] ?? appointment.statusLabel}
-                          </Badge>
+                        <td className="px-4 py-3 align-top">
+                          <AppointmentStatusInfo appointment={appointment} />
                         </td>
                         <td className="px-4 py-3 text-right">
                           <Button

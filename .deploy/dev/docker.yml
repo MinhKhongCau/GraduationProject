@@ -239,6 +239,9 @@ services:
       # Consultation room link sent to patient/expert after successful payment
       - MEETING_BASE_URL=${MEETING_BASE_URL}
       - MIN_SESSION_PRESENCE_MINUTES=${MIN_SESSION_PRESENCE_MINUTES:-30}
+      # Meet room join window → meeting_status (too_early | open | too_late) in appointment lists.
+      - MEET_JOIN_EARLY_MINUTES=${MEET_JOIN_EARLY_MINUTES:-15}
+      - MEET_JOIN_LATE_MINUTES=${MEET_JOIN_LATE_MINUTES:-60}
       # Expert payout when a session completes
       - PAYMENT_SERVICE_INTERNAL_URL=http://payment-service:${PORT_PAYMENT_SERVICE}
       # gRPC to profile-service; internal gRPC server for payment-service
@@ -351,9 +354,6 @@ services:
       - BOOKING_SERVICE_INTERNAL_URL=http://booking-service:${PORT_BOOKING_SERVICE}
       - INTERNAL_CLIENT_ID=${CHATROOM_SERVICE_NAME:-chatroom-service}
       - INTERNAL_CLIENT_SECRET=${INTERNAL_PLAIN_SECRET_CHATROOM}
-      # Meet room join window (minutes before slot start / after slot end).
-      - MEET_JOIN_EARLY_MINUTES=${MEET_JOIN_EARLY_MINUTES:-15}
-      - MEET_JOIN_LATE_MINUTES=${MEET_JOIN_LATE_MINUTES:-60}
 
   # 9. API GATEWAY (Kong)
   api-gateway:
