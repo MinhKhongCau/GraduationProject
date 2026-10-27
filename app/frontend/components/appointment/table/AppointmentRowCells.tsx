@@ -93,6 +93,24 @@ export function AppointmentStatusInfo({ appointment }: { appointment: Appointmen
   );
 }
 
+/** Paid amount with its payment status, or the slot price when there is no payment order yet. */
+export function AppointmentPriceInfo({ appointment }: { appointment: Appointment }) {
+  const slotPrice = appointment.slot?.price || appointment.price;
+  if (appointment.payment) {
+    return (
+      <>
+        {formatVnd(appointment.payment.amountVnd)}
+        <p className={appointment.payment.status === "SUCCESS" ? "text-xs text-success" : "text-xs text-muted-foreground"}>
+          {PAYMENT_STATUS_TEXT[appointment.payment.status] ?? appointment.payment.status}
+        </p>
+      </>
+    );
+  }
+  // No payment order yet (or payment-service unreachable): fall back to the slot price.
+  if (slotPrice) return <span className="text-muted-foreground">{formatVnd(slotPrice)}</span>;
+  return <>—</>;
+}
+
 /** The optional columns (specialization, session, booked at, amount, status), in header order. */
 export function AppointmentOptionalCells({
   appointment,
@@ -101,7 +119,6 @@ export function AppointmentOptionalCells({
   appointment: Appointment;
   columns: Record<OptionalColumn, boolean>;
 }) {
-  const slotPrice = appointment.slot?.price || appointment.price;
   return (
     <>
       {columns.specialization && (
@@ -119,23 +136,7 @@ export function AppointmentOptionalCells({
       )}
       {columns.price && (
         <td className="whitespace-nowrap px-3 py-3 text-right align-top text-sm tabular-nums text-foreground">
-          {appointment.payment ? (
-            <>
-              {formatVnd(appointment.payment.amountVnd)}
-              <p
-                className={
-                  appointment.payment.status === "SUCCESS" ? "text-xs text-success" : "text-xs text-muted-foreground"
-                }
-              >
-                {PAYMENT_STATUS_TEXT[appointment.payment.status] ?? appointment.payment.status}
-              </p>
-            </>
-          ) : slotPrice ? (
-            // No payment order yet (or payment-service unreachable): fall back to the slot price.
-            <span className="text-muted-foreground">{formatVnd(slotPrice)}</span>
-          ) : (
-            "—"
-          )}
+          <AppointmentPriceInfo appointment={appointment} />
         </td>
       )}
       {columns.status && (
@@ -150,17 +151,25 @@ export function AppointmentOptionalCells({
 const MENU_ITEM =
   "flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-sm font-medium text-foreground outline-none data-[highlighted]:bg-surface data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50";
 
-/** "Thao tác ▾" button opening the row's action menu; children are `RowActionItem`s. */
-export function RowActionsMenu({ bookingId, children }: { bookingId: string; children: ReactNode }) {
+/** "Thao tác ▾" button opening an action menu; children are `RowActionItem`s. Usable outside a table. */
+export function RowActionsDropdown({
+  bookingId,
+  triggerClassName,
+  children,
+}: {
+  bookingId: string;
+  triggerClassName?: string;
+  children: ReactNode;
+}) {
   return (
-    <td className="px-3 py-3 text-right align-top">
+    <>
       {/* Non-modal so the dialogs opened from these items get focus/pointer events back cleanly. */}
       <DropdownMenu.Root modal={false}>
         <DropdownMenu.Trigger asChild>
           <Button
             size="sm"
             variant="outline"
-            className="data-[state=open]:bg-surface"
+            className={clsx("data-[state=open]:bg-surface", triggerClassName)}
             aria-label={`Thao tác cho lịch hẹn ${shortBookingId(bookingId)}`}
           >
             Thao tác
@@ -177,6 +186,15 @@ export function RowActionsMenu({ bookingId, children }: { bookingId: string; chi
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
+    </>
+  );
+}
+
+/** The action menu in its table cell; children are `RowActionItem`s. */
+export function RowActionsMenu({ bookingId, children }: { bookingId: string; children: ReactNode }) {
+  return (
+    <td className="px-3 py-3 text-right align-top">
+      <RowActionsDropdown bookingId={bookingId}>{children}</RowActionsDropdown>
     </td>
   );
 }

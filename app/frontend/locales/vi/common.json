@@ -51,7 +51,9 @@
       "dimensions": "Các chiều chấm điểm dùng trong mẫu.",
       "optionGroups": "Thang trả lời dùng lại cho câu hỏi.",
       "questions": "Ngân hàng câu hỏi cho mọi bài đánh giá.",
-      "transactions": "Giao dịch của các chuyên gia bạn đã duyệt."
+      "transactions": "Giao dịch của các chuyên gia bạn đã duyệt.",
+      "myBookings": "Lịch hẹn, thanh toán và phòng tư vấn của bạn.",
+      "schedule": "Thiết lập giờ làm việc và mở khung giờ trống."
     },
     "transactions": "Quản lý giao dịch"
   },

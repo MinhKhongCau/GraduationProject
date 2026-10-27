@@ -16,6 +16,8 @@ export interface AppointmentTableProps {
   emptyText: string;
   /** One row per appointment. */
   children: ReactNode;
+  /** Optional card list shown instead of the table on phones (below `md`). */
+  mobileCards?: ReactNode;
 }
 
 /** Bordered table frame: header, loading/empty rows, rows, then pagination. */
@@ -28,15 +30,36 @@ export function AppointmentTable({
   isFetching,
   emptyText,
   children,
+  mobileCards,
 }: AppointmentTableProps) {
   const shownColumns = OPTIONAL_COLUMNS.filter((column) => state.columns[column.id]);
   // Booking ID + counterpart + Actions, plus the optional columns shown.
   const columnCount = 3 + shownColumns.length;
 
+  const hasCards = mobileCards !== undefined;
+
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-background">
+    <div className={clsx("overflow-hidden", hasCards ? "md:rounded-xl md:border md:border-border md:bg-background" : "rounded-xl border border-border bg-background")}>
+      {hasCards && (
+        <div
+          className={clsx("space-y-3 transition-opacity md:hidden", isFetching && !isLoading && "opacity-60")}
+          aria-busy={isFetching}
+        >
+          {isLoading ? (
+            <div className="rounded-xl border border-border bg-background px-3 py-10">
+              <Spinner className="mx-auto h-6 w-6" />
+            </div>
+          ) : visibleIds.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-border bg-background px-4 py-10 text-center text-sm text-muted-foreground">
+              {emptyText}
+            </p>
+          ) : (
+            mobileCards
+          )}
+        </div>
+      )}
       <div
-        className={clsx("overflow-x-auto transition-opacity", isFetching && !isLoading && "opacity-60")}
+        className={clsx("overflow-x-auto transition-opacity", hasCards && "hidden md:block", isFetching && !isLoading && "opacity-60")}
         aria-busy={isFetching}
       >
         <table className="w-full border-collapse text-left">
@@ -81,7 +104,14 @@ export function AppointmentTable({
           </tbody>
         </table>
       </div>
-      <Pagination page={state.page + 1} totalPages={totalPages} onPageChange={(next) => state.goToPage(next - 1)} />
+      <div
+        className={clsx(
+          hasCards &&
+            "mt-3 overflow-hidden rounded-xl border border-border bg-background empty:hidden md:mt-0 md:rounded-none md:border-0 [&>div]:border-t-0 md:[&>div]:border-t"
+        )}
+      >
+        <Pagination page={state.page + 1} totalPages={totalPages} onPageChange={(next) => state.goToPage(next - 1)} />
+      </div>
     </div>
   );
 }
