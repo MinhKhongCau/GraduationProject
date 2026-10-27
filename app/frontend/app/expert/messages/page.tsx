@@ -7,6 +7,7 @@ import { useExpertChatContacts, useDmThread, useKeyboardHeight } from "@/hooks";
 import { useAuthContext } from "@/context/AuthContext";
 import { useChatContext } from "@/context/ChatContext";
 import { ChatContact } from "@/types";
+import { MessageCircle } from "lucide-react";
 
 export default function ExpertMessagesPage() {
   const { user } = useAuthContext();
@@ -35,7 +36,7 @@ export default function ExpertMessagesPage() {
 
   return (
     <div
-      className="flex h-[calc(100dvh-9.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--keyboard-height))] overflow-hidden rounded-xl border border-border bg-background shadow-card sm:h-[750px]"
+      className="-mx-4 -mt-5 -mb-[calc(2.5rem-1px)] flex h-[calc(100dvh-7.0625rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)-var(--keyboard-height))] overflow-hidden bg-background sm:mx-0 sm:mt-0 sm:mb-0 sm:h-[calc(100dvh-7.5rem)] sm:min-h-[520px] sm:rounded-2xl sm:border sm:border-border/70 sm:shadow-elevated lg:h-[calc(100dvh-8.5rem)]"
       style={{ "--keyboard-height": `${keyboardHeight}px` } as React.CSSProperties}
     >
       <ContactList
@@ -62,8 +63,16 @@ export default function ExpertMessagesPage() {
           onFetchMore={thread.fetchMore}
         />
       ) : (
-        <div className={`flex-1 items-center justify-center text-sm text-muted-foreground ${showChatOnMobile ? "flex" : "hidden md:flex"}`}>
-          {contacts.length === 0 ? "No conversations yet." : "Select a conversation"}
+        <div className={`flex-1 flex-col items-center justify-center gap-3 bg-gradient-to-b from-surface/50 to-background p-8 text-center ${showChatOnMobile ? "flex" : "hidden md:flex"}`}>
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <MessageCircle className="h-7 w-7" aria-hidden="true" />
+          </span>
+          <p className="text-sm font-semibold text-foreground">
+            {contacts.length === 0 ? "No conversations yet" : "Select a conversation"}
+          </p>
+          <p className="max-w-xs text-xs text-muted-foreground">
+            {contacts.length === 0 ? "Conversations with your patients will appear here." : "Choose a contact on the left to continue chatting."}
+          </p>
         </div>
       )}
     </div>

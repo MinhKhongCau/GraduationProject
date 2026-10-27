@@ -30,7 +30,7 @@ export function ClientShell({ navItems, bottomNavItems, sideNavItems, settingsIt
       <DesktopHeaderNav navItems={navItems} settingsItem={settingsItem} />
       <TabletDrawerNav navItems={navItems} settingsItem={settingsItem} />
 
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur sm:hidden">
+      <header className="sticky top-0 z-30 flex h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between gap-2 border-b border-border bg-background/95 px-4 pt-[env(safe-area-inset-top)] backdrop-blur sm:hidden">
         <BrandLogo className="text-base" />
         <NavAvatarMenu settingsItem={settingsItem} />
       </header>
