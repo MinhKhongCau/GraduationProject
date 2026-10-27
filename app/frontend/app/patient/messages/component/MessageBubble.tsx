@@ -57,68 +57,87 @@ export function MessageBubble({ message, isMine, reactions, currentUserId, onRea
 
   return (
     <div
-      className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}
+      className={`group flex flex-col ${isMine ? "items-end" : "items-start"}`}
       onMouseEnter={() => setShowReactionBar(true)}
       onMouseLeave={() => setShowReactionBar(false)}
     >
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm sm:max-w-[70%] leading-relaxed transition-transform ${isLongPressing ? "scale-[0.98]" : "scale-100"} ${
-          isMine ? "rounded-br-sm bg-primary text-white" : "rounded-bl-sm border border-border bg-background text-foreground shadow-card"
-        }`}
-        onClick={handleClick}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={clearLongPress}
-        onTouchCancel={clearLongPress}
-      >
-        {message.type === "voice" ? (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              if (message.audio) playBase64Audio(message.audio);
-            }}
-            className={`flex items-center gap-2 ${isMine ? "text-white" : "text-foreground"}`}
+      <div className={`relative max-w-[82%] sm:max-w-[68%] ${isMine ? "pl-8" : "pr-8"}`}>
+        {showReactionBar && (
+          <div
+            role="group"
+            aria-label="Choose a reaction"
+            className={`absolute -top-10 z-10 flex gap-0.5 rounded-full border border-border/70 bg-background p-1 shadow-elevated ${isMine ? "right-0" : "left-0"}`}
           >
-            <span className={`flex h-7 w-7 items-center justify-center rounded-full ${isMine ? "bg-white/20" : "bg-primary-soft"}`}>
-              <Play className="h-3.5 w-3.5" />
-            </span>
-            <span className="text-xs">{formatDuration(message.duration ?? 0)}</span>
-          </button>
-        ) : (
-          message.text
+            {QUICK_REACTIONS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onReact(emoji)}
+                aria-label={`React ${emoji}`}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm transition-transform hover:scale-125 hover:bg-surface"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div
+          className={`rounded-[20px] px-3.5 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap transition-transform select-none sm:select-text ${isLongPressing ? "scale-[0.97]" : "scale-100"} ${
+            isMine
+              ? "rounded-br-md bg-gradient-to-br from-primary to-primary-hover text-white shadow-[0_2px_8px_rgba(3,105,161,0.25)]"
+              : "rounded-bl-md bg-background text-foreground shadow-card ring-1 ring-border/60"
+          }`}
+          onClick={handleClick}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={clearLongPress}
+          onTouchCancel={clearLongPress}
+        >
+          {message.type === "voice" ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (message.audio) playBase64Audio(message.audio);
+              }}
+              className={`flex items-center gap-2.5 py-0.5 ${isMine ? "text-white" : "text-foreground"}`}
+            >
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full ${isMine ? "bg-white/20" : "bg-primary-soft text-primary"}`}>
+                <Play className="ml-0.5 h-3.5 w-3.5 fill-current" />
+              </span>
+              <span className="flex items-end gap-[3px]" aria-hidden="true">
+                {[8, 14, 10, 18, 12, 16, 9, 13].map((h, i) => (
+                  <span key={i} style={{ height: h }} className={`w-[3px] rounded-full ${isMine ? "bg-white/60" : "bg-primary/40"}`} />
+                ))}
+              </span>
+              <span className="text-xs tabular-nums">{formatDuration(message.duration ?? 0)}</span>
+            </button>
+          ) : (
+            message.text
+          )}
+        </div>
+
+        {reactions && Object.keys(reactions).length > 0 && (
+          <div className={`-mt-1.5 flex gap-1 px-2 ${isMine ? "justify-end" : "justify-start"}`}>
+            {Object.entries(reactions).map(([emoji, userIds]) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => onReact(emoji)}
+                aria-pressed={userIds.includes(currentUserId)}
+                className={`relative rounded-full border px-1.5 py-px text-[11px] shadow-card transition-colors ${
+                  userIds.includes(currentUserId) ? "border-primary/40 bg-primary-soft" : "border-border bg-background hover:bg-surface"
+                }`}
+              >
+                {emoji} {userIds.length > 1 ? userIds.length : ""}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
-      {reactions && Object.keys(reactions).length > 0 && (
-        <div className="mt-1 flex gap-1 px-1">
-          {Object.entries(reactions).map(([emoji, userIds]) => (
-            <button
-              key={emoji}
-              type="button"
-              onClick={() => onReact(emoji)}
-              aria-pressed={userIds.includes(currentUserId)}
-              className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
-                userIds.includes(currentUserId) ? "border-primary bg-primary-soft" : "border-border bg-background hover:bg-surface"
-              }`}
-            >
-              {emoji} {userIds.length}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {showReactionBar && (
-        <div role="group" className="mt-1 flex gap-0.5 rounded-full border border-border bg-background px-1 py-0.5 shadow-card" aria-label="Choose a reaction">
-          {QUICK_REACTIONS.map((emoji) => (
-            <button key={emoji} type="button" onClick={() => onReact(emoji)} aria-label={`React ${emoji}`} className="inline-flex h-7 w-7 items-center justify-center rounded-full text-sm transition-colors hover:bg-surface">
-              {emoji}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div className="mt-1.5 flex items-center gap-1 px-1">
-        <span className="text-[11px] text-muted-foreground">{time}</span>
+      <div className="mt-1 flex items-center gap-1 px-1.5">
+        <span className="text-[10.5px] text-muted-foreground/80">{time}</span>
         {isMine && <CheckCheck className="h-3.5 w-3.5 text-primary" aria-label="Sent" />}
       </div>
     </div>

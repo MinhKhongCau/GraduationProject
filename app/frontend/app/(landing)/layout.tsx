@@ -4,7 +4,7 @@ import { LandingFooter } from "@/components/layout/landing/LandingFooter";
 
 export default function LandingLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col overflow-x-clip">
       <LandingHeader />
       <main className="flex-1">{children}</main>
       <LandingFooter />
