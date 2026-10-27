@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookingTableRow } from "./component/BookingTableRow";
+import { BookingCard, BookingTableRow } from "./component/BookingTableRow";
 import {
   AppointmentListHeader,
   AppointmentListSummary,
@@ -121,6 +121,17 @@ export default function MyBookingsPage() {
         isLoading={isLoading}
         isFetching={isFetching}
         emptyText={list.hasFilters ? "No bookings match these filters." : "You don't have any bookings yet."}
+        mobileCards={visibleAppointments.map((appointment) => (
+          <BookingCard
+            key={appointment.appointmentId}
+            appointment={appointment}
+            onCancel={(a) => setCancelingAppointments([a])}
+            onPayNow={handlePayNow}
+            isPaying={
+              (payMutation.isPending || isPaymentBrowserOpen) && payingAppointmentId === appointment.appointmentId
+            }
+          />
+        ))}
       >
         {visibleAppointments.map((appointment) => (
           <BookingTableRow
