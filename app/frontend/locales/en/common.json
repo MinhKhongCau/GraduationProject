@@ -51,7 +51,9 @@
       "dimensions": "Scoring dimensions used by templates.",
       "optionGroups": "Reusable answer scales for questions.",
       "questions": "The question bank behind every assessment.",
-      "transactions": "Payments of the experts you approved."
+      "transactions": "Payments of the experts you approved.",
+      "myBookings": "Your appointments, payments and consultation rooms.",
+      "schedule": "Set your working hours and open time slots."
     },
     "transactions": "Transactions"
   },

@@ -62,7 +62,10 @@ export const PATIENT_NAV_ITEMS: NavItem[] = [
     id: "book-appointment", labelKey: "nav.bookAppointment", label: "Book Appointment", href: ROUTES.PATIENT.BOOK_APPOINTMENT, icon: CalendarPlus,
     descriptionKey: "nav.desc.bookAppointment", description: "Pick a topic, an expert and a time slot.",
   },
-  { id: "my-bookings", labelKey: "nav.myBookings", label: "My Bookings", href: ROUTES.PATIENT.MY_BOOKINGS, icon: ClipboardList },
+  {
+    id: "my-bookings", labelKey: "nav.myBookings", label: "My Bookings", href: ROUTES.PATIENT.MY_BOOKINGS, icon: ClipboardList,
+    descriptionKey: "nav.desc.myBookings", description: "Your appointments, payments and consultation rooms.",
+  },
   {
     id: "wallet", labelKey: "nav.wallet", label: "Wallet", href: ROUTES.PATIENT.WALLET, icon: Wallet,
     descriptionKey: "nav.desc.wallet", description: "Check your balance, top up or withdraw.",
@@ -83,13 +86,13 @@ export const PATIENT_NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export const PATIENT_HEADER_NAV_ITEMS = pick(PATIENT_NAV_ITEMS, ["dashboard", "find-experts", "my-bookings", "messages", "forum"]);
+export const PATIENT_HEADER_NAV_ITEMS = pick(PATIENT_NAV_ITEMS, ["dashboard", "find-experts", "messages", "forum"]);
 export const PATIENT_BOTTOM_NAV_ITEMS = PATIENT_HEADER_NAV_ITEMS;
 /** Desktop side rail: every patient page. */
 export const PATIENT_SIDE_NAV_ITEMS = PATIENT_NAV_ITEMS;
 
 export const PATIENT_DASHBOARD_FEATURES: FeatureGroup[] = [
-  { id: "care", labelKey: "nav.group.care", label: "Care", items: pick(PATIENT_NAV_ITEMS, ["book-appointment", "assessment", "medical-history"]) },
+  { id: "care", labelKey: "nav.group.care", label: "Care", items: pick(PATIENT_NAV_ITEMS, ["my-bookings", "book-appointment", "assessment", "medical-history"]) },
   { id: "account", labelKey: "nav.group.account", label: "Account & community", items: pick(PATIENT_NAV_ITEMS, ["wallet", "my-posts"]) },
 ];
 
@@ -99,7 +102,10 @@ export const PATIENT_DASHBOARD_FEATURES: FeatureGroup[] = [
 
 export const EXPERT_NAV_ITEMS: NavItem[] = [
   { id: "dashboard", labelKey: "nav.dashboard", label: "Dashboard", href: ROUTES.EXPERT.DASHBOARD, icon: LayoutDashboard },
-  { id: "schedule", labelKey: "nav.schedule", label: "Schedule", href: ROUTES.EXPERT.SCHEDULE, icon: CalendarClock },
+  {
+    id: "schedule", labelKey: "nav.schedule", label: "Schedule", href: ROUTES.EXPERT.SCHEDULE, icon: CalendarClock,
+    descriptionKey: "nav.desc.schedule", description: "Set your working hours and open time slots.",
+  },
   { id: "appointments", labelKey: "nav.appointments", label: "Appointments", href: ROUTES.EXPERT.APPOINTMENTS, icon: CalendarCheck },
   {
     id: "patients", labelKey: "nav.patients", label: "My Patients", href: ROUTES.EXPERT.PATIENTS, icon: Users, comingSoon: true,
@@ -120,13 +126,13 @@ export const EXPERT_NAV_ITEMS: NavItem[] = [
   },
 ];
 
-export const EXPERT_HEADER_NAV_ITEMS = pick(EXPERT_NAV_ITEMS, ["dashboard", "schedule", "appointments", "messages"]);
+export const EXPERT_HEADER_NAV_ITEMS = pick(EXPERT_NAV_ITEMS, ["dashboard", "appointments", "messages", "clinical-records"]);
 export const EXPERT_BOTTOM_NAV_ITEMS = EXPERT_HEADER_NAV_ITEMS;
 /** Desktop side rail: every expert page. */
 export const EXPERT_SIDE_NAV_ITEMS = EXPERT_NAV_ITEMS;
 
 export const EXPERT_DASHBOARD_FEATURES: FeatureGroup[] = [
-  { id: "care", labelKey: "nav.group.patientCare", label: "Patient care", items: pick(EXPERT_NAV_ITEMS, ["clinical-records", "patients"]) },
+  { id: "care", labelKey: "nav.group.patientCare", label: "Patient care", items: pick(EXPERT_NAV_ITEMS, ["schedule", "patients"]) },
   { id: "account", labelKey: "nav.group.account", label: "Account & community", items: pick(EXPERT_NAV_ITEMS, ["forum", "wallet"]) },
 ];
 
