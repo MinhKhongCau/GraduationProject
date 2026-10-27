@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "MindCare",
     short_name: "MindCare",
     description: "Nền tảng kết nối chuyên gia tâm lý và khách hàng.",
-    start_url: "/",
+    start_url: "/auth/login",
     scope: "/",
     display: "standalone",
     orientation: "portrait",
