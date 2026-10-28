@@ -32,6 +32,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && stored) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setUser(stored);
+    } else {
+      // Cookies can outlive localStorage (e.g. iOS copies Safari's cookies, but not its
+      // localStorage, into a Home Screen app). A leftover session cookie makes proxy.ts
+      // bounce /auth/login back to the dashboard while ProtectedRoute bounces the
+      // dashboard to /auth/login — an endless loop. Clear it so both agree.
+      clearSession();
     }
     setIsLoading(false);
   }, []);
