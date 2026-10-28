@@ -1,8 +1,12 @@
-/* MindCare service worker — Cache First for HTML, CSS and JS. */
+/*
+ * MindCare service worker.
+ * - CSS / JS / fonts / images: Cache First (file names are content-hashed, so they never go stale).
+ * - Pages (HTML): Network First, cache only as an offline fallback. Pages must hit the server so
+ *   proxy.ts can apply the login redirects; a cached page skipped them and caused login loops.
+ */
 const CACHE_PREFIX = "mindcare-";
-const CACHE = `${CACHE_PREFIX}v1`;
+const CACHE = `${CACHE_PREFIX}v2`;
 const PRECACHE_URLS = [
-  "/",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -60,24 +64,17 @@ async function cacheFirst(request) {
   return response;
 }
 
-// Cache First for pages, refreshed in the background so a new deploy shows up on the next visit.
-async function cacheFirstPage(event) {
-  const { request } = event;
-  const cached = await caches.match(request);
-  const network = fetch(request)
-    .then((response) => {
-      if (!response.redirected) putInCache(request, response.clone());
-      return response;
-    })
-    .catch(() => undefined);
-
-  if (cached) {
-    event.waitUntil(network);
-    return cached;
+// Network First for pages; the cached copy is only used when the device is offline.
+async function networkFirstPage(request) {
+  try {
+    const response = await fetch(request);
+    // Redirects (e.g. proxy.ts sending a user to /auth/login) are never cached.
+    if (response.type === "basic" && !response.redirected) putInCache(request, response.clone());
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    return cached || Response.error();
   }
-  const response = await network;
-  if (response) return response;
-  return (await caches.match("/")) || Response.error();
 }
 
 self.addEventListener("fetch", (event) => {
@@ -91,7 +88,7 @@ self.addEventListener("fetch", (event) => {
   if (request.headers.get("RSC") || url.searchParams.has("_rsc")) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(cacheFirstPage(event));
+    event.respondWith(networkFirstPage(request));
     return;
   }
   if (isStaticAsset(url, request)) {
