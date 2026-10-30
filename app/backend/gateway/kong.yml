@@ -242,18 +242,18 @@ services:
           - /chatroom
         strip_path: true
         
-  - name: chatbot-service
-    url: http://chatbot-upstream
-    routes:
-      - name: chatbot-routes
-        paths:
-          - /api/v1/chat
-        strip_path: false
-        plugins:
-          - name: mindcare-auth
-            config:
-              auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
-
+  # - name: chatbot-service
+  #   url: http://chatbot-upstream
+  #   routes:
+  #     - name: chatbot-routes
+  #       paths:
+  #         - /api/v1/chat
+  #       strip_path: false
+  #       plugins:
+  #         - name: mindcare-auth
+  #           config:
+  #             auth_service_url: "http://auth-service:8080/api/v1/auth/public-key"
+  #
 upstreams:
   - name: auth-upstream
     targets:
@@ -365,10 +365,10 @@ upstreams:
           http_failures: 2
           timeouts: 2
 
-  - name: chatbot-upstream
-    targets:
-      - target: chatbot-service:8086
-
+  # - name: chatbot-upstream
+  #   targets:
+  #     - target: chatbot-service:8086
+  #
 plugins:
   # Cấu hình CORS toàn cục
   - name: cors
