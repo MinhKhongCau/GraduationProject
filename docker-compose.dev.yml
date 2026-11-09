@@ -401,9 +401,11 @@ services:
   #     - POSTGRES_DB=${CHATBOT_DB_NAME}
   #     - OLLAMA_BASE_URL=http://ollama:11434
   #     - EMOTION_MODEL_NAME=r-f/wav2vec-english-speech-emotion-recognition
+  #     - FASTTEXT_LID_MODEL_PATH=/models/language/lid.176.ftz
   #   volumes:
   #     - ./app/backend/chatbot-service/data:/workspace/data
   #     - huggingface_cache:/root/.cache/huggingface
+  #     - fasttext_model:/models/language:ro
   #   # Thêm healthcheck
   #   healthcheck:
   #     test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8086/health')" ]
@@ -458,6 +460,9 @@ volumes:
   rabbitmq_data:
   ollama_data:
   huggingface_cache:
+  # fasttext_model:
+  #   external: true
+  #   name: chatbot_fasttext_model
 
 networks:
   app-network:

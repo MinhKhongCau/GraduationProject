@@ -26,6 +26,10 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Register translation router
+from app.routers import translation_router
+app.include_router(translation_router.router, prefix="/api/v1/translation")
+
 # Đảm bảo thư mục lưu file tạm tồn tại
 os.makedirs("temp_audio", exist_ok=True)
 
