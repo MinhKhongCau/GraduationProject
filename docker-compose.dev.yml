@@ -87,17 +87,17 @@ services:
     networks:
       - app-network
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama-service
-    restart: always
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - app-network
-    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull nomic-embed-text && tail -f /dev/null" ]
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama-service
+  #   restart: always
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   networks:
+  #     - app-network
+  #   entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull nomic-embed-text && tail -f /dev/null" ]
 
   # 5. AUTH SERVICE (Java / Spring Boot)
   auth-service:
