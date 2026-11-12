@@ -39,21 +39,26 @@ pip install -r requirements.txt
 ### Chạy kiểm thử tự động E2E với pytest
 
 ```bash
-# Chạy toàn bộ các test suites (UC-01 đến UC-08, UC-16 đến UC-18)
+# Chạy toàn bộ các test suites (UC-01 đến UC-08, UC-09, UC-11 đến UC-14, UC-16 đến UC-18)
 pytest tests/ -v
 
 # Chạy test theo từng Use Case cụ thể:
-pytest tests/test_uc01_auth.py -v          # UC-01: Authentication (Login/Logout)
-pytest tests/test_uc02_register.py -v      # UC-02: Register
-pytest tests/test_uc03_expert_search.py -v # UC-03: Expert Search
-pytest tests/test_uc04_profile.py -v       # UC-04: Profile Management
-pytest tests/test_uc05_booking.py -v       # UC-05: Booking & Slot Lock
-pytest tests/test_uc06_appointment.py -v   # UC-06: Appointment Management
-pytest tests/test_uc07_payment.py -v       # UC-07: Payment Orders
-pytest tests/test_uc08_wallet.py -v        # UC-08: Wallet & Earnings
-pytest tests/test_uc16_admin_users.py -v   # UC-16: Admin User Management
-pytest tests/test_uc17_forum.py -v         # UC-17: Forum Management
-pytest tests/test_uc18_assessment.py -v    # UC-18: Assessment Management
+pytest tests/test_uc01_auth.py -v                  # UC-01: Authentication (Login/Logout)
+pytest tests/test_uc02_register.py -v              # UC-02: Register
+pytest tests/test_uc03_expert_search.py -v         # UC-03: Expert Search
+pytest tests/test_uc04_profile.py -v               # UC-04: Profile Management
+pytest tests/test_uc05_booking.py -v               # UC-05: Booking & Slot Lock
+pytest tests/test_uc06_appointment.py -v           # UC-06: Appointment Management
+pytest tests/test_uc07_payment.py -v               # UC-07: Payment Orders
+pytest tests/test_uc08_wallet.py -v                # UC-08: Wallet & Earnings
+pytest tests/test_uc09_chat.py -v                  # UC-09: Consultation Chat & Video Meet
+pytest tests/test_uc11_notification.py -v          # UC-11: System Notifications (Fails if not implemented)
+pytest tests/test_uc12_assessment_submission.py -v # UC-12: Psychological Assessment Submission
+pytest tests/test_uc13_community_forum.py -v       # UC-13: Community Q&A & Forum Posting
+pytest tests/test_uc14_payout_withdraw.py -v       # UC-14: Payout & Wallet Withdrawals
+pytest tests/test_uc16_admin_users.py -v           # UC-16: Admin User Management
+pytest tests/test_uc17_forum.py -v                 # UC-17: Forum Management
+pytest tests/test_uc18_assessment.py -v            # UC-18: Assessment Management
 
 # Xuất báo cáo HTML
 pytest tests/ -v --html=report.html --self-contained-html
@@ -69,8 +74,10 @@ pytest tests/ -v --html=report.html --self-contained-html
 - `pages/booking_page.py`: Page object cho Đặt lịch hẹn và khóa slot thời gian (`/booking`).
 - `pages/appointment_page.py`: Page object cho Quản lý lịch hẹn của Bệnh nhân & Chuyên gia (`/client/appointments`, `/expert/appointments`).
 - `pages/payment_page.py`: Page object cho kết quả thanh toán VNPay và đơn hàng (`/payment/result`).
-- `pages/wallet_page.py`: Page object cho Quản lý ví điện tử, nạp tiền và thu nhập chuyên gia (`/wallet`).
+- `pages/wallet_page.py`: Page object cho Quản lý ví điện tử, nạp tiền, rút tiền và thu nhập chuyên gia (`/patient/wallet`, `/expert/wallet`, `/admin/withdrawals`).
+- `pages/chat_page.py`: Page object cho Tin nhắn tư vấn trực tuyến và phòng họp video (`/patient/messages`, `/expert/messages`, `/meet/:id`).
+- `pages/notification_page.py`: Page object cho Trung tâm thông báo và chuông thông báo hệ thống (`/notifications`).
 - `pages/admin_users_page.py`: Page object cho Admin Quản lý & Xác thực người dùng (`/admin/users`).
-- `pages/forum_page.py`: Page object cho Diễn đàn cộng đồng & Quản lý bài viết (`/community`).
-- `pages/assessment_page.py`: Page object cho Bài kiểm tra đánh giá tâm lý (`/assessments`, `/admin/assessments`).
+- `pages/forum_page.py`: Page object cho Diễn đàn cộng đồng, đăng bài & Quản lý bài viết (`/patient/forum`, `/community`).
+- `pages/assessment_page.py`: Page object cho Quản lý bài trắc nghiệm và quy trình làm bài đánh giá tâm lý (`/patient/assessment`, `/admin/templates`).
  
