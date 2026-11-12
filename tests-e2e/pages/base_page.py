@@ -50,11 +50,20 @@ class BasePage:
         except (TimeoutException, NoSuchElementException):
             return False
 
+    def wait_visible(self, locator, timeout=10):
+        return self.find(locator, timeout)
+
+    def wait_until_visible(self, locator, timeout=10):
+        return self.find(locator, timeout)
+
     def wait_for_url_contains(self, fragment, timeout=10):
         return WebDriverWait(self.driver, timeout).until(EC.url_contains(fragment))
 
-    def scroll_into_view(self, locator):
-        element = self.driver.find_element(*locator)
+    def scroll_into_view(self, target):
+        if isinstance(target, tuple):
+            element = self.driver.find_element(*target)
+        else:
+            element = target
         self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
 
     def execute_script(self, script, *args):
