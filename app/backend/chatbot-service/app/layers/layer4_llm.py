@@ -1,9 +1,12 @@
 # app/layers/layer4_llm.py
 import os
+import logging
 # pyrefly: ignore [missing-import]
 from openai import OpenAI
 # pyrefly: ignore [missing-import]
 import httpx
+
+logger = logging.getLogger(__name__)
 
 # Khởi tạo kết nối tới Local LLM (Ollama)
 # ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
@@ -67,9 +70,9 @@ def generate_response_stream(user_message: str, rag_context: str):
             if chunk.choices[0].delta.content is not None:
                 yield chunk.choices[0].delta.content
                 
-    except Exception as e:
-        print(f"\n[Layer 4 - LLM] ❌ Lỗi khi gọi LLM: {e}")
-        yield "I'm sorry, I'm experiencing a technical issue right now."
+    except Exception as exc:
+        logger.error("LLM generation failed: %s", type(exc).__name__)
+        raise
 
 # Giữ lại hàm generate_response cho test
 def generate_response(user_message: str, rag_context: str) -> str:
